@@ -6,6 +6,8 @@ The animation engine behind [Toto](https://toto.tech) — the interaction layer 
 
 Built on techniques from [pretext](https://github.com/chenglou/pretext) by Cheng Lou -- Semi-Lagrangian fluid simulation applied to UI rendering.
 
+**[Live demo](https://toto.tech/playground)** -- see it running before you install.
+
 ## Features
 
 - **State-driven**: set animation state, engine handles rendering
