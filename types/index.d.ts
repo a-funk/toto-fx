@@ -17,6 +17,8 @@ export interface TotoFXConfig {
   containerResolver?: (groupId: string) => HTMLElement | null;
   /** Layout animation duration in ms. Default: 300 */
   layoutDuration?: number;
+  /** Enable debug mode with console warnings. Default: false */
+  debug?: boolean;
   /** Layout animation CSS easing. Default: 'ease-out' */
   layoutEasing?: string;
 }
@@ -102,6 +104,9 @@ export interface TotoFXEngine {
   // One-shot animations
   play(category: string, el: HTMLElement, opts?: PlayOptions): void;
   transition(key: string, toCategory: string, opts?: PlayOptions): void;
+
+  // Element resolution
+  resolveElement(key: string): HTMLElement | null;
 
   // Queries
   isAnimating(groupId?: string): boolean;

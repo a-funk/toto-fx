@@ -519,6 +519,7 @@ Create a new engine instance.
 | `onRefresh` | `(groupId: string) => void\|Promise` | `null` | Refresh callback for animation-aware updates |
 | `containerResolver` | `(groupId: string) => HTMLElement\|null` | `getElementById('item-list-...')` | Container resolver for layout animation |
 | `layoutDuration` | `number` | `300` | Layout animation duration (ms) |
+| `debug` | `boolean` | `false` | Enable console warnings for common mistakes (wrong arg types, unregistered categories, detached elements) |
 | `layoutEasing` | `string` | `'ease-out'` | Layout animation CSS easing |
 
 ### Engine Methods
@@ -531,8 +532,9 @@ Create a new engine instance.
 | `engine.clear(category, key)` | Clear persistent animation state |
 | `engine.isActive(category, key)` | Check if key has active persistent animation |
 | `engine.getActiveKeys(category)` | Get all active keys for a category |
-| `engine.play(category, el, opts?)` | Play a one-shot animation |
+| `engine.play(category, el, opts?)` | Play a one-shot animation (takes a DOM element) |
 | `engine.transition(key, toCategory, opts?)` | Transition from persistent to one-shot |
+| `engine.resolveElement(key)` | Resolve a key string to a DOM element using the configured resolver |
 
 #### Lifecycle
 

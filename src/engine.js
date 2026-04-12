@@ -31,7 +31,14 @@ export function createEngine(userConfig) {
       return document.querySelector('[data-anim-id="' + key + '"]');
     },
     onRefresh: userConfig.onRefresh || null,
+    debug: userConfig.debug || false,
   };
+
+  function _warn(msg) {
+    if (_config.debug && typeof console !== 'undefined') {
+      console.warn('[TotoFX] ' + msg);
+    }
+  }
 
   // ── Category Registry ──────────────────────────────────────
 
@@ -144,6 +151,7 @@ export function createEngine(userConfig) {
     configure: function (opts) {
       if (opts.resolveElement) _config.resolveElement = opts.resolveElement;
       if (opts.root) _config.root = opts.root;
+      if (opts.debug !== undefined) _config.debug = opts.debug;
       if (opts.onRefresh) {
         _config.onRefresh = opts.onRefresh;
         _refreshCoordinator.configure(opts.onRefresh);
@@ -208,6 +216,10 @@ export function createEngine(userConfig) {
      * @param {import('./types.js').PersistentAnimationParams} [params]
      */
     set: function (category, key, params) {
+      if (_config.debug) {
+        if (typeof key !== 'string') _warn('set() expects a string key, got ' + typeof key + '. Did you mean play()?');
+        if (!_categories[category] && !StateStore._persistent.has(key)) _warn('Category "' + category + '" is not registered. Call registerCategory() first.');
+      }
       params = params || {};
 
       const state = {
@@ -278,9 +290,14 @@ export function createEngine(userConfig) {
      * @param {import('./types.js').PlayOptions} [opts]
      */
     play: function (category, el, opts) {
+      if (_config.debug) {
+        if (!el || typeof el.nodeType === 'undefined') _warn('play() expects a DOM element, got ' + typeof el + '. Did you mean set()?');
+        else if (!el.isConnected) _warn('play() called on a detached element. Animation will not be visible.');
+        if (!_categories[category]) _warn('Category "' + category + '" is not registered. Call registerCategory() first.');
+      }
       opts = opts || {};
-      const key = el.dataset ? (el.dataset.animId || el.id || '') : '';
-      const groupId = el.dataset ? (el.dataset.group || '') : '';
+      const key = el && el.dataset ? (el.dataset.animId || el.id || '') : '';
+      const groupId = el && el.dataset ? (el.dataset.group || '') : '';
 
       // Register transient state
       if (key) {
@@ -566,6 +583,18 @@ export function createEngine(userConfig) {
      */
     getFX: function (name) {
       return _fxLayers[name] || null;
+    },
+
+    // ── Element Resolution ────────────────────────────────────
+
+    /**
+     * Resolve a key to a DOM element using the configured resolver.
+     *
+     * @param {string} key - Opaque key string.
+     * @returns {HTMLElement|null} The resolved element, or null.
+     */
+    resolveElement: function (key) {
+      return _config.resolveElement(key);
     },
 
     // ── Internals (exposed for advanced use / testing) ───────
