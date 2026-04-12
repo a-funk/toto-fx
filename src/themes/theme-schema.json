@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Toto Theme",
+  "type": "object",
+  "required": ["id", "name", "palette"],
+  "properties": {
+    "id": { "type": "string", "description": "Unique theme identifier" },
+    "name": { "type": "string", "description": "Display name" },
+    "description": { "type": "string" },
+    "author": { "type": "string" },
+    "version": { "type": "string" },
+    "colorScheme": { "type": "string", "enum": ["light", "dark"], "default": "light" },
+    "palette": {
+      "type": "object",
+      "required": ["bg", "surface", "ink", "accent"],
+      "description": "Semantic CSS color variables. Minimum 4 required (bg, surface, ink, accent).",
+      "properties": {
+        "bg": { "type": "string" },
+        "surface": { "type": "string" },
+        "ink": { "type": "string" },
+        "ink-secondary": { "type": "string" },
+        "ink-muted": { "type": "string" },
+        "ink-light": { "type": "string" },
+        "accent": { "type": "string" },
+        "accent-hover": { "type": "string" },
+        "accent-subtle": { "type": "string" },
+        "green": { "type": "string" },
+        "green-hover": { "type": "string" },
+        "green-subtle": { "type": "string" },
+        "red": { "type": "string" },
+        "red-hover": { "type": "string" },
+        "red-subtle": { "type": "string" },
+        "border": { "type": "string" },
+        "border-light": { "type": "string" },
+        "bg-tint-1": { "type": "string", "description": "Body background gradient tint 1" },
+        "bg-tint-2": { "type": "string", "description": "Body background gradient tint 2" }
+      }
+    },
+    "typography": {
+      "type": "object",
+      "description": "Font family overrides. System/bundled fonts only, no URLs.",
+      "properties": {
+        "fontDisplay": { "type": "string" },
+        "fontBody": { "type": "string" }
+      }
+    },
+    "elevation": {
+      "type": "object",
+      "description": "Shadow definitions for elevation levels.",
+      "properties": {
+        "shadow-xs": { "type": "string" },
+        "shadow-sm": { "type": "string" },
+        "shadow-md": { "type": "string" },
+        "shadow-hover": { "type": "string" }
+      }
+    },
+    "cssOverrides": {
+      "type": "object",
+      "description": "Direct --var-name: value pairs for additional CSS variable overrides.",
+      "additionalProperties": { "type": "string" }
+    },
+    "animations": {
+      "type": "object",
+      "description": "Animation-specific settings: particle colors, characters, effects.",
+      "properties": {
+        "colors": {
+          "type": "object",
+          "properties": {
+            "flash": { "type": "string" },
+            "glow": { "type": "string" },
+            "particles": {
+              "type": "object",
+              "properties": {
+                "impact": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } },
+                "smoke": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } },
+                "fire": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } },
+                "debris": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } },
+                "confetti": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } },
+                "hearts": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } },
+                "sparkle": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+              }
+            }
+          }
+        },
+        "chars": {
+          "type": "object",
+          "properties": {
+            "particles": { "type": "array", "items": { "type": "string" } },
+            "smoke": { "type": "array", "items": { "type": "string" } },
+            "confetti": { "type": "array", "items": { "type": "string" } },
+            "fire": { "type": "array", "items": { "type": "string" } },
+            "debris": { "type": "array", "items": { "type": "string" } },
+            "shatter": { "type": "array", "items": { "type": "string" } },
+            "blast": { "type": "array", "items": { "type": "string" } },
+            "hearts": { "type": "array", "items": { "type": "string" } },
+            "sparkle": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "effects": {
+          "type": "object",
+          "properties": {
+            "flashOpacity": { "type": "number", "minimum": 0, "maximum": 1 },
+            "glowIntensity": { "type": "number", "minimum": 0, "maximum": 1 },
+            "particleTrails": { "type": "boolean" },
+            "impactRipple": { "type": "boolean" },
+            "screenTint": { "type": "string" },
+            "badgeAnimation": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

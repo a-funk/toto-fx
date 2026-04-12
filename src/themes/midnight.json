@@ -1,0 +1,73 @@
+{
+  "id": "midnight",
+  "name": "Midnight",
+  "description": "Deep navy and muted golds — elegant dark mode",
+  "author": "Toto",
+  "version": "2.0.0",
+  "colorScheme": "dark",
+  "palette": {
+    "bg": "#0f1219",
+    "surface": "#1a1f2e",
+    "ink": "#d8dce6",
+    "ink-secondary": "#8d94a6",
+    "ink-muted": "#5a6178",
+    "ink-light": "#3d4458",
+    "accent": "#c4a05a",
+    "accent-hover": "#d4b46e",
+    "accent-subtle": "rgba(196, 160, 90, 0.1)",
+    "green": "#5a9e7a",
+    "green-hover": "#6eb88e",
+    "green-subtle": "rgba(90, 158, 122, 0.1)",
+    "red": "#c45a5a",
+    "red-hover": "#d47070",
+    "red-subtle": "rgba(196, 90, 90, 0.08)",
+    "border": "rgba(255, 255, 255, 0.08)",
+    "border-light": "rgba(255, 255, 255, 0.04)",
+    "bg-tint-1": "rgba(196, 160, 90, 0.03)",
+    "bg-tint-2": "rgba(90, 158, 122, 0.02)"
+  },
+  "typography": {
+    "fontDisplay": "'Bricolage Grotesque', Georgia, serif",
+    "fontBody": "'Karla', system-ui, sans-serif"
+  },
+  "elevation": {
+    "shadow-xs": "0 1px 2px rgba(0, 0, 0, 0.25)",
+    "shadow-sm": "0 1px 4px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2)",
+    "shadow-md": "0 4px 16px rgba(0, 0, 0, 0.35), 0 1px 4px rgba(0, 0, 0, 0.25)",
+    "shadow-hover": "0 8px 24px rgba(196, 160, 90, 0.12), 0 2px 6px rgba(0, 0, 0, 0.2)"
+  },
+  "animations": {
+    "colors": {
+      "flash": "#0f1219",
+      "glow": "rgba(196, 160, 90, 0.25)",
+      "particles": {
+        "impact": [[196, 160, 90], [180, 140, 70]],
+        "smoke": [[90, 95, 110]],
+        "fire": [[196, 160, 90], [220, 180, 100]],
+        "debris": [[140, 130, 120]],
+        "confetti": [[196, 160, 90], [90, 158, 122], [180, 140, 200], [200, 200, 220]],
+        "hearts": [[196, 160, 90]],
+        "sparkle": [[220, 200, 150], [196, 160, 90]]
+      }
+    },
+    "chars": {
+      "particles": ["#", "*", "+", "=", "~", "^"],
+      "smoke": ["\u2591", "\u2592", "~", "\u2248"],
+      "confetti": ["*", "+", "\u2726", "\u2605"],
+      "fire": ["*", "\u2726", "\u2668", "#"],
+      "debris": ["\u2591", "\u2592", "\u2593", "#", "^"],
+      "shatter": ["\u2571", "\u2572", "\u2502", "\u2500", "\u2573"],
+      "blast": ["\u2588", "\u2593", "\u2592", "#", "@"],
+      "hearts": ["\u2665"],
+      "sparkle": ["\u2726", "\u2727", "*"]
+    },
+    "effects": {
+      "flashOpacity": 0.5,
+      "glowIntensity": 0.3,
+      "particleTrails": false,
+      "impactRipple": true,
+      "screenTint": "rgba(196, 160, 90, 0.02)",
+      "badgeAnimation": "pop"
+    }
+  }
+}

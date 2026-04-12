@@ -1,0 +1,73 @@
+{
+  "id": "spring",
+  "name": "Spring Meadow",
+  "description": "Warm earth and fresh greens — sun-dappled and alive",
+  "author": "Toto",
+  "version": "2.0.0",
+  "colorScheme": "light",
+  "palette": {
+    "bg": "#F6F3EC",
+    "surface": "#FEFDFB",
+    "ink": "#2C2A1F",
+    "ink-secondary": "#6B6550",
+    "ink-muted": "#A09A82",
+    "ink-light": "#C8C2AC",
+    "accent": "#B07840",
+    "accent-hover": "#C48A50",
+    "accent-subtle": "rgba(176, 120, 64, 0.07)",
+    "green": "#5A8C4A",
+    "green-hover": "#6DA05C",
+    "green-subtle": "rgba(90, 140, 74, 0.07)",
+    "red": "#C4524A",
+    "red-hover": "#D4665E",
+    "red-subtle": "rgba(196, 82, 74, 0.06)",
+    "border": "#E4DDD0",
+    "border-light": "#EDE8DD",
+    "bg-tint-1": "rgba(176, 120, 64, 0.04)",
+    "bg-tint-2": "rgba(90, 140, 74, 0.04)"
+  },
+  "typography": {
+    "fontDisplay": "'Bricolage Grotesque', Georgia, serif",
+    "fontBody": "'Karla', system-ui, sans-serif"
+  },
+  "elevation": {
+    "shadow-xs": "0 1px 2px rgba(44, 42, 31, 0.04)",
+    "shadow-sm": "0 1px 4px rgba(44, 42, 31, 0.06), 0 1px 2px rgba(44, 42, 31, 0.03)",
+    "shadow-md": "0 4px 16px rgba(44, 42, 31, 0.07), 0 1px 4px rgba(44, 42, 31, 0.04)",
+    "shadow-hover": "0 8px 24px rgba(90, 140, 74, 0.1), 0 2px 6px rgba(44, 42, 31, 0.04)"
+  },
+  "animations": {
+    "colors": {
+      "flash": "#F6F3EC",
+      "glow": "rgba(90, 140, 74, 0.25)",
+      "particles": {
+        "impact": [[176, 120, 64], [90, 140, 74]],
+        "smoke": [[140, 135, 118]],
+        "fire": [[176, 120, 64], [200, 150, 60]],
+        "debris": [[160, 148, 125]],
+        "confetti": [[90, 140, 74], [176, 120, 64], [200, 170, 80], [180, 100, 120], [120, 160, 90]],
+        "hearts": [[180, 100, 120]],
+        "sparkle": [[200, 170, 80], [90, 140, 74]]
+      }
+    },
+    "chars": {
+      "particles": ["#", "*", "+", "=", "~", "^"],
+      "smoke": ["\u2591", "\u2592", "~", "\u2248"],
+      "confetti": ["*", "+", "\u2726", "\u2605", "\u2022"],
+      "fire": ["*", "\u2726", "\u2668", "#"],
+      "debris": ["\u2591", "\u2592", "\u2593", "#", "^"],
+      "shatter": ["\u2571", "\u2572", "\u2502", "\u2500", "\u2573"],
+      "blast": ["\u2588", "\u2593", "\u2592", "#", "@"],
+      "hearts": ["\u2665"],
+      "sparkle": ["\u2726", "\u2727", "*", "\u2022"]
+    },
+    "effects": {
+      "flashOpacity": 0.5,
+      "glowIntensity": 0.3,
+      "particleTrails": false,
+      "impactRipple": true,
+      "screenTint": "rgba(90, 140, 74, 0.04)",
+      "badgeAnimation": "pop"
+    }
+  }
+}

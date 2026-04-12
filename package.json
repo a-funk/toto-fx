@@ -1,0 +1,80 @@
+{
+  "name": "toto-fx",
+  "version": "0.1.0",
+  "description": "State-Driven Rendering Architecture (SDRA) animation engine with fluid-simulation dotgrid, 59+ animation variants, plugin system, and theme engine. Inspired by pretext.",
+  "author": "Alex Funk <alex@artfunkstudios.com>",
+  "homepage": "https://github.com/a-funk/toto-fx",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/a-funk/toto-fx.git"
+  },
+  "bugs": {
+    "url": "https://github.com/a-funk/toto-fx/issues"
+  },
+  "main": "dist/toto-fx.min.js",
+  "module": "dist/toto-fx.esm.js",
+  "browser": "dist/toto-fx.min.js",
+  "types": "types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/toto-fx.esm.js",
+      "require": "./dist/toto-fx.min.js",
+      "default": "./dist/toto-fx.min.js"
+    },
+    "./core": {
+      "import": "./dist/core.esm.js"
+    },
+    "./fx": {
+      "import": "./dist/fx.esm.js"
+    },
+    "./dotgrid": {
+      "import": "./dist/dotgrid.esm.js"
+    },
+    "./plugins/thud": {
+      "import": "./dist/plugins/thud.esm.js"
+    },
+    "./plugins/death": {
+      "import": "./dist/plugins/death.esm.js"
+    },
+    "./plugins/cute": {
+      "import": "./dist/plugins/cute.esm.js"
+    },
+    "./plugins/creation": {
+      "import": "./dist/plugins/creation.esm.js"
+    },
+    "./plugins/in-progress": {
+      "import": "./dist/plugins/in-progress.esm.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "src/",
+    "types/",
+    "LICENSE-MIT",
+    "LICENSE-APACHE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node build.js",
+    "build:watch": "node build.js --watch",
+    "test": "node --experimental-vm-modules --test tests/core.test.js"
+  },
+  "keywords": [
+    "animation",
+    "engine",
+    "sdra",
+    "state-driven",
+    "fluid-simulation",
+    "dotgrid",
+    "pretext",
+    "particles",
+    "morph",
+    "dom",
+    "fx",
+    "plugin"
+  ],
+  "license": "(MIT OR Apache-2.0)",
+  "devDependencies": {
+    "esbuild": "^0.20.0"
+  }
+}

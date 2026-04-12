@@ -1,0 +1,73 @@
+{
+  "id": "cyber",
+  "name": "Cyber Neon",
+  "description": "Electric blues and hot pinks — high-energy digital aesthetic",
+  "author": "Toto",
+  "version": "2.0.0",
+  "colorScheme": "dark",
+  "palette": {
+    "bg": "#0a0a14",
+    "surface": "#1a1a2e",
+    "ink": "#e8e8f0",
+    "ink-secondary": "#9a9ab0",
+    "ink-muted": "#6a6a8a",
+    "ink-light": "#4a4a6a",
+    "accent": "#00e5ff",
+    "accent-hover": "#33ebff",
+    "accent-subtle": "rgba(0, 229, 255, 0.1)",
+    "green": "#00ffa3",
+    "green-hover": "#33ffb8",
+    "green-subtle": "rgba(0, 255, 163, 0.1)",
+    "red": "#ff5252",
+    "red-hover": "#ff7070",
+    "red-subtle": "rgba(255, 82, 82, 0.1)",
+    "border": "rgba(255, 255, 255, 0.08)",
+    "border-light": "rgba(255, 255, 255, 0.04)",
+    "bg-tint-1": "rgba(0, 229, 255, 0.04)",
+    "bg-tint-2": "rgba(255, 46, 170, 0.03)"
+  },
+  "typography": {
+    "fontDisplay": "'Bricolage Grotesque', Georgia, serif",
+    "fontBody": "'Karla', system-ui, sans-serif"
+  },
+  "elevation": {
+    "shadow-xs": "0 1px 2px rgba(0, 0, 0, 0.2)",
+    "shadow-sm": "0 1px 4px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.15)",
+    "shadow-md": "0 4px 16px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2)",
+    "shadow-hover": "0 8px 24px rgba(0, 229, 255, 0.15), 0 2px 6px rgba(0, 0, 0, 0.2)"
+  },
+  "animations": {
+    "colors": {
+      "flash": "#0a0a14",
+      "glow": "rgba(0, 229, 255, 0.3)",
+      "particles": {
+        "impact": [[0, 229, 255], [0, 180, 255]],
+        "smoke": [[100, 100, 140]],
+        "fire": [[0, 229, 255], [255, 46, 170]],
+        "debris": [[0, 229, 255], [140, 140, 180]],
+        "confetti": [[0, 229, 255], [255, 46, 170], [0, 255, 163], [179, 136, 255]],
+        "hearts": [[255, 46, 170]],
+        "sparkle": [[0, 229, 255], [255, 255, 255]]
+      }
+    },
+    "chars": {
+      "particles": ["#", "*", "+", "=", "~", "^", "@"],
+      "smoke": ["\u2591", "\u2592", "~", "\u2248", "\u2601"],
+      "confetti": ["*", "+", "\u2726", "\u2605", "\u2666"],
+      "fire": ["*", "\u2726", "\u2668", "#", "+"],
+      "debris": ["\u2591", "\u2592", "\u2593", "#", "*", "\u256C", "^"],
+      "shatter": ["\u2571", "\u2572", "\u2502", "\u2500", "\u2573", "\u256B", "/"],
+      "blast": ["\u2588", "\u2593", "\u2592", "\u256C", "\u256A", "#", "@", "\u2726"],
+      "hearts": ["\u2665", "\u2764"],
+      "sparkle": ["\u2726", "\u2727", "*", "+"]
+    },
+    "effects": {
+      "flashOpacity": 0.8,
+      "glowIntensity": 0.5,
+      "particleTrails": true,
+      "impactRipple": true,
+      "screenTint": "rgba(0, 229, 255, 0.03)",
+      "badgeAnimation": "pop"
+    }
+  }
+}

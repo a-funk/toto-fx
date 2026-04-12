@@ -1,0 +1,73 @@
+{
+  "id": "cute",
+  "name": "Cotton Candy",
+  "description": "Soft pastels and playful pinks — sweet and dreamy",
+  "author": "Toto",
+  "version": "2.0.0",
+  "colorScheme": "light",
+  "palette": {
+    "bg": "#FFF5F9",
+    "surface": "#FFFFFF",
+    "ink": "#3D2B3A",
+    "ink-secondary": "#7A6078",
+    "ink-muted": "#B8A0B4",
+    "ink-light": "#D4C4D0",
+    "accent": "#E8729A",
+    "accent-hover": "#F08CB0",
+    "accent-subtle": "rgba(232, 114, 154, 0.08)",
+    "green": "#6BC4A6",
+    "green-hover": "#82D4B8",
+    "green-subtle": "rgba(107, 196, 166, 0.08)",
+    "red": "#E85A6F",
+    "red-hover": "#F07080",
+    "red-subtle": "rgba(232, 90, 111, 0.07)",
+    "border": "#F0DDE6",
+    "border-light": "#F7EBF0",
+    "bg-tint-1": "rgba(232, 114, 154, 0.04)",
+    "bg-tint-2": "rgba(162, 130, 220, 0.04)"
+  },
+  "typography": {
+    "fontDisplay": "'Bricolage Grotesque', Georgia, serif",
+    "fontBody": "'Karla', system-ui, sans-serif"
+  },
+  "elevation": {
+    "shadow-xs": "0 1px 2px rgba(61, 43, 58, 0.04)",
+    "shadow-sm": "0 1px 4px rgba(61, 43, 58, 0.06), 0 1px 2px rgba(61, 43, 58, 0.03)",
+    "shadow-md": "0 4px 16px rgba(232, 114, 154, 0.08), 0 1px 4px rgba(61, 43, 58, 0.04)",
+    "shadow-hover": "0 8px 24px rgba(232, 114, 154, 0.12), 0 2px 6px rgba(61, 43, 58, 0.04)"
+  },
+  "animations": {
+    "colors": {
+      "flash": "#FFF5F9",
+      "glow": "rgba(232, 114, 154, 0.25)",
+      "particles": {
+        "impact": [[232, 114, 154], [162, 130, 220]],
+        "smoke": [[200, 180, 195]],
+        "fire": [[232, 114, 154], [255, 180, 120]],
+        "debris": [[200, 180, 200]],
+        "confetti": [[232, 114, 154], [107, 196, 166], [162, 130, 220], [255, 200, 100], [130, 190, 240]],
+        "hearts": [[232, 114, 154], [255, 130, 170]],
+        "sparkle": [[255, 200, 100], [232, 114, 154], [162, 130, 220]]
+      }
+    },
+    "chars": {
+      "particles": ["*", "+", "~", "\u00b7", "\u2022"],
+      "smoke": ["\u2601", "~", "\u00b7", "\u2022"],
+      "confetti": ["\u2726", "\u2605", "\u2665", "*", "+", "\u2666"],
+      "fire": ["\u2726", "*", "+", "\u2665"],
+      "debris": ["\u00b7", "\u2022", "*", "~"],
+      "shatter": ["\u2726", "\u2727", "*", "+", "\u00b7"],
+      "blast": ["\u2726", "\u2605", "\u2665", "*", "+"],
+      "hearts": ["\u2665", "\u2764", "\u2661"],
+      "sparkle": ["\u2726", "\u2727", "\u2605", "*", "\u00b7"]
+    },
+    "effects": {
+      "flashOpacity": 0.4,
+      "glowIntensity": 0.25,
+      "particleTrails": false,
+      "impactRipple": true,
+      "screenTint": "rgba(232, 114, 154, 0.04)",
+      "badgeAnimation": "pop"
+    }
+  }
+}

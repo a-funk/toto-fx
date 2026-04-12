@@ -1,0 +1,592 @@
+/**
+ * @module engine
+ * @description TotoFX engine facade -- composes StateStore, DOMObserver,
+ * Reconciler, RefreshCoordinator, and LayoutAnimator into the unified
+ * TotoFX API.
+ *
+ * This is the main engine object. In IIFE builds it's exposed as
+ * window.TotoFX. In ESM builds it's the default export.
+ */
+
+import { StateStore } from './state-store.js';
+import { DOMObserver } from './dom-observer.js';
+import { createReconciler } from './reconciler.js';
+import { createRefreshCoordinator } from './refresh-coordinator.js';
+import { createLayoutAnimator } from './layout-animator.js';
+
+/**
+ * Create a TotoFX engine instance.
+ *
+ * @param {import('./types.js').TotoFXConfig} [userConfig] - Engine configuration
+ * @returns {Object} TotoFX engine instance
+ */
+export function createEngine(userConfig) {
+  userConfig = userConfig || {};
+
+  // ── Configuration ──────────────────────────────────────────
+
+  const _config = {
+    root: userConfig.root || (typeof document !== 'undefined' ? document.body : null),
+    resolveElement: userConfig.resolveElement || function (key) {
+      return document.querySelector('[data-anim-id="' + key + '"]');
+    },
+    onRefresh: userConfig.onRefresh || null,
+  };
+
+  // ── Category Registry ──────────────────────────────────────
+
+  /** @type {Object<string, import('./types.js').CategoryDescriptor>} */
+  const _categories = {};
+
+  // ── Plugin / FX Storage ────────────────────────────────────
+
+  const _plugins = [];
+  const _fxLayers = {};
+
+  // ── Create sub-modules ─────────────────────────────────────
+
+  const _layoutAnimator = createLayoutAnimator({
+    containerResolver: userConfig.containerResolver || undefined,
+    duration: userConfig.layoutDuration || 300,
+    easing: userConfig.layoutEasing || 'ease-out',
+  });
+
+  const _reconciler = createReconciler(_config, _categories, {
+    lookupVariant: function (category, style, variant) {
+      // Delegate to a user-provided variant registry if available
+      if (engine._variantLookup) {
+        return engine._variantLookup(category, style, variant);
+      }
+      return null;
+    },
+    stopElement: function (el) {
+      if (engine._stopHandler) {
+        engine._stopHandler(el);
+      }
+    },
+    tickerRef: null,
+  });
+
+  const _refreshCoordinator = createRefreshCoordinator({
+    layoutAnimator: _layoutAnimator,
+    reconciler: _reconciler,
+  });
+
+  if (_config.onRefresh) {
+    _refreshCoordinator.configure(_config.onRefresh);
+  }
+
+  // ── Scoped FX Context ──────────────────────────────────────
+
+  /**
+   * Execute an animation function with a scoped FX context.
+   * Sets the context before the animation starts and clears it when
+   * the animation's onDone callback fires.
+   *
+   * @param {Object} ctxOpts - Context options
+   * @param {Function} animFn - The animation function to call
+   * @param {HTMLElement} el - The element to animate
+   * @param {Object} animOpts - Options to pass to the animation function
+   */
+  function _withScopedContext(ctxOpts, animFn, el, animOpts) {
+    const originalOnDone = animOpts.onDone;
+    const scopedCtx = ctxOpts || { speed: 1, fxOverrides: null };
+
+    // If there's a registered FX context manager, use it
+    if (engine._fxContextManager) {
+      engine._fxContextManager.set(scopedCtx);
+    }
+
+    animOpts.onDone = function () {
+      if (engine._fxContextManager) {
+        engine._fxContextManager.clear();
+      }
+      if (originalOnDone) originalOnDone();
+    };
+
+    animFn(el, animOpts);
+  }
+
+  // ── Engine API ─────────────────────────────────────────────
+
+  const engine = {
+    /** @type {string} */
+    version: '0.1.0',
+
+    /** @type {boolean} */
+    _initialized: false,
+
+    /** @type {number|null} */
+    _gcInterval: null,
+
+    /** @type {Function|null} Optional variant lookup: (category, style, variant) => object */
+    _variantLookup: null,
+
+    /** @type {Function|null} Optional stop handler: (element) => void */
+    _stopHandler: null,
+
+    /** @type {Object|null} Optional FX context manager: { set(ctx), clear() } */
+    _fxContextManager: null,
+
+    // ── Configuration ────────────────────────────────────────
+
+    /**
+     * Configure the engine. Can be called before or after init().
+     *
+     * @param {Object} opts
+     * @param {Function} [opts.resolveElement] - Element resolver function
+     * @param {HTMLElement} [opts.root] - Root element for DOM observation
+     * @param {Function} [opts.onRefresh] - Refresh callback (groupId) => void|Promise
+     * @param {Function} [opts.variantLookup] - Variant registry: (category, style, variant) => variant object
+     * @param {Function} [opts.stopHandler] - Stop animation on element: (el) => void
+     * @param {Object} [opts.fxContextManager] - FX context manager: { set(ctx), clear() }
+     */
+    configure: function (opts) {
+      if (opts.resolveElement) _config.resolveElement = opts.resolveElement;
+      if (opts.root) _config.root = opts.root;
+      if (opts.onRefresh) {
+        _config.onRefresh = opts.onRefresh;
+        _refreshCoordinator.configure(opts.onRefresh);
+      }
+      if (opts.variantLookup) this._variantLookup = opts.variantLookup;
+      if (opts.stopHandler) this._stopHandler = opts.stopHandler;
+      if (opts.fxContextManager) this._fxContextManager = opts.fxContextManager;
+    },
+
+    /**
+     * Initialize the engine. Call after configuration and plugin registration.
+     * Idempotent -- safe to call multiple times.
+     */
+    init: function () {
+      if (this._initialized) return;
+      if (!_config.root) return;
+      this._initialized = true;
+
+      // Start DOM observation
+      DOMObserver.init(_config.root, function () {
+        _reconciler.reconcile();
+      }, {
+        cleanupHandler: this._stopHandler || null,
+      });
+
+      // Start GC interval (60s) + visibilitychange
+      const self = this;
+      this._gcInterval = setInterval(function () {
+        StateStore.gc(_config.resolveElement);
+      }, 60000);
+
+      if (typeof document !== 'undefined') {
+        document.addEventListener('visibilitychange', function () {
+          if (document.visibilityState === 'visible') {
+            StateStore.invalidateCache();
+            _reconciler.reconcile();
+          }
+        });
+      }
+    },
+
+    /**
+     * Destroy the engine: disconnect observers, clear intervals.
+     */
+    destroy: function () {
+      DOMObserver.destroy();
+      if (this._gcInterval) {
+        clearInterval(this._gcInterval);
+        this._gcInterval = null;
+      }
+      this._initialized = false;
+    },
+
+    // ── Persistent Animations ────────────────────────────────
+
+    /**
+     * Set persistent animation state for a key.
+     * The reconciler will find the element and start the animation.
+     *
+     * @param {string} category - Animation category (e.g., 'persist')
+     * @param {string} key - Opaque key (e.g., item ID)
+     * @param {import('./types.js').PersistentAnimationParams} [params]
+     */
+    set: function (category, key, params) {
+      params = params || {};
+
+      const state = {
+        style: params.style,
+        variant: params.variant,
+        params: params,
+        groupId: params.groupId || '',
+      };
+
+      StateStore.set(category, key, state);
+
+      // Trigger immediate reconciliation for this key
+      const catDescriptor = _categories[category];
+      const resolver = (catDescriptor && catDescriptor.resolve) || _config.resolveElement;
+      const el = StateStore.resolveElement(key, resolver);
+      if (el && el.isConnected) {
+        const entry = StateStore.getPersistent(key);
+        if (entry) {
+          _reconciler._startElement(key, el, entry);
+        }
+      }
+    },
+
+    /**
+     * Clear persistent animation state for a key.
+     * Stops the animation on the element.
+     *
+     * @param {string} category
+     * @param {string} key
+     */
+    clear: function (category, key) {
+      StateStore.clear(category, key);
+
+      const catDescriptor = _categories[category];
+      const resolver = (catDescriptor && catDescriptor.resolve) || _config.resolveElement;
+      const el = StateStore.resolveElement(key, resolver);
+      if (el && el.__totoAnimation) {
+        _reconciler._stopElement(el);
+      }
+    },
+
+    /**
+     * Check if a key has active persistent animation.
+     * @param {string} category
+     * @param {string} key
+     * @returns {boolean}
+     */
+    isActive: function (category, key) {
+      return StateStore.isActive(category, key);
+    },
+
+    /**
+     * Get all active keys for a category.
+     * @param {string} category
+     * @returns {Set<string>}
+     */
+    getActiveKeys: function (category) {
+      return StateStore.getActiveKeys(category);
+    },
+
+    // ── One-Shot Animations ──────────────────────────────────
+
+    /**
+     * Play a one-shot animation on an element.
+     *
+     * @param {string} category - Any registered category
+     * @param {HTMLElement} el - The element to animate
+     * @param {import('./types.js').PlayOptions} [opts]
+     */
+    play: function (category, el, opts) {
+      opts = opts || {};
+      const key = el.dataset ? (el.dataset.animId || el.id || '') : '';
+      const groupId = el.dataset ? (el.dataset.group || '') : '';
+
+      // Register transient state
+      if (key) {
+        StateStore.setTransient(category, key, {
+          groupId: groupId,
+          element: el,
+          onDone: opts.onDone,
+        });
+      }
+
+      const wrappedDone = function () {
+        if (key) StateStore.clearTransient(key);
+        if (groupId) _refreshCoordinator.flushDeferred(groupId);
+        if (opts.onDone) opts.onDone();
+      };
+
+      // Use the category registry if available
+      const catDescriptor = _categories[category];
+      if (catDescriptor && catDescriptor.play) {
+        catDescriptor.play(el, {
+          onDone: wrappedDone,
+          styleOverride: opts.styleOverride || null,
+          params: opts.params || {},
+          key: key,
+          groupId: groupId,
+        });
+        return;
+      }
+    },
+
+    /**
+     * Transition from persistent to one-shot animation.
+     *
+     * @param {string} key - Element key
+     * @param {string} toCategory - Target category
+     * @param {import('./types.js').PlayOptions} [opts]
+     */
+    transition: function (key, toCategory, opts) {
+      opts = opts || {};
+      const el = StateStore.resolveElement(key, _config.resolveElement);
+      if (!el) return;
+
+      // Clear any persistent state for this key
+      const entry = StateStore.getPersistent(key);
+      if (entry) {
+        StateStore.clear(entry.category, key);
+      }
+
+      if (el.__totoAnimation) {
+        _reconciler._stopElement(el);
+      }
+      this.play(toCategory, el, opts);
+    },
+
+    // ── Queries ──────────────────────────────────────────────
+
+    /**
+     * Check if any transient animation is active for a group.
+     * @param {string} [groupId]
+     * @returns {boolean}
+     */
+    isAnimating: function (groupId) {
+      if (groupId) return StateStore.isGroupAnimating(groupId);
+      return StateStore.hasAnyTransient();
+    },
+
+    // ── Reconciliation ───────────────────────────────────────
+
+    /**
+     * Trigger manual reconciliation.
+     */
+    reconcile: function () {
+      StateStore.invalidateCache();
+      _reconciler.reconcile();
+    },
+
+    // ── Layout Animation ─────────────────────────────────────
+
+    /**
+     * Perform an animated refresh: capture height, lock, swap, reconcile, animate.
+     *
+     * @param {string} groupId
+     * @param {Function} swapFn - (groupId) => void|Promise
+     */
+    animatedRefresh: function (groupId, swapFn) {
+      if (!groupId || !swapFn) return;
+
+      const snapshot = _layoutAnimator.captureAndLock(groupId);
+      const result = swapFn(groupId);
+
+      const self = this;
+      const afterSwap = function () {
+        requestAnimationFrame(function () {
+          StateStore.invalidateCache();
+          _reconciler.reconcile();
+          if (snapshot) {
+            _layoutAnimator.animateToNewHeight(groupId, snapshot);
+          }
+        });
+      };
+
+      if (result && typeof result.then === 'function') {
+        result.then(afterSwap);
+      } else {
+        requestAnimationFrame(afterSwap);
+      }
+    },
+
+    /**
+     * Capture container height before an external swap.
+     * @param {string} groupId
+     * @returns {Object|null}
+     */
+    captureLayout: function (groupId) {
+      return _layoutAnimator.capture(groupId);
+    },
+
+    /**
+     * Animate container height after an external swap.
+     * @param {string} groupId
+     * @param {Object} snapshot - From captureLayout()
+     */
+    animateAfterSwap: function (groupId, snapshot) {
+      if (!snapshot) return;
+      StateStore.invalidateCache();
+      _reconciler.reconcile();
+      _layoutAnimator.animateToNewHeight(groupId, snapshot);
+    },
+
+    // ── Settings ─────────────────────────────────────────────
+
+    /**
+     * Re-read settings and restart all persistent animations.
+     */
+    refreshSettings: function () {
+      // Bump version on all persistent entries to force restart
+      StateStore._persistent.forEach(function (state) {
+        StateStore._version++;
+        state.version = StateStore._version;
+      });
+
+      // Stop all current animations and reconcile
+      const resolver = _config.resolveElement;
+      StateStore._persistent.forEach(function (state, key) {
+        const el = StateStore.resolveElement(key, resolver);
+        if (el) {
+          _reconciler._stopElement(el);
+        }
+      });
+
+      StateStore.invalidateCache();
+      _reconciler.reconcile();
+    },
+
+    // ── Refresh Coordination ─────────────────────────────────
+
+    /**
+     * Schedule a debounced refresh for a group.
+     * @param {string} groupId
+     */
+    scheduleRefresh: function (groupId) {
+      _refreshCoordinator.schedule(groupId);
+    },
+
+    /**
+     * Schedule an immediate refresh for a group.
+     * @param {string} groupId
+     */
+    scheduleImmediateRefresh: function (groupId) {
+      _refreshCoordinator.scheduleImmediate(groupId);
+    },
+
+    /**
+     * Begin a transaction: defer all refreshes until commit.
+     */
+    beginTransaction: function () {
+      _refreshCoordinator.beginTransaction();
+    },
+
+    /**
+     * Commit a transaction: flush all queued refreshes.
+     */
+    commitTransaction: function () {
+      _refreshCoordinator.commitTransaction();
+    },
+
+    // ── Category Registration ────────────────────────────────
+
+    /**
+     * Register an animation category with the engine.
+     *
+     * @param {string} name - Category name
+     * @param {import('./types.js').CategoryDescriptor} descriptor
+     */
+    registerCategory: function (name, descriptor) {
+      if (!name || !descriptor) return;
+      _categories[name] = descriptor;
+    },
+
+    /**
+     * Get a registered category descriptor.
+     * @param {string} name
+     * @returns {import('./types.js').CategoryDescriptor|null}
+     */
+    getCategory: function (name) {
+      return _categories[name] || null;
+    },
+
+    /**
+     * Get all registered category names.
+     * @returns {string[]}
+     */
+    getCategoryNames: function () {
+      return Object.keys(_categories);
+    },
+
+    // ── Plugin System ────────────────────────────────────────
+
+    /**
+     * Install a plugin. Supports two formats:
+     *
+     * 1. Legacy: plugin with install(engine) method
+     * 2. Declarative: plugin with name, categories, and/or fx
+     *
+     * @param {import('./types.js').AnimationPlugin} plugin
+     * @param {Object} [config] - Plugin-specific config
+     */
+    use: function (plugin, config) {
+      if (!plugin) return;
+
+      _plugins.push(plugin);
+
+      // Legacy format
+      if (typeof plugin.install === 'function') {
+        plugin.install(this, config);
+        return;
+      }
+
+      // Declarative format
+      if (plugin.categories) {
+        for (let catName in plugin.categories) {
+          if (plugin.categories.hasOwnProperty(catName)) {
+            this.registerCategory(catName, plugin.categories[catName]);
+          }
+        }
+      }
+
+      if (plugin.fx) {
+        for (let fxName in plugin.fx) {
+          if (plugin.fx.hasOwnProperty(fxName)) {
+            this.registerFX(fxName, plugin.fx[fxName]);
+          }
+        }
+      }
+    },
+
+    /**
+     * Register animation variants under a category and style.
+     * @param {string} category
+     * @param {string} style
+     * @param {Object} variants
+     */
+    register: function (category, style, variants) {
+      // Store in internal registry for standalone use
+      if (!this._variantRegistry) this._variantRegistry = {};
+      if (!this._variantRegistry[category]) this._variantRegistry[category] = {};
+      this._variantRegistry[category][style] = variants;
+    },
+
+    /**
+     * Register an FX layer.
+     * @param {string} name
+     * @param {import('./types.js').FXLayer} layer
+     */
+    registerFX: function (name, layer) {
+      _fxLayers[name] = layer;
+    },
+
+    /**
+     * Get a registered FX layer.
+     * @param {string} name
+     * @returns {import('./types.js').FXLayer|null}
+     */
+    getFX: function (name) {
+      return _fxLayers[name] || null;
+    },
+
+    // ── Internals (exposed for advanced use / testing) ───────
+
+    /** @internal */
+    _state: StateStore,
+    /** @internal */
+    _observer: DOMObserver,
+    /** @internal */
+    _reconciler: _reconciler,
+    /** @internal */
+    _refresh: _refreshCoordinator,
+    /** @internal */
+    _layout: _layoutAnimator,
+    /** @internal */
+    _config: _config,
+    /** @internal */
+    _categories: _categories,
+    /** @internal */
+    _withScopedContext: _withScopedContext,
+  };
+
+  return engine;
+}

@@ -1,0 +1,144 @@
+/**
+ * @module dom-observer
+ * @description Unified MutationObserver for animation cleanup and reconciliation.
+ *
+ * On DOM mutation:
+ *   1. Cleanup removed nodes (stop animations, clear handles)
+ *   2. Schedule reconciliation via rAF (coalesced: one per frame)
+ *
+ * The observer filters out irrelevant mutations (animation infrastructure:
+ * canvases, promoted card wrappers, particle overlays) to avoid
+ * unnecessary reconciliation during animation playback.
+ */
+
+import { StateStore } from './state-store.js';
+
+export const DOMObserver = {
+  /** @type {MutationObserver|null} */
+  _observer: null,
+  /** @type {number|null} */
+  _pendingRAF: null,
+  /** @type {Function|null} */
+  _reconcileFn: null,
+  /** @type {boolean} */
+  _initialized: false,
+  /** @type {Function|null} Callback to stop an animation on a removed element */
+  _cleanupHandler: null,
+
+  /**
+   * Initialize the observer on a root element.
+   * @param {HTMLElement} root - Root element to observe
+   * @param {Function} reconcileFn - Called on rAF after mutations
+   * @param {Object} [opts] - Options
+   * @param {Function} [opts.cleanupHandler] - Called to stop animation on a removed element.
+   *   Signature: (element: HTMLElement) => void
+   */
+  init: function (root, reconcileFn, opts) {
+    if (this._initialized) return;
+    this._initialized = true;
+    this._reconcileFn = reconcileFn;
+    this._cleanupHandler = (opts && opts.cleanupHandler) || null;
+    const self = this;
+
+    this._observer = new MutationObserver(function (mutations) {
+      // Skip if no persistent state -- nothing to reconcile
+      if (StateStore._persistent.size === 0) return;
+
+      // Check if any mutation involves structural changes in RELEVANT containers.
+      // Ignore mutations inside animation infrastructure (canvases, promoted card
+      // wrappers, particle overlays) -- these fire hundreds of times per second
+      // during completion animations and are not relevant to state reconciliation.
+      let hasRelevant = false;
+      for (let i = 0; i < mutations.length; i++) {
+        if (mutations[i].addedNodes.length === 0 && mutations[i].removedNodes.length === 0) continue;
+        const target = mutations[i].target;
+        // Skip mutations inside animation-stage wrappers (promoted cards)
+        if (target.classList && target.classList.contains('animation-stage')) continue;
+        // Skip mutations on canvas elements
+        if (target.tagName === 'CANVAS') continue;
+        // Skip mutations inside animation canvas containers
+        if (target.id === 'animation-canvas' || target.id === 'speed-lines-canvas' || target.id === 'impact-flash-overlay') continue;
+        // Skip mutations on body-level animation overlays
+        if (target === document.body) {
+          let dominated = false;
+          for (let j = 0; j < mutations[i].addedNodes.length; j++) {
+            const n = mutations[i].addedNodes[j];
+            if (n.nodeType === 1 && (n.classList.contains('animation-stage') || n.tagName === 'CANVAS' || n.id === 'animation-canvas')) {
+              dominated = true;
+              break;
+            }
+          }
+          if (dominated) continue;
+        }
+        hasRelevant = true;
+        break;
+      }
+      if (!hasRelevant) return;
+
+      // Cleanup handles on removed elements (synchronous, before reconciliation)
+      for (let i = 0; i < mutations.length; i++) {
+        const removed = mutations[i].removedNodes;
+        for (let j = 0; j < removed.length; j++) {
+          self._cleanupRemovedTree(removed[j]);
+        }
+      }
+
+      // Coalesce: one rAF per frame
+      if (self._pendingRAF) return;
+      self._pendingRAF = requestAnimationFrame(function () {
+        self._pendingRAF = null;
+        // Invalidate element cache since DOM changed
+        StateStore.invalidateCache();
+        if (self._reconcileFn) self._reconcileFn();
+      });
+    });
+
+    this._observer.observe(root, { childList: true, subtree: true });
+  },
+
+  /**
+   * Cleanup animation handles on a removed DOM tree.
+   * @param {Node} node
+   * @private
+   */
+  _cleanupRemovedTree: function (node) {
+    if (node.nodeType !== 1) return;
+
+    if (node.__totoAnimation) this._cleanupElement(node);
+
+    const desc = node.querySelectorAll ? node.querySelectorAll('*') : [];
+    for (let i = 0; i < desc.length; i++) {
+      if (desc[i].__totoAnimation) this._cleanupElement(desc[i]);
+    }
+  },
+
+  /**
+   * Cleanup an element with __totoAnimation handle.
+   * @param {HTMLElement} el
+   * @private
+   */
+  _cleanupElement: function (el) {
+    if (!el.__totoAnimation) return;
+
+    if (this._cleanupHandler) {
+      this._cleanupHandler(el);
+    }
+
+    delete el.__totoAnimation;
+  },
+
+  /**
+   * Disconnect the observer.
+   */
+  destroy: function () {
+    if (this._observer) {
+      this._observer.disconnect();
+      this._observer = null;
+    }
+    if (this._pendingRAF) {
+      cancelAnimationFrame(this._pendingRAF);
+      this._pendingRAF = null;
+    }
+    this._initialized = false;
+  },
+};

@@ -1,0 +1,73 @@
+{
+  "id": "warm",
+  "name": "Earthy Warmth",
+  "description": "Warm terracotta and forest tones — the default Toto palette",
+  "author": "Toto",
+  "version": "2.0.0",
+  "colorScheme": "light",
+  "palette": {
+    "bg": "#F5F0E8",
+    "surface": "#FFFFFF",
+    "ink": "#1A1714",
+    "ink-secondary": "#6B5F52",
+    "ink-muted": "#A89A8C",
+    "ink-light": "#C4B8AA",
+    "accent": "#C45A3C",
+    "accent-hover": "#D4714F",
+    "accent-subtle": "rgba(196, 90, 60, 0.07)",
+    "green": "#3A7D5C",
+    "green-hover": "#4A9A70",
+    "green-subtle": "rgba(58, 125, 92, 0.07)",
+    "red": "#B5403A",
+    "red-hover": "#C95650",
+    "red-subtle": "rgba(181, 64, 58, 0.06)",
+    "border": "#E0D9CE",
+    "border-light": "#EBE6DD",
+    "bg-tint-1": "rgba(196, 90, 60, 0.04)",
+    "bg-tint-2": "rgba(58, 125, 92, 0.03)"
+  },
+  "typography": {
+    "fontDisplay": "'Bricolage Grotesque', Georgia, serif",
+    "fontBody": "'Karla', system-ui, sans-serif"
+  },
+  "elevation": {
+    "shadow-xs": "0 1px 2px rgba(26, 23, 20, 0.04)",
+    "shadow-sm": "0 1px 4px rgba(26, 23, 20, 0.06), 0 1px 2px rgba(26, 23, 20, 0.04)",
+    "shadow-md": "0 4px 16px rgba(26, 23, 20, 0.07), 0 1px 4px rgba(26, 23, 20, 0.04)",
+    "shadow-hover": "0 8px 24px rgba(26, 23, 20, 0.09), 0 2px 6px rgba(26, 23, 20, 0.04)"
+  },
+  "animations": {
+    "colors": {
+      "flash": "#F5F0E8",
+      "glow": "rgba(196, 90, 60, 0.3)",
+      "particles": {
+        "impact": [[196, 90, 60], [200, 120, 50]],
+        "smoke": [[120, 120, 110]],
+        "fire": [[196, 90, 60], [200, 140, 60]],
+        "debris": [[180, 160, 140]],
+        "confetti": [[196, 90, 60], [58, 125, 92], [201, 168, 76], [155, 133, 196]],
+        "hearts": [[196, 90, 60]],
+        "sparkle": [[201, 168, 76], [196, 90, 60]]
+      }
+    },
+    "chars": {
+      "particles": ["#", "*", "+", "=", "~", "^"],
+      "smoke": ["\u2591", "\u2592", "~", "\u2248"],
+      "confetti": ["*", "+", "\u2726", "\u2605"],
+      "fire": ["*", "\u2726", "\u2668", "#"],
+      "debris": ["\u2591", "\u2592", "\u2593", "#", "^"],
+      "shatter": ["\u2571", "\u2572", "\u2502", "\u2500", "\u2573"],
+      "blast": ["\u2588", "\u2593", "\u2592", "#", "@"],
+      "hearts": ["\u2665"],
+      "sparkle": ["\u2726", "\u2727", "*"]
+    },
+    "effects": {
+      "flashOpacity": 0.6,
+      "glowIntensity": 0.3,
+      "particleTrails": false,
+      "impactRipple": true,
+      "screenTint": "rgba(196, 90, 60, 0.05)",
+      "badgeAnimation": "pop"
+    }
+  }
+}
