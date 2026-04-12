@@ -73,6 +73,7 @@
     "fx",
     "plugin"
   ],
+  "type": "module",
   "license": "(MIT OR Apache-2.0)",
   "devDependencies": {
     "esbuild": "^0.20.0"

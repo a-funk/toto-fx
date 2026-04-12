@@ -1,5 +1,5 @@
-const esbuild = require('esbuild');
-const fs = require('fs');
+import esbuild from 'esbuild';
+import fs from 'fs';
 
 const watch = process.argv.includes('--watch');
 
