@@ -111,6 +111,15 @@ The engine maintains two types of animation state:
 
 Keys are opaque strings. The engine doesn't care what they represent.
 
+**`set()` takes a key, `play()` takes an element.** These look parallel but the second argument is different:
+
+```javascript
+engine.set('persist', 'item-42');                    // key string — engine resolves the element
+engine.play('action', document.getElementById('el')); // DOM element — you provide it directly
+```
+
+`set()` uses the key to find and track the element via `resolveElement`. `play()` takes an element directly because one-shot animations don't need persistent tracking. If you pass a string to `play()` or an element to `set()`, it will silently fail.
+
 ### Element Resolver
 
 The engine needs to map string keys to DOM elements. You provide a resolver function:
@@ -297,6 +306,35 @@ Plugin globals reference:
 | Death (destroy) | `toto-fx/plugins/death` | `TotoFXDeath` |
 | Creation (enter) | `toto-fx/plugins/creation` | `TotoFXCreation` |
 | In-Progress (persist) | `toto-fx/plugins/in-progress` | `TotoFXInProgress` |
+
+### Quickstart with built-in plugins
+
+The most common use case: load everything, play an anime-slam on click.
+
+```html
+<script src="dist/toto-fx.min.js"></script>
+<script src="dist/plugins/thud.min.js"></script>
+<script>
+  var engine = TotoFX.createEngine({
+    resolveElement: function (key) {
+      return document.querySelector('[data-id="' + key + '"]');
+    },
+  });
+
+  // Install the thud plugin (adds 'action' category with 10 slam variants)
+  TotoFXThud.install(engine);
+  engine.init();
+
+  // Play anime-slam on any element
+  document.querySelectorAll('.card').forEach(function (card) {
+    card.addEventListener('click', function () {
+      engine.play('action', card, {
+        params: { style: 'thud', variant: 'anime-slam' },
+      });
+    });
+  });
+</script>
+```
 
 ## Built-in Animation Variants
 
@@ -541,9 +579,27 @@ Create a new engine instance.
 | `engine.beginTransaction()` | Defer refreshes until commit |
 | `engine.commitTransaction()` | Flush all deferred refreshes |
 
+## Dist Files
+
+The build produces multiple bundles for different use cases:
+
+| File | Size | Use case |
+|------|------|----------|
+| `dist/toto-fx.min.js` | 74KB | Full bundle, IIFE. Load via `<script>` tag, exposes `window.TotoFX`. |
+| `dist/toto-fx.esm.js` | 74KB | Full bundle, ESM. `import { createEngine } from 'toto-fx'` |
+| `dist/core.esm.js` | 12KB | Engine only (no FX, dotgrid, or plugins). For minimal setups. |
+| `dist/fx.min.js` | 23KB | FX utilities only, IIFE. `window.TotoFXUtils` |
+| `dist/dotgrid.min.js` | 18KB | Dotgrid only, IIFE. `window.TotoFXDotgrid` |
+| `dist/plugins/*.min.js` | 16-71KB | Individual plugins, IIFE. `window.TotoFXThud`, etc. |
+
+**Which one should I use?**
+- Just getting started? Use `toto-fx.min.js` — it includes everything.
+- Optimizing bundle size? Use `core.esm.js` + only the plugins you need.
+- Only want the fluid simulation? Use `dotgrid.min.js` standalone.
+
 ## Individual Module Exports
 
-For advanced use, individual modules are available:
+For advanced use via ESM:
 
 ```javascript
 import { StateStore } from 'toto-fx';
@@ -558,8 +614,13 @@ import { AnimationSettings } from 'toto-fx'; // localStorage persistence
 import { PresetSchema } from 'toto-fx';      // preset validation
 ```
 
+## TypeScript
+
+Type definitions ship at `types/index.d.ts` and are referenced in `package.json`. TypeScript and IDE autocompletion works automatically after `npm install toto-fx`.
+
 ## Further Reading
 
+- [docs/fx-api.md](docs/fx-api.md) -- FX utilities API reference (all 50+ exports)
 - [docs/dotgrid.md](docs/dotgrid.md) -- Dotgrid fluid simulation deep dive
 - [docs/plugin-guide.md](docs/plugin-guide.md) -- Writing custom plugins
 
