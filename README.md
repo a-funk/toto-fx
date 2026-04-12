@@ -6,7 +6,7 @@ The animation engine behind [Toto](https://toto.tech) — the interaction layer 
 
 Built on techniques from [pretext](https://github.com/chenglou/pretext) by Cheng Lou -- Semi-Lagrangian fluid simulation applied to UI rendering.
 
-**[Live demo](https://toto.tech/playground)** -- see it running before you install.
+**[Try toto-fx in the playground](https://toto.tech/playground)** -- Create a random animation, create your own animation. True user configurability. Look at the 'Advanced' tab to see the configurability. 
 
 ## Why TotoFX
 
