@@ -1008,14 +1008,17 @@ export function doDotgridCrater(cx, cy, radius, depth, opts) {
  *
  * @param {number} cx - Center x coordinate in viewport pixels.
  * @param {number} cy - Center y coordinate in viewport pixels.
+ * @param {Object} [opts] - Options passed through to Dotgrid.nuclear.
+ * @param {number} [opts.blastRadius=280] - Overall blast radius in pixels.
+ * @param {string} [opts.color='#C45A3C'] - CSS color for the shockwave ring.
  */
-export function doDotgridNuclear(cx, cy) {
+export function doDotgridNuclear(cx, cy, opts) {
   if (!fxEnabled('dotgrid')) return;
   if (_ctx.dotgridOverride) {
     _fireDotgridOverride(cx, cy);
     return;
   }
-  if (_hasDotgrid()) _Dotgrid.nuclear(cx, cy);
+  if (_hasDotgrid()) _Dotgrid.nuclear(cx, cy, opts);
 }
 
 /**

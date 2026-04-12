@@ -366,6 +366,58 @@ The most common use case: load everything, play an anime-slam on click.
 
 **Rich** (5): snake-border, particle-orbit, corner-accents, heartbeat, progress-bar
 
+### Variant options
+
+Every built-in variant has tunable parameters. Pass them via `opts.params`:
+
+```javascript
+engine.play('action', el, {
+  params: {
+    style: 'thud',
+    variant: 'anime-slam',
+    // Variant-specific tuning:
+    peakZ: 450,        // lift height (px)
+    liftDur: 350,      // lift duration (ms)
+    fallDur: 200,      // fall duration (ms)
+    fallExp: 3,        // fall easing curve
+    particles: 40,     // particle count
+    spread: 8,         // particle spread
+    particleSize: 6,   // particle size
+    gravity: 0.15,     // gravity strength
+  },
+});
+```
+
+All variants define their params with `{ min, max, default, step, unit, group }`. You can inspect them at runtime:
+
+```javascript
+import { AnimationRegistry } from 'toto-fx';
+
+// Get param descriptors for anime-slam
+const params = AnimationRegistry.getParams('action', 'thud', 'anime-slam');
+// → { peakZ: { min: 100, max: 1000, default: 450, ... }, liftDur: { ... }, ... }
+```
+
+The full parameter manifest is in `src/animations-manifest.json`.
+
+### A note on the params shape
+
+The `play` callback receives a `params` object that contains a `.params` sub-property for variant-specific values:
+
+```javascript
+engine.registerCategory('action', {
+  play: function (el, params) {
+    params.onDone;           // completion callback
+    params.style;            // 'thud'
+    params.variant;          // 'anime-slam'
+    params.params;           // { peakZ: 450, liftDur: 350, ... }
+    params.params.peakZ;     // 450
+  },
+});
+```
+
+Yes, `params.params` reads awkwardly. The outer `params` is the engine's execution context (onDone, style, variant, key, groupId). The inner `.params` is the variant-specific tuning values. We chose this over a flat merge to avoid key collisions between engine fields and variant params.
+
 ## Dotgrid Fluid Simulation
 
 The dotgrid system renders a full-viewport ASCII character grid driven by Semi-Lagrangian fluid simulation. Canvas-based (zero DOM writes per frame).
@@ -387,10 +439,10 @@ const grid = createDotgrid({
 grid.init();  // REQUIRED: starts the render loop
 
 // Trigger effects
-grid.ripple(400, 300, { radius: 200, push: 10 });
-grid.vortex(400, 300, { radius: 150, speed: 2 });
-grid.crater(400, 300, 100, 1);
-grid.nuclear(400, 300, { blastRadius: 250 });
+grid.ripple(400, 300, { radius: 200, push: 10, density: 0.6, color: '#C45A3C' });
+grid.vortex(400, 300, { radius: 150, speed: 2, pull: 0.3, direction: 'cw' });
+grid.crater(400, 300, 100, 1, { cracks: 6, crackLength: 220 });
+grid.nuclear(400, 300, { blastRadius: 250, color: '#C45A3C' });
 grid.scorch(400, 300, { width: 40, length: 200 });
 
 // Cleanup
@@ -415,9 +467,9 @@ grid.init();
 FX.setDotgrid(grid);
 
 // Now FX dotgrid helpers work
-FX.doDotgridRipple(400, 300, { radius: 200, push: 10 });
-FX.doDotgridCrater(400, 300, 100, 1);
-FX.doDotgridNuclear(400, 300);
+FX.doDotgridRipple(400, 300, { radius: 200, push: 10, density: 0.6 });
+FX.doDotgridCrater(400, 300, 100, 1, { cracks: 6 });
+FX.doDotgridNuclear(400, 300, { blastRadius: 250 });
 FX.doDotgridScorch(300, 300, 500, 300, 40);
 ```
 
@@ -472,9 +524,9 @@ FX.doImpactFlash(true);                 // intense white-out
 FX.flashColor('#ff0000', 300);          // colored flash
 
 // Dotgrid effects (requires FX.setDotgrid(grid) first)
-FX.doDotgridRipple(cx, cy, { radius: 200, push: 10 });
-FX.doDotgridCrater(cx, cy, 100, 1);
-FX.doDotgridNuclear(cx, cy);
+FX.doDotgridRipple(cx, cy, { radius: 200, push: 10, density: 0.6 });
+FX.doDotgridCrater(cx, cy, 100, 1, { cracks: 6 });
+FX.doDotgridNuclear(cx, cy, { blastRadius: 250 });
 FX.doDotgridScorch(x1, y1, x2, y2, 40);
 
 // Card animation helpers (physics-based)
