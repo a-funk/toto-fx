@@ -1,46 +1,117 @@
 /**
  * @module fx
- * @description FX — shared animation infrastructure for toto-fx.
+ * @description FX — animation effects toolkit for TotoFX.
  *
- * Provides reusable building blocks that any animation style (thud,
- * cute, death, etc.) can compose. Nothing here is style-specific.
+ * Particles, screen effects, physics-based card animations, and canvas
+ * rendering helpers. Used by all built-in plugins (thud, death, cute,
+ * creation) and available for custom animations.
  *
- * Capabilities:
- *   - fxConfig: toggleable effect layers (speedLines, flash, etc.)
- *   - Particle canvas: spawn themed ASCII particles
- *   - Speed lines canvas: radial anime-style lines
- *   - Impact flash: black flash + color inversion
- *   - Screen shake: light and heavy
- *   - Dotgrid wrappers: ripple, crater, nuclear, scorch
- *   - Card helpers: getSubElements, getItemRect, intensityScale
- *   - Lift/fall/impact/remove: liftCard, gravityFall, standardImpact,
- *     completeAndRemove, cleanupCard
- *   - FX canvas: full-viewport canvas for custom particle/effect rendering
- *   - Animation cancellation: register, cancel, and cleanup in-flight animations
+ * ## Setup
  *
- * All functions read from the theme provider (configurable) for colors/chars.
+ *   import { FX, configure } from 'toto-fx';
+ *   // or: const FX = TotoFX.FX;  (IIFE)
+ *
+ *   // Optional: wire dotgrid for grid-based effects
+ *   FX.setDotgrid(myDotgridInstance);
+ *
+ *   // Optional: customize selectors, theme, mobile behavior
+ *   configure({ selectors: { shadow: '.my-shadow' }, theme: myTheme });
+ *
+ * ## API Overview
+ *
+ * ### Particles
+ *   spawnParticles(cx, cy, opts)  — ASCII particle burst (count, colors, chars, speed, gravity)
+ *   spawnSmoke(cx, cy, count)     — smoke puff effect
+ *   spawnFireTrail(x, y, angle)   — directional fire particles
+ *   pushParticles(arr)            — add pre-built particles to the render loop
+ *
+ * ### Screen Effects
+ *   doScreenShake(heavy?)         — shake the viewport (light or heavy)
+ *   doImpactFlash(whiteOut?)      — full-screen flash (white or black)
+ *   flashColor(color, durationMs) — colored overlay flash
+ *   startSpeedLines(cx, cy, dir, ms) — anime-style radial speed lines
+ *   stopSpeedLines()              — stop speed lines
+ *
+ * ### Dotgrid Effects (requires FX.setDotgrid() first)
+ *   doDotgridRipple(cx, cy, opts) — radial push wave
+ *   doDotgridCrater(cx, cy, r, d) — impact crater with cracks
+ *   doDotgridNuclear(cx, cy)      — mushroom cloud blast
+ *   doDotgridScorch(x1,y1,x2,y2,w) — directional scorch line
+ *
+ * ### Card Animation Physics
+ *   liftCard(el, shadow, cx, cy, peakZ, dur, rotX, rotY, onDone) — lift to peak
+ *   gravityFall(el, shadow, peakZ, rotX, rotY, dur, exp, cx, cy, onImpact) — fall with gravity
+ *   standardImpact(el, shadow, burst, cx, cy) — impact flash + particles + shake
+ *   completeAndRemove(el, badge, strike, delay, onDone) — badge → strike → fade → remove
+ *   removeCard(el, fadeDelay, onDone) — fade out and remove
+ *   destroyCard(el) — immediately hide element
+ *   prepareCard(el) — promote to animation stage, return dimensions
+ *   promoteCard(el) — create fixed overlay clone for physics animations
+ *   cleanupCard(el) — reset all animation styles
+ *   finalize(el, opts) — clean up and call opts.onDone()
+ *
+ * ### Element Helpers
+ *   getSubElements(el) — find shadow/burst/badge/strike child elements
+ *   getItemRect(el)    — bounding rect with center coordinates
+ *   intensityScale(n)  — map intensity 1-10 to scale factor 0.3-1.0
+ *   speedScale(ms)     — divide duration by current context speed
+ *   pCount(n)          — scale particle count for mobile/tablet
+ *   resolveParams(descriptors, overrides) — merge param defaults with user overrides
+ *
+ * ### Canvas
+ *   getFxCanvas()      — full-viewport particle canvas element
+ *   getFxCtx()         — 2D context for the particle canvas
+ *   getCanvas()        — particle canvas (creates if needed)
+ *   getSpeedCanvas()   — speed lines canvas (creates if needed)
+ *   drawAsciiChar(ctx, ch, x, y, color, size, alpha, rotation) — render one character
+ *   drawChar(ctx, ch, x, y, color, size, alpha, rotation) — optimized character draw
+ *
+ * ### Animation Lifecycle
+ *   registerAnimation(el, rafId) — track an in-flight animation
+ *   setAnimationCleanup(el, fn)  — register cleanup function for cancellation
+ *   cancelAnimation(el)          — cancel and clean up an animation
+ *   deregisterAnimation(el)      — remove tracking without cleanup
+ *
+ * ### Context
+ *   setContext(opts)   — set speed, FX toggles, particle style for next animation
+ *   clearContext()     — reset to defaults (call after each animation)
+ *
+ * ### State
+ *   isIdle()              — true if no animations rendering
+ *   getAdaptiveQuality()  — current quality level (1.0 or 0.5)
+ *   isMobile / isTablet   — device detection flags
+ *   fxEnabled(key)        — check if an FX layer is active in current context
+ *   fxConfig              — current FX toggle state
  *
  * @example
- * import { getSubElements, getItemRect, liftCard, gravityFall, standardImpact, completeAndRemove } from 'toto-fx/fx';
+ * // Spawn particles at a click point
+ * import { FX } from 'toto-fx';
  *
- * const sub = getSubElements(el);
- * const pos = getItemRect(el);
- * liftCard(el, sub.shadow, pos.cx, pos.cy, 450, 350, -6, 2, () => {
- *   gravityFall(el, sub.shadow, 450, -6, 2, 200, 3, pos.cx, pos.cy, () => {
- *     standardImpact(el, sub.shadow, sub.burst, pos.cx, pos.cy);
- *     completeAndRemove(el, sub.badge, sub.strike, 300, onDone);
+ * el.addEventListener('click', (e) => {
+ *   FX.spawnParticles(e.clientX, e.clientY, {
+ *     count: 20,
+ *     colors: [[255, 100, 50], [255, 200, 0]],
+ *     chars: ['*', '+', '#'],
+ *     speed: 4,
+ *     gravity: 0.15,
+ *   });
+ *   FX.doScreenShake();
+ * });
+ *
+ * @example
+ * // Full lift-slam-impact sequence
+ * import { FX } from 'toto-fx';
+ *
+ * const sub = FX.getSubElements(el);
+ * const pos = FX.getItemRect(el);
+ * FX.liftCard(el, sub.shadow, pos.cx, pos.cy, 450, 350, -6, 2, () => {
+ *   FX.gravityFall(el, sub.shadow, 450, -6, 2, 200, 3, pos.cx, pos.cy, () => {
+ *     FX.standardImpact(el, sub.shadow, sub.burst, pos.cx, pos.cy);
+ *     FX.finalize(el, { onDone });
  *   });
  * });
  *
- * @example
- * // Configure before use
- * import { configure, FX } from 'toto-fx/fx';
- *
- * configure({
- *   mobile: { particleScale: 0.3, maxParticles: 20, maxParticlesTotal: 40, shadow: false },
- *   selectors: { shadow: '.card-shadow', burst: '.impact-burst', badge: '.done-badge', strike: '.strikethrough' },
- *   theme: myThemeProvider,
- * });
+ * @see {@link file://docs/fx-api.md} for full parameter documentation.
  */
 
 // ── Optional Dotgrid integration ────────────────────────────────
