@@ -21,6 +21,14 @@ Built on techniques from [pretext](https://github.com/chenglou/pretext) by Cheng
 - **Phase continuity**: persistent animations survive DOM replacement with seamless visual continuity
 - **Refresh coordination**: debounced, animation-aware refresh with transaction support
 
+## Why TotoFX
+
+Most animation libraries assume you control the DOM. You create an element, animate it, remove it — a straightforward lifecycle. But if your app uses htmx, morphdom, idiomorph, Turbo, LiveView, or any server-driven approach that *replaces* DOM nodes, those animations die on every swap.
+
+TotoFX treats animation as a **state reconciliation problem**. You declare that a key should be animating — the engine finds the element, starts the animation, and watches for DOM changes. When the DOM gets replaced (morphed, swapped, re-rendered), the engine detects the mutation, resolves the new element, and resumes the animation at the correct phase. No flicker, no restart, no manual bookkeeping.
+
+This is the same mental model as React's reconciler, but for animations and framework-agnostic. It works with htmx, vanilla JS, React, Vue, or anything else that touches the DOM.
+
 ## Install
 
 ```bash
