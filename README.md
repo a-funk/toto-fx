@@ -695,6 +695,52 @@ Uses `WeakRef`, `MutationObserver`, `requestAnimationFrame`, `Map`, `Set`.
 
 TotoFX's dotgrid fluid simulation is built on rendering techniques from [pretext](https://github.com/chenglou/pretext) by Cheng Lou. The Semi-Lagrangian advection approach to text-based UI rendering was the direct inspiration for the engine's background system.
 
+## Security Model
+
+TotoFX includes a `PluginLoader` that dynamically loads JavaScript files via `<script>` tag injection. This is by design — it enables runtime plugin discovery for IIFE/CDN deployments. **You should understand the trust implications.**
+
+### What PluginLoader does
+
+`PluginLoader.load(builtins, opts)` creates `<script src="...">` elements for each URL you pass it (via the `builtins` array or a manifest endpoint response). It does **not** validate, sanitize, or restrict these URLs. The caller controls what gets loaded.
+
+### Who controls the inputs
+
+- **`builtins` array**: You, the developer. These are URLs you pass directly in your code.
+- **`opts.manifestUrl` response**: Whatever server responds to that URL. If you point the manifest at your own API, you control it. If the endpoint is compromised or MITM'd, an attacker could inject arbitrary script URLs.
+- **`opts.validateUrl` callback**: Optional — you provide a function that gates each URL before injection.
+
+### Recommendations
+
+1. **Use a Content Security Policy.** CSP `script-src` is the browser-level control for which domains can serve executable scripts. At minimum, restrict to `'self'` and any specific CDN origins you use:
+   ```
+   Content-Security-Policy: script-src 'self' https://unpkg.com/toto-fx@1.0.0/;
+   ```
+
+2. **Use Subresource Integrity (SRI) for CDN-loaded scripts.** PluginLoader supports `{url, integrity}` objects — when integrity is provided, the browser verifies the script hash before execution:
+   ```javascript
+   PluginLoader.load([
+     { url: 'https://cdn.example.com/plugin.js', integrity: 'sha384-...' },
+   ]);
+   ```
+
+3. **Use `opts.validateUrl` for dynamic manifests.** If your manifest endpoint returns URLs you don't fully control, provide a validation callback:
+   ```javascript
+   PluginLoader.load([], {
+     manifestUrl: '/api/plugins',
+     validateUrl: (url) => url.startsWith('/') || url.startsWith('https://my-cdn.com/'),
+   });
+   ```
+
+4. **For ESM usage, you don't need PluginLoader at all.** Import plugins directly — no dynamic script injection involved:
+   ```javascript
+   import { thudPlugin } from 'toto-fx/plugins/thud';
+   engine.use(thudPlugin);
+   ```
+
+### What this means for the npm security flag
+
+Automated scanners flag `document.createElement('script')` with variable `src` as a potential injection vector. This is architecturally identical to every CDN-based module loader, `importmap`, and module federation setup. The PluginLoader is a developer-facing utility — not an end-user-facing API. The security boundary is your CSP and the trust you place in the URLs you provide.
+
 ## License
 
 Dual-licensed under [MIT](LICENSE-MIT) or [Apache 2.0](LICENSE-APACHE), at your option.
