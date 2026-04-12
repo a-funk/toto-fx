@@ -1,0 +1,480 @@
+{
+  "version": "1.0.0",
+  "categories": {
+    "action": {
+      "thud": {
+        "description": "Lift-and-slam impact animations with physics-based particles",
+        "variants": {
+          "anime-slam": {
+            "description": "Classic lift + slam with particle burst",
+            "params": {
+              "peakZ":        { "label": "Lift Height",     "type": "range", "min": 100, "max": 1000, "default": 450,  "step": 10,   "unit": "px", "group": "motion" },
+              "liftDur":      { "label": "Lift Duration",   "type": "range", "min": 100, "max": 1000, "default": 350,  "step": 10,   "unit": "ms", "group": "timing" },
+              "fallDur":      { "label": "Fall Duration",   "type": "range", "min": 50,  "max": 500,  "default": 200,  "step": 10,   "unit": "ms", "group": "timing" },
+              "fallExp":      { "label": "Fall Curve",      "type": "range", "min": 1,   "max": 6,    "default": 3,    "step": 0.1,  "group": "physics" },
+              "particles":    { "label": "Particle Count",  "type": "range", "min": 5,   "max": 100,  "default": 40,   "step": 5,    "group": "particles" },
+              "spread":       { "label": "Particle Spread", "type": "range", "min": 1,   "max": 30,   "default": 8,    "step": 1,    "group": "particles" },
+              "particleSize": { "label": "Particle Size",   "type": "range", "min": 1,   "max": 20,   "default": 6,    "step": 1,    "group": "particles" },
+              "gravity":      { "label": "Gravity",         "type": "range", "min": 0,   "max": 1,    "default": 0.15, "step": 0.01, "group": "physics" }
+            }
+          },
+          "low-bounce": {
+            "description": "Subtle low-altitude bounce with gentle particles",
+            "params": {
+              "peakZ":        { "label": "Lift Height",     "type": "range", "min": 50,  "max": 500,  "default": 150,  "step": 10,   "unit": "px", "group": "motion" },
+              "liftDur":      { "label": "Lift Duration",   "type": "range", "min": 50,  "max": 600,  "default": 200,  "step": 10,   "unit": "ms", "group": "timing" },
+              "fallDur":      { "label": "Fall Duration",   "type": "range", "min": 30,  "max": 400,  "default": 120,  "step": 10,   "unit": "ms", "group": "timing" },
+              "fallExp":      { "label": "Fall Curve",      "type": "range", "min": 1,   "max": 6,    "default": 2.5,  "step": 0.1,  "group": "physics" },
+              "particles":    { "label": "Particle Count",  "type": "range", "min": 5,   "max": 80,   "default": 20,   "step": 5,    "group": "particles" },
+              "spread":       { "label": "Particle Spread", "type": "range", "min": 1,   "max": 20,   "default": 4,    "step": 1,    "group": "particles" },
+              "particleSize": { "label": "Particle Size",   "type": "range", "min": 1,   "max": 20,   "default": 4,    "step": 1,    "group": "particles" },
+              "gravity":      { "label": "Gravity",         "type": "range", "min": 0,   "max": 1,    "default": 0.12, "step": 0.01, "group": "physics" }
+            }
+          },
+          "stratosphere": {
+            "description": "Massive height lift with heavy impact and glow",
+            "params": {
+              "peakZ":        { "label": "Lift Height",     "type": "range", "min": 200, "max": 1200, "default": 680,  "step": 10,   "unit": "px", "group": "motion" },
+              "liftDur":      { "label": "Lift Duration",   "type": "range", "min": 200, "max": 1200, "default": 500,  "step": 10,   "unit": "ms", "group": "timing" },
+              "fallDur":      { "label": "Fall Duration",   "type": "range", "min": 100, "max": 600,  "default": 280,  "step": 10,   "unit": "ms", "group": "timing" },
+              "fallExp":      { "label": "Fall Curve",      "type": "range", "min": 1,   "max": 6,    "default": 3.5,  "step": 0.1,  "group": "physics" },
+              "particles":    { "label": "Particle Count",  "type": "range", "min": 10,  "max": 150,  "default": 60,   "step": 5,    "group": "particles" },
+              "spread":       { "label": "Particle Spread", "type": "range", "min": 1,   "max": 30,   "default": 12,   "step": 1,    "group": "particles" },
+              "particleSize": { "label": "Particle Size",   "type": "range", "min": 1,   "max": 20,   "default": 8,    "step": 1,    "group": "particles" },
+              "gravity":      { "label": "Gravity",         "type": "range", "min": 0,   "max": 1,    "default": 0.2,  "step": 0.01, "group": "physics" }
+            }
+          },
+          "orbit-slam": {
+            "description": "Card orbits before slamming down",
+            "params": {
+              "peakZ":        { "label": "Lift Height",     "type": "range", "min": 100, "max": 1000, "default": 500,  "step": 10,   "unit": "px", "group": "motion" },
+              "liftDur":      { "label": "Lift Duration",   "type": "range", "min": 100, "max": 1000, "default": 350,  "step": 10,   "unit": "ms", "group": "timing" },
+              "orbitDur":     { "label": "Orbit Duration",  "type": "range", "min": 100, "max": 800,  "default": 280,  "step": 10,   "unit": "ms", "group": "timing" },
+              "fallDur":      { "label": "Fall Duration",   "type": "range", "min": 50,  "max": 500,  "default": 200,  "step": 10,   "unit": "ms", "group": "timing" },
+              "fallExp":      { "label": "Fall Curve",      "type": "range", "min": 1,   "max": 6,    "default": 3.5,  "step": 0.1,  "group": "physics" },
+              "particles":    { "label": "Particle Count",  "type": "range", "min": 5,   "max": 120,  "default": 50,   "step": 5,    "group": "particles" },
+              "spread":       { "label": "Particle Spread", "type": "range", "min": 1,   "max": 25,   "default": 9,    "step": 1,    "group": "particles" },
+              "particleSize": { "label": "Particle Size",   "type": "range", "min": 1,   "max": 20,   "default": 7,    "step": 1,    "group": "particles" }
+            }
+          },
+          "crater": {
+            "description": "Impact leaves a crater in the dotgrid",
+            "params": {
+              "peakZ":        { "label": "Lift Height",    "type": "range", "min": 100, "max": 1000, "default": 450,  "step": 10,   "unit": "px", "group": "motion" },
+              "liftDur":      { "label": "Lift Duration",  "type": "range", "min": 100, "max": 1000, "default": 370,  "step": 10,   "unit": "ms", "group": "timing" },
+              "fallDur":      { "label": "Fall Duration",  "type": "range", "min": 50,  "max": 500,  "default": 210,  "step": 10,   "unit": "ms", "group": "timing" },
+              "fallExp":      { "label": "Fall Curve",     "type": "range", "min": 1,   "max": 6,    "default": 3,    "step": 0.1,  "group": "physics" },
+              "particles":    { "label": "Particle Count", "type": "range", "min": 5,   "max": 120,  "default": 45,   "step": 5,    "group": "particles" },
+              "particleSize": { "label": "Particle Size",  "type": "range", "min": 1,   "max": 20,   "default": 6,    "step": 1,    "group": "particles" },
+              "craterRadius": { "label": "Crater Size",    "type": "range", "min": 50,  "max": 500,  "default": 180,  "step": 10,   "unit": "px", "group": "visual" },
+              "craterDepth":  { "label": "Crater Depth",   "type": "range", "min": 0.1, "max": 3,    "default": 1.0,  "step": 0.1,  "group": "visual" }
+            }
+          },
+          "deep-crater": {
+            "description": "Deeper crater with fire particles and screen shake",
+            "params": {
+              "peakZ":        { "label": "Lift Height",     "type": "range", "min": 200, "max": 1200, "default": 600,  "step": 10,   "unit": "px", "group": "motion" },
+              "liftDur":      { "label": "Lift Duration",   "type": "range", "min": 150, "max": 1000, "default": 450,  "step": 10,   "unit": "ms", "group": "timing" },
+              "fallDur":      { "label": "Fall Duration",   "type": "range", "min": 50,  "max": 600,  "default": 250,  "step": 10,   "unit": "ms", "group": "timing" },
+              "fallExp":      { "label": "Fall Curve",      "type": "range", "min": 1,   "max": 6,    "default": 3,    "step": 0.1,  "group": "physics" },
+              "particles":    { "label": "Debris Count",    "type": "range", "min": 10,  "max": 150,  "default": 70,   "step": 5,    "group": "particles" },
+              "spread":       { "label": "Debris Spread",   "type": "range", "min": 1,   "max": 25,   "default": 10,   "step": 1,    "group": "particles" },
+              "particleSize": { "label": "Particle Size",   "type": "range", "min": 1,   "max": 20,   "default": 7,    "step": 1,    "group": "particles" },
+              "craterRadius": { "label": "Crater Size",     "type": "range", "min": 80,  "max": 600,  "default": 260,  "step": 10,   "unit": "px", "group": "visual" },
+              "craterDepth":  { "label": "Crater Depth",    "type": "range", "min": 0.1, "max": 4,    "default": 1.5,  "step": 0.1,  "group": "visual" }
+            }
+          },
+          "meteor": {
+            "description": "Angled meteor strike with fire trail and scorch marks",
+            "params": {
+              "peakZ":        { "label": "Lift Height",     "type": "range", "min": 100, "max": 1000, "default": 450,  "step": 10,   "unit": "px", "group": "motion" },
+              "liftDur":      { "label": "Lift Duration",   "type": "range", "min": 100, "max": 1000, "default": 350,  "step": 10,   "unit": "ms", "group": "timing" },
+              "fallDur":      { "label": "Fall Duration",   "type": "range", "min": 80,  "max": 600,  "default": 250,  "step": 10,   "unit": "ms", "group": "timing" },
+              "lateralDrift": { "label": "Lateral Drift",   "type": "range", "min": 20,  "max": 200,  "default": 80,   "step": 5,    "unit": "px", "group": "motion" },
+              "particles":    { "label": "Debris Count",    "type": "range", "min": 10,  "max": 120,  "default": 50,   "step": 5,    "group": "particles" },
+              "particleSize": { "label": "Particle Size",   "type": "range", "min": 1,   "max": 20,   "default": 7,    "step": 1,    "group": "particles" },
+              "craterRadius": { "label": "Crater Size",     "type": "range", "min": 50,  "max": 500,  "default": 200,  "step": 10,   "unit": "px", "group": "visual" }
+            }
+          },
+          "detonation": {
+            "description": "Impact followed by delayed detonation with shockwave",
+            "params": {
+              "peakZ":        { "label": "Lift Height",      "type": "range", "min": 100, "max": 1000, "default": 400,  "step": 10,   "unit": "px", "group": "motion" },
+              "liftDur":      { "label": "Lift Duration",    "type": "range", "min": 100, "max": 1000, "default": 350,  "step": 10,   "unit": "ms", "group": "timing" },
+              "fallDur":      { "label": "Fall Duration",    "type": "range", "min": 50,  "max": 500,  "default": 200,  "step": 10,   "unit": "ms", "group": "timing" },
+              "fallExp":      { "label": "Fall Curve",       "type": "range", "min": 1,   "max": 6,    "default": 3,    "step": 0.1,  "group": "physics" },
+              "detonDelay":   { "label": "Detonation Delay", "type": "range", "min": 50,  "max": 500,  "default": 200,  "step": 10,   "unit": "ms", "group": "timing" },
+              "particles":    { "label": "Blast Particles",  "type": "range", "min": 10,  "max": 150,  "default": 70,   "step": 5,    "group": "particles" },
+              "particleSize": { "label": "Particle Size",    "type": "range", "min": 1,   "max": 20,   "default": 9,    "step": 1,    "group": "particles" },
+              "rippleRadius": { "label": "Ripple Radius",    "type": "range", "min": 200, "max": 1000, "default": 600,  "step": 10,   "unit": "px", "group": "visual" },
+              "smokeCount":   { "label": "Smoke Amount",     "type": "range", "min": 5,   "max": 60,   "default": 25,   "step": 5,    "group": "particles" }
+            }
+          },
+          "nuclear": {
+            "description": "Mushroom cloud with white flash and massive shockwave",
+            "params": {
+              "peakZ":         { "label": "Lift Height",    "type": "range", "min": 200, "max": 1200, "default": 500,  "step": 10,   "unit": "px", "group": "motion" },
+              "liftDur":       { "label": "Lift Duration",  "type": "range", "min": 200, "max": 1200, "default": 400,  "step": 10,   "unit": "ms", "group": "timing" },
+              "fallDur":       { "label": "Fall Duration",  "type": "range", "min": 80,  "max": 600,  "default": 220,  "step": 10,   "unit": "ms", "group": "timing" },
+              "fallExp":       { "label": "Fall Curve",     "type": "range", "min": 1,   "max": 6,    "default": 3,    "step": 0.1,  "group": "physics" },
+              "rippleRadius":  { "label": "Ripple Radius",  "type": "range", "min": 300, "max": 1200, "default": 800,  "step": 10,   "unit": "px", "group": "visual" },
+              "stemParticles": { "label": "Stem Particles", "type": "range", "min": 5,   "max": 60,   "default": 25,   "step": 5,    "group": "particles" },
+              "capParticles":  { "label": "Cap Particles",  "type": "range", "min": 5,   "max": 80,   "default": 30,   "step": 5,    "group": "particles" },
+              "particleSize":  { "label": "Particle Size",  "type": "range", "min": 1,   "max": 20,   "default": 10,   "step": 1,    "group": "particles" }
+            }
+          },
+          "shatter": {
+            "description": "Card shatters into ASCII fragments that fall away",
+            "params": {
+              "peakZ":        { "label": "Lift Height",     "type": "range", "min": 100, "max": 1000, "default": 400,  "step": 10,   "unit": "px", "group": "motion" },
+              "liftDur":      { "label": "Lift Duration",   "type": "range", "min": 100, "max": 1000, "default": 350,  "step": 10,   "unit": "ms", "group": "timing" },
+              "fallDur":      { "label": "Fall Duration",   "type": "range", "min": 50,  "max": 500,  "default": 200,  "step": 10,   "unit": "ms", "group": "timing" },
+              "fallExp":      { "label": "Fall Curve",      "type": "range", "min": 1,   "max": 6,    "default": 3,    "step": 0.1,  "group": "physics" },
+              "fragCount":    { "label": "Fragment Count",  "type": "range", "min": 5,   "max": 40,   "default": 15,   "step": 1,    "group": "particles" },
+              "fragGravity":  { "label": "Frag Gravity",    "type": "range", "min": 0.05,"max": 1,    "default": 0.25, "step": 0.01, "group": "physics" },
+              "particles":    { "label": "Particle Count",  "type": "range", "min": 5,   "max": 80,   "default": 25,   "step": 5,    "group": "particles" },
+              "spread":       { "label": "Particle Spread", "type": "range", "min": 1,   "max": 20,   "default": 5,    "step": 1,    "group": "particles" },
+              "particleSize": { "label": "Particle Size",   "type": "range", "min": 1,   "max": 20,   "default": 4,    "step": 1,    "group": "particles" },
+              "gravity":      { "label": "Gravity",         "type": "range", "min": 0,   "max": 1,    "default": 0.1,  "step": 0.01, "group": "physics" }
+            }
+          }
+        }
+      },
+      "cute": {
+        "description": "Whimsical, colorful celebration animations",
+        "variants": {
+          "confetti": {
+            "description": "Colorful confetti burst with rainbow particles",
+            "params": {
+              "minParticles": { "label": "Min Particles", "type": "range", "min": 5,    "max": 60,   "default": 15,   "step": 5,    "group": "particles" },
+              "maxParticles": { "label": "Max Particles", "type": "range", "min": 40,   "max": 250,  "default": 120,  "step": 10,   "group": "particles" },
+              "particleSize": { "label": "Particle Size", "type": "range", "min": 2,    "max": 30,   "default": 10,   "step": 1,    "group": "particles" },
+              "minDuration":  { "label": "Min Duration",  "type": "range", "min": 500,  "max": 2500, "default": 1500, "step": 100,  "unit": "ms", "group": "timing" },
+              "maxDuration":  { "label": "Max Duration",  "type": "range", "min": 2000, "max": 6000, "default": 3500, "step": 250,  "unit": "ms", "group": "timing" },
+              "gravity":      { "label": "Gravity",       "type": "range", "min": 50,   "max": 400,  "default": 180,  "step": 10,   "unit": "px/s\u00b2", "group": "physics" },
+              "burstLift":    { "label": "Burst Lift",    "type": "range", "min": 20,   "max": 250,  "default": 100,  "step": 10,   "unit": "px/s", "group": "motion" }
+            }
+          },
+          "flowers": {
+            "description": "Impressionist flower garden with 8 species growing upward",
+            "params": {
+              "minDuration":  { "label": "Min Duration",    "type": "range", "min": 1500, "max": 5000,  "default": 3200, "step": 200,  "unit": "ms", "group": "timing" },
+              "maxDuration":  { "label": "Max Duration",    "type": "range", "min": 4000, "max": 10000, "default": 6500, "step": 500,  "unit": "ms", "group": "timing" },
+              "minFlowers":   { "label": "Min Flowers",     "type": "range", "min": 1,    "max": 10,    "default": 3,    "step": 1,    "group": "particles" },
+              "maxFlowers":   { "label": "Max Flowers",     "type": "range", "min": 8,    "max": 40,    "default": 20,   "step": 2,    "group": "particles" },
+              "particleSize": { "label": "Particle Size",   "type": "range", "min": 2,    "max": 30,    "default": 10,   "step": 1,    "group": "particles" },
+              "maxStemHeight":{ "label": "Max Stem Height",  "type": "range", "min": 50,   "max": 200,   "default": 110,  "step": 10,   "unit": "px", "group": "visual" },
+              "swaySpeed":    { "label": "Sway Speed",      "type": "range", "min": 0.2,  "max": 3.0,   "default": 1.0,  "step": 0.1,  "group": "motion" }
+            }
+          },
+          "sparkle": {
+            "description": "Gentle sparkle shower raining down",
+            "params": {}
+          },
+          "shootingstar": {
+            "description": "Card launches across the screen as a shooting star",
+            "params": {
+              "minDuration":    { "label": "Min Duration",      "type": "range", "min": 800,  "max": 2500, "default": 1600, "step": 100,  "unit": "ms", "group": "timing" },
+              "maxDuration":    { "label": "Max Duration",      "type": "range", "min": 2000, "max": 5000, "default": 3000, "step": 250,  "unit": "ms", "group": "timing" },
+              "flightDistanceX":{ "label": "Flight Distance X", "type": "range", "min": 100,  "max": 800,  "default": 400,  "step": 25,   "unit": "px", "group": "motion" },
+              "flightDistanceY":{ "label": "Flight Distance Y", "type": "range", "min": 200,  "max": 1000, "default": 600,  "step": 25,   "unit": "px", "group": "motion" },
+              "rotationDeg":    { "label": "Rotation",          "type": "range", "min": 0,    "max": 45,   "default": 15,   "step": 5,    "unit": "deg", "group": "motion" }
+            }
+          },
+          "butterflies": {
+            "description": "Butterflies flutter upward from the card",
+            "params": {
+              "minDuration":  { "label": "Min Duration",     "type": "range", "min": 1000, "max": 3500, "default": 2200, "step": 200,  "unit": "ms", "group": "timing" },
+              "maxDuration":  { "label": "Max Duration",     "type": "range", "min": 3000, "max": 7000, "default": 4500, "step": 250,  "unit": "ms", "group": "timing" },
+              "minCount":     { "label": "Min Butterflies",  "type": "range", "min": 1,    "max": 8,    "default": 3,    "step": 1,    "group": "particles" },
+              "maxCount":     { "label": "Max Butterflies",  "type": "range", "min": 6,    "max": 30,   "default": 14,   "step": 2,    "group": "particles" },
+              "particleSize": { "label": "Particle Size",    "type": "range", "min": 2,    "max": 30,   "default": 12,   "step": 1,    "group": "particles" },
+              "flySpeed":     { "label": "Fly Speed",        "type": "range", "min": 15,   "max": 100,  "default": 40,   "step": 5,    "unit": "px/s", "group": "motion" },
+              "flapSpeed":    { "label": "Flap Speed",       "type": "range", "min": 2,    "max": 15,   "default": 6,    "step": 1,    "group": "motion" }
+            }
+          },
+          "rainbow": {
+            "description": "Rainbow bridge arc carries the card away",
+            "params": {}
+          },
+          "fireworks": {
+            "description": "Firework bursts launch from the card",
+            "params": {
+              "minDuration":  { "label": "Min Duration",  "type": "range", "min": 1500, "max": 4000, "default": 2500, "step": 250,  "unit": "ms", "group": "timing" },
+              "maxDuration":  { "label": "Max Duration",  "type": "range", "min": 3000, "max": 7000, "default": 4500, "step": 250,  "unit": "ms", "group": "timing" },
+              "maxBursts":    { "label": "Max Bursts",    "type": "range", "min": 1,    "max": 10,   "default": 5,    "step": 1,    "group": "particles" },
+              "particleSize": { "label": "Particle Size", "type": "range", "min": 2,    "max": 30,   "default": 10,   "step": 1,    "group": "particles" },
+              "launchDelay":  { "label": "Launch Delay",  "type": "range", "min": 200,  "max": 1500, "default": 800,  "step": 50,   "unit": "ms", "group": "timing" },
+              "gravity":      { "label": "Gravity",       "type": "range", "min": 20,   "max": 150,  "default": 60,   "step": 10,   "unit": "px/s\u00b2", "group": "physics" }
+            }
+          },
+          "hearts": {
+            "description": "Heart explosion with floating heart particles",
+            "params": {
+              "minDuration":  { "label": "Min Duration",  "type": "range", "min": 1000, "max": 3500, "default": 2000, "step": 200,  "unit": "ms", "group": "timing" },
+              "maxDuration":  { "label": "Max Duration",  "type": "range", "min": 2500, "max": 6000, "default": 4000, "step": 250,  "unit": "ms", "group": "timing" },
+              "minHearts":    { "label": "Min Hearts",    "type": "range", "min": 3,    "max": 30,   "default": 10,   "step": 1,    "group": "particles" },
+              "maxHearts":    { "label": "Max Hearts",    "type": "range", "min": 20,   "max": 150,  "default": 70,   "step": 5,    "group": "particles" },
+              "particleSize": { "label": "Particle Size", "type": "range", "min": 2,    "max": 30,   "default": 12,   "step": 1,    "group": "particles" },
+              "gravity":      { "label": "Gravity",       "type": "range", "min": 30,   "max": 250,  "default": 100,  "step": 10,   "unit": "px/s\u00b2", "group": "physics" }
+            }
+          },
+          "cat": {
+            "description": "Cute ASCII cats with purring, pawing, and charm",
+            "params": {
+              "minDuration":    { "label": "Min Duration",    "type": "range", "min": 1500, "max": 4000, "default": 2500, "step": 250,  "unit": "ms", "group": "timing" },
+              "maxDuration":    { "label": "Max Duration",    "type": "range", "min": 3500, "max": 8000, "default": 5000, "step": 250,  "unit": "ms", "group": "timing" },
+              "minCatSize":     { "label": "Min Cat Size",    "type": "range", "min": 6,    "max": 18,   "default": 12,   "step": 1,    "unit": "px", "group": "visual" },
+              "maxCatSize":     { "label": "Max Cat Size",    "type": "range", "min": 14,   "max": 30,   "default": 18,   "step": 1,    "unit": "px", "group": "visual" },
+              "particleGravity":{ "label": "Particle Gravity","type": "range", "min": 20,   "max": 150,  "default": 60,   "step": 10,   "unit": "px/s\u00b2", "group": "physics" },
+              "particleSize":   { "label": "Particle Size",   "type": "range", "min": 2,    "max": 30,   "default": 10,   "step": 1,    "group": "particles" }
+            }
+          },
+          "dog": {
+            "description": "Happy tail-wagging ASCII dogs",
+            "params": {
+              "minDuration":    { "label": "Min Duration",      "type": "range", "min": 1500,  "max": 4000, "default": 2500,  "step": 250,   "unit": "ms", "group": "timing" },
+              "maxDuration":    { "label": "Max Duration",      "type": "range", "min": 3500,  "max": 8000, "default": 5000,  "step": 250,   "unit": "ms", "group": "timing" },
+              "minDogSize":     { "label": "Min Dog Size",      "type": "range", "min": 6,     "max": 18,   "default": 12,    "step": 1,     "unit": "px", "group": "visual" },
+              "maxDogSize":     { "label": "Max Dog Size",      "type": "range", "min": 14,    "max": 30,   "default": 18,    "step": 1,     "unit": "px", "group": "visual" },
+              "particleGravity":{ "label": "Particle Gravity",  "type": "range", "min": 20,    "max": 200,  "default": 80,    "step": 10,    "unit": "px/s\u00b2", "group": "physics" },
+              "particleSize":   { "label": "Particle Size",     "type": "range", "min": 2,     "max": 30,   "default": 10,    "step": 1,     "group": "particles" },
+              "tailSpeed":      { "label": "Tail Wag Speed",    "type": "range", "min": 0.005, "max": 0.04, "default": 0.015, "step": 0.001, "group": "motion" }
+            }
+          },
+          "snowfall": {
+            "description": "Gentle snowflakes drifting down",
+            "params": {}
+          },
+          "ocean": {
+            "description": "Ocean waves with fish and bubbles",
+            "params": {}
+          },
+          "fireflies": {
+            "description": "Glowing fireflies in a night scene",
+            "params": {}
+          }
+        }
+      },
+      "death": {
+        "description": "Dramatic destruction animations (available for both action and destroy categories)",
+        "variants": {
+          "explode": {
+            "description": "Directional ASCII fragment explosion with smoke",
+            "params": {
+              "fragmentCount": { "label": "Fragment Count", "type": "range", "min": 10,  "max": 150,  "default": 60,   "step": 5,    "group": "particles" },
+              "smokeCount":    { "label": "Smoke Puffs",    "type": "range", "min": 5,   "max": 60,   "default": 25,   "step": 5,    "group": "particles" },
+              "particleSize":  { "label": "Particle Size",  "type": "range", "min": 2,   "max": 40,   "default": 14,   "step": 1,    "group": "particles" },
+              "gravity":       { "label": "Gravity",        "type": "range", "min": 100, "max": 1200, "default": 600,  "step": 50,   "unit": "px/s\u00b2", "group": "physics" },
+              "minSpeed":      { "label": "Min Speed",      "type": "range", "min": 50,  "max": 500,  "default": 200,  "step": 10,   "unit": "px/s", "group": "motion" },
+              "speedRange":    { "label": "Speed Range",    "type": "range", "min": 100, "max": 1000, "default": 500,  "step": 25,   "unit": "px/s", "group": "motion" },
+              "duration":      { "label": "Duration",       "type": "range", "min": 500, "max": 3000, "default": 1500, "step": 100,  "unit": "ms", "group": "timing" },
+              "flashDuration": { "label": "Flash Duration",  "type": "range", "min": 50,  "max": 500,  "default": 250,  "step": 25,   "unit": "ms", "group": "timing" }
+            }
+          },
+          "incinerate": {
+            "description": "Fast burn from bottom with ASCII flame characters",
+            "params": {
+              "burnDuration":   { "label": "Burn Duration",  "type": "range", "min": 300,  "max": 2000, "default": 700,  "step": 50,  "unit": "ms", "group": "timing" },
+              "flameSpawnRate": { "label": "Flame Density",  "type": "range", "min": 1,    "max": 10,   "default": 4,    "step": 1,   "group": "particles" },
+              "flameSpread":    { "label": "Flame Spread",   "type": "range", "min": 20,   "max": 200,  "default": 80,   "step": 10,  "unit": "px", "group": "motion" },
+              "flameRiseSpeed": { "label": "Rise Speed",     "type": "range", "min": 30,   "max": 300,  "default": 150,  "step": 10,  "unit": "px/s", "group": "motion" },
+              "flameMinSize":   { "label": "Min Flame Size", "type": "range", "min": 4,    "max": 20,   "default": 8,    "step": 1,   "unit": "px", "group": "visual" }
+            }
+          },
+          "shredder": {
+            "description": "Sword slashes cut card into strips that fall apart",
+            "params": {
+              "stripCount":    { "label": "Strip Count",    "type": "range", "min": 3,   "max": 16,   "default": 8,    "step": 1,    "group": "visual" },
+              "slashDuration": { "label": "Slash Speed",    "type": "range", "min": 10,  "max": 120,  "default": 40,   "step": 5,    "unit": "ms", "group": "timing" },
+              "slashGap":      { "label": "Slash Gap",      "type": "range", "min": 10,  "max": 100,  "default": 30,   "step": 5,    "unit": "ms", "group": "timing" },
+              "fallDuration":  { "label": "Fall Duration",  "type": "range", "min": 400, "max": 2500, "default": 1000, "step": 100,  "unit": "ms", "group": "timing" },
+              "sparkCount":    { "label": "Spark Count",    "type": "range", "min": 0,   "max": 8,    "default": 3,    "step": 1,    "group": "particles" },
+              "particleSize":  { "label": "Particle Size",  "type": "range", "min": 2,   "max": 30,   "default": 10,   "step": 1,    "group": "particles" }
+            }
+          },
+          "guillotine": {
+            "description": "Blade drops, cuts card in two, halves fall apart",
+            "params": {
+              "bladeDropDuration": { "label": "Blade Drop Speed", "type": "range", "min": 80,  "max": 600,  "default": 200,  "step": 20,  "unit": "ms", "group": "timing" },
+              "fallDuration":      { "label": "Fall Duration",    "type": "range", "min": 400, "max": 2500, "default": 1000, "step": 100, "unit": "ms", "group": "timing" },
+              "cutPosition":       { "label": "Cut Position",     "type": "range", "min": 0.2, "max": 0.8,  "default": 0.5,  "step": 0.05,"group": "visual" },
+              "gravity":           { "label": "Gravity",          "type": "range", "min": 200, "max": 1200, "default": 600,  "step": 50,  "unit": "px/s\u00b2", "group": "physics" },
+              "bloodCount":        { "label": "Blood Splatter",   "type": "range", "min": 5,   "max": 60,   "default": 30,   "step": 5,   "group": "particles" },
+              "particleSize":      { "label": "Particle Size",    "type": "range", "min": 2,   "max": 30,   "default": 12,   "step": 1,   "group": "particles" }
+            }
+          },
+          "heartbeat": {
+            "description": "Accelerating heartbeat pulse, ECG spike, then flatline",
+            "params": {}
+          },
+          "sniper": {
+            "description": "Crosshair lock-on, gunshot, and bullet hole",
+            "params": {
+              "lockOnDuration":  { "label": "Lock-on Time",     "type": "range", "min": 300, "max": 2000, "default": 800,  "step": 50,  "unit": "ms", "group": "timing" },
+              "bangDuration":    { "label": "Bang Duration",    "type": "range", "min": 30,  "max": 200,  "default": 80,   "step": 10,  "unit": "ms", "group": "timing" },
+              "afterDuration":   { "label": "After Duration",   "type": "range", "min": 500, "max": 3000, "default": 1200, "step": 100, "unit": "ms", "group": "timing" },
+              "crosshairRadius": { "label": "Crosshair Size",   "type": "range", "min": 15,  "max": 60,   "default": 30,   "step": 5,   "unit": "px", "group": "visual" },
+              "crosshairWobble": { "label": "Crosshair Wobble", "type": "range", "min": 2,   "max": 20,   "default": 8,    "step": 1,   "unit": "px", "group": "motion" }
+            }
+          },
+          "eaten": {
+            "description": "ASCII jaws chomp rhythmically, crumbs fall",
+            "params": {
+              "approachDuration":  { "label": "Approach Speed",  "type": "range", "min": 100, "max": 800, "default": 350, "step": 25,  "unit": "ms", "group": "timing" },
+              "chewCount":         { "label": "Chew Cycles",    "type": "range", "min": 2,   "max": 8,   "default": 4,   "step": 1,   "group": "timing" },
+              "chewCycleDuration": { "label": "Chew Speed",     "type": "range", "min": 150, "max": 800, "default": 400, "step": 25,  "unit": "ms", "group": "timing" },
+              "swallowDuration":   { "label": "Swallow Duration","type": "range", "min": 100, "max": 600, "default": 300, "step": 25,  "unit": "ms", "group": "timing" },
+              "burpDuration":      { "label": "Burp Duration",  "type": "range", "min": 200, "max": 1000,"default": 500, "step": 50,  "unit": "ms", "group": "timing" }
+            }
+          },
+          "lightning": {
+            "description": "Van Gogh-style thick ASCII lightning bolt strike",
+            "params": {}
+          },
+          "steamroller": {
+            "description": "Steamroller flattens the card with dust and cracks",
+            "params": {
+              "totalDuration":  { "label": "Total Duration",    "type": "range", "min": 800, "max": 4000, "default": 1900, "step": 100, "unit": "ms", "group": "timing" },
+              "dustLaunchSpeed":{ "label": "Dust Launch Speed", "type": "range", "min": 10,  "max": 120,  "default": 40,   "step": 5,   "unit": "px/s", "group": "particles" },
+              "dustSpawnRate":  { "label": "Dust Spawn Rate",   "type": "range", "min": 3,   "max": 20,   "default": 8,    "step": 1,   "unit": "px", "group": "particles" },
+              "crackSpawnRate": { "label": "Crack Spawn Rate",  "type": "range", "min": 10,  "max": 60,   "default": 25,   "step": 5,   "unit": "px", "group": "particles" },
+              "particleSize":   { "label": "Particle Size",     "type": "range", "min": 2,   "max": 20,   "default": 8,    "step": 1,   "group": "particles" },
+              "dustGravity":    { "label": "Dust Gravity",      "type": "range", "min": 20,  "max": 200,  "default": 60,   "step": 10,  "unit": "px/s\u00b2", "group": "physics" },
+              "shakeIntensity": { "label": "Shake Intensity",   "type": "range", "min": 0.5, "max": 5,    "default": 1.5,  "step": 0.25,"unit": "px", "group": "motion" }
+            }
+          },
+          "piranhas": {
+            "description": "ASCII fish swarm bites card edges away",
+            "params": {
+              "swarmInDuration":  { "label": "Swarm-in Time",   "type": "range", "min": 100, "max": 800,  "default": 300,  "step": 50,  "unit": "ms", "group": "timing" },
+              "frenzyDuration":   { "label": "Frenzy Duration", "type": "range", "min": 600, "max": 3500, "default": 1500, "step": 100, "unit": "ms", "group": "timing" },
+              "disperseDuration": { "label": "Disperse Time",   "type": "range", "min": 150, "max": 1000, "default": 400,  "step": 50,  "unit": "ms", "group": "timing" },
+              "fishCount":        { "label": "Fish Count",      "type": "range", "min": 5,   "max": 60,   "default": 30,   "step": 1,   "group": "particles" },
+              "particleSize":     { "label": "Particle Size",   "type": "range", "min": 2,   "max": 30,   "default": 12,   "step": 1,   "group": "particles" },
+              "fishSpeed":        { "label": "Fish Speed",      "type": "range", "min": 150, "max": 800,  "default": 400,  "step": 25,  "unit": "px/s", "group": "motion" },
+              "biteSpeed":        { "label": "Bite Speed",      "type": "range", "min": 10,  "max": 80,   "default": 35,   "step": 1,   "group": "physics" },
+              "edgeSegments":     { "label": "Edge Segments",   "type": "range", "min": 6,   "max": 24,   "default": 12,   "step": 1,   "group": "visual" }
+            }
+          },
+          "woodchipper": {
+            "description": "Card feeds into a woodchipper, chunks spray out",
+            "params": {
+              "feedDuration":  { "label": "Feed Duration",  "type": "range", "min": 300, "max": 3000, "default": 1000, "step": 50,  "unit": "ms", "group": "timing" },
+              "afterDuration": { "label": "After Duration", "type": "range", "min": 200, "max": 2000, "default": 800,  "step": 50,  "unit": "ms", "group": "timing" },
+              "sprayCount":    { "label": "Spray Count",    "type": "range", "min": 1,   "max": 8,    "default": 3,    "step": 1,   "group": "particles" },
+              "chunkSize":     { "label": "Chunk Size",     "type": "range", "min": 4,   "max": 20,   "default": 9,    "step": 1,   "unit": "px", "group": "visual" },
+              "spraySpeed":    { "label": "Spray Speed",    "type": "range", "min": 50,  "max": 600,  "default": 250,  "step": 10,  "unit": "px/s", "group": "physics" },
+              "gravity":       { "label": "Gravity",        "type": "range", "min": 100, "max": 800,  "default": 400,  "step": 10,  "group": "physics" }
+            }
+          }
+        }
+      }
+    },
+    "destroy": {
+      "death": {
+        "description": "Dramatic destruction animations for item deletion",
+        "sameAs": "categories.action.death"
+      }
+    }
+  },
+  "dotgridEffects": {
+    "ripple": {
+      "description": "Radial velocity burst + density ring emanating from center",
+      "params": {
+        "radius":  { "label": "Max Radius", "type": "range", "default": 500, "unit": "px" },
+        "push":    { "label": "Push Strength", "type": "range", "default": 14 },
+        "density": { "label": "Density Strength", "type": "range", "default": 0.6 },
+        "color":   { "label": "Color", "type": "color", "default": "var(--accent)" }
+      }
+    },
+    "crater": {
+      "description": "Shaped density injection with radial zones + crack lines",
+      "params": {
+        "radius":      { "label": "Crater Radius", "type": "range", "unit": "px" },
+        "depth":       { "label": "Depth Multiplier", "type": "range" },
+        "cracks":      { "label": "Crack Count", "type": "range", "default": 6 },
+        "crackLength": { "label": "Crack Length", "type": "range", "unit": "px" }
+      }
+    },
+    "vortex": {
+      "description": "Rotational velocity injection — dots spiral around center",
+      "params": {
+        "radius":    { "label": "Vortex Radius", "type": "range", "default": 300, "unit": "px" },
+        "speed":     { "label": "Rotation Speed", "type": "range", "default": 1.5 },
+        "pull":      { "label": "Inward Pull", "type": "range", "default": 0.3 },
+        "direction": { "label": "Direction", "type": "select", "options": ["cw", "ccw"], "default": "cw" },
+        "density":   { "label": "Density Strength", "type": "range", "default": 0.5 },
+        "color":     { "label": "Color", "type": "color", "default": "var(--accent)" }
+      }
+    },
+    "nuclear": {
+      "description": "Mushroom cloud: stem + cap + shockwave ring shaped injection",
+      "params": {
+        "blastRadius": { "label": "Blast Radius", "type": "range", "default": 280, "unit": "px" },
+        "color":       { "label": "Ring Color", "type": "color", "default": "var(--accent)" }
+      }
+    },
+    "scorch": {
+      "description": "Linear density injection along a trail from point A to point B",
+      "params": {
+        "width": { "label": "Trail Width", "type": "range", "default": 40, "unit": "px" },
+        "color": { "label": "Trail Color", "type": "color" }
+      }
+    }
+  },
+  "settingsSchema": {
+    "theme": { "type": "string", "default": "warm" },
+    "bulkAnimations": { "type": "boolean", "default": false },
+    "action": {
+      "style":     { "type": "string", "default": "thud" },
+      "variant":   { "type": "string", "default": "anime-slam" },
+      "intensity": { "type": "number", "default": 5, "min": 1, "max": 10 },
+      "speed":     { "type": "number", "default": 1, "min": 0.1, "max": 3 },
+      "fx": {
+        "sound":   { "type": "boolean", "default": false },
+        "shake":   { "type": "boolean", "default": false },
+        "dotgrid": { "type": "boolean", "default": false }
+      }
+    },
+    "destroy": {
+      "style":     { "type": "string", "default": "none" },
+      "variant":   { "type": "string", "default": "" },
+      "intensity": { "type": "number", "default": 5, "min": 1, "max": 10 },
+      "speed":     { "type": "number", "default": 1, "min": 0.1, "max": 3 },
+      "fx": {
+        "sound": { "type": "boolean", "default": false },
+        "shake": { "type": "boolean", "default": false }
+      }
+    },
+    "fxConfig": {
+      "speedLines":        { "type": "boolean", "default": true },
+      "blackFlash":        { "type": "boolean", "default": true },
+      "colorInversion":    { "type": "boolean", "default": true },
+      "screenShake":       { "type": "boolean", "default": true },
+      "dotgridShockwave":  { "type": "boolean", "default": true },
+      "cardSquash":        { "type": "boolean", "default": true }
+    },
+    "dotgridConfig": {
+      "dotSize":            { "type": "number", "default": 28 },
+      "fontSize":           { "type": "number", "default": 19 },
+      "baseChar":           { "type": "string", "default": "\u00b7" },
+      "baseOpacity":        { "type": "number", "default": 0.50 },
+      "densityDecay":       { "type": "number", "default": 0.977 },
+      "velDecay":           { "type": "number", "default": 0.92 },
+      "diffusionRate":      { "type": "number", "default": 0.16 },
+      "displacementScale":  { "type": "number", "default": 0.8 },
+      "opacityMin":         { "type": "number", "default": 0.80 },
+      "opacityMax":         { "type": "number", "default": 1.0 },
+      "densityMultiplier":  { "type": "number", "default": 1.0 },
+      "glowEnabled":        { "type": "boolean", "default": false },
+      "glowRadius":         { "type": "number", "default": 8 },
+      "glowIntensity":      { "type": "number", "default": 0.6 },
+      "palette":            { "type": "string", "default": "default" },
+      "resetOnAnimation":   { "type": "boolean", "default": false }
+    }
+  },
+  "themes": {
+    "builtin": ["warm", "cyber", "midnight", "mono", "cute", "spring"]
+  }
+}
