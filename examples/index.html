@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TotoFX — Demo</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'SF Mono','Fira Code',Consolas,monospace; background: #0a0a0a; color: #c8c8c8; min-height: 100vh; overflow-x: hidden; }
+  a { color: inherit; }
+  #dotgrid-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+  .content { position: relative; z-index: 1; max-width: 720px; margin: 0 auto; padding: 60px 24px 80px; }
+  h1 { font-size: 3rem; font-weight: 700; letter-spacing: -0.03em; color: #f0f0f0; margin-bottom: 6px; }
+  h1 span { color: var(--accent, #c45a3c); }
+  .sub { font-size: 0.85rem; color: #666; margin-bottom: 8px; line-height: 1.5; }
+  .links { font-size: 0.75rem; color: #555; margin-bottom: 48px; }
+  .links a { text-decoration: none; border-bottom: 1px solid #333; }
+  .links a:hover { color: #999; border-color: #666; }
+  /* Theme picker */
+  .themes { display: flex; gap: 8px; align-items: center; margin-bottom: 32px; }
+  .themes label { font-size: 0.7rem; color: #555; text-transform: uppercase; letter-spacing: 0.08em; }
+  .tbtn { width: 28px; height: 28px; border-radius: 6px; border: 2px solid transparent; cursor: pointer; transition: border-color .2s, transform .15s; }
+  .tbtn:hover { transform: scale(1.15); }
+  .tbtn.on { border-color: #f0f0f0; }
+  /* Cards */
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 36px; }
+  .card { position: relative; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 10px; padding: 20px 16px; cursor: pointer; user-select: none; transition: background .2s, border-color .2s; }
+  .card:hover { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.12); }
+  .card b { display: block; font-size: 0.85rem; color: #e0e0e0; font-weight: 500; margin-bottom: 4px; }
+  .card small { font-size: 0.65rem; color: #555; }
+  .card.glow { box-shadow: 0 0 20px var(--gc,rgba(196,90,60,.25)), inset 0 0 12px var(--gc,rgba(196,90,60,.08)); border-color: var(--gb,rgba(196,90,60,.3)); }
+  @keyframes enter { from { opacity:0; transform:translateY(16px) scale(.95); } to { opacity:1; transform:translateY(0) scale(1); } }
+  .card.entering { animation: enter .35s ease-out forwards; }
+  @keyframes action { 0%{transform:translateY(0) scale(1)} 30%{transform:translateY(-8px) scale(1.03)} 55%{transform:translateY(2px) scale(.98)} 100%{transform:translateY(0) scale(1)} }
+  .card.action { animation: action .4s cubic-bezier(.22,1,.36,1) forwards; }
+  @keyframes destroy { 0%{opacity:1;transform:scale(1);filter:brightness(1)} 20%{opacity:1;transform:scale(1.05);filter:brightness(2)} 100%{opacity:0;transform:scale(.3);filter:brightness(.3)} }
+  .card.destroying { animation: destroy .45s ease-in forwards; pointer-events: none; }
+  /* Controls */
+  .ctrls { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 48px; }
+  button { font-family: inherit; font-size: .75rem; background: rgba(255,255,255,.06); color: #aaa; border: 1px solid rgba(255,255,255,.1); border-radius: 6px; padding: 8px 16px; cursor: pointer; transition: background .2s, color .2s; }
+  button:hover { background: rgba(255,255,255,.1); color: #e0e0e0; }
+  /* Code section */
+  .code-section h2 { font-size: 1rem; color: #e0e0e0; margin-bottom: 12px; font-weight: 600; }
+  pre { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06); border-radius: 8px; padding: 16px 20px; font-size: .72rem; line-height: 1.6; color: #999; overflow-x: auto; }
+  .k { color: #c45a3c; } .f { color: #d4b46e; } .s { color: #5a9e7a; } .c { color: #444; font-style: italic; }
+</style>
+</head>
+<body>
+<div id="dotgrid-bg"></div>
+<div class="content">
+  <h1>Toto<span>FX</span></h1>
+  <p class="sub">State-Driven Rendering Architecture. Fluid-simulation dotgrid, persistent + one-shot animations, plugin system, theme engine.<br>Built on techniques from <em>pretext</em> (Cheng Lou, 2026).</p>
+  <p class="links"><a href="https://github.com/a-funk/toto-fx">GitHub</a> &middot; <a href="https://github.com/a-funk/toto-fx#readme">Docs</a> &middot; npm install toto-fx</p>
+
+  <!-- Theme picker -->
+  <div class="themes">
+    <label>Theme</label>
+    <div class="tbtn on" data-theme="midnight" title="Midnight" style="background:linear-gradient(135deg,#0f1219 50%,#c4a05a 50%)"></div>
+    <div class="tbtn" data-theme="cyber" title="Cyber" style="background:linear-gradient(135deg,#0a0a14 50%,#00e5ff 50%)"></div>
+    <div class="tbtn" data-theme="warm" title="Warm" style="background:linear-gradient(135deg,#2a2018 50%,#c45a3c 50%)"></div>
+  </div>
+
+  <!-- Interactive cards -->
+  <div class="cards" id="cards">
+    <div class="card glow" data-anim-id="card-1"><b>Persistent glow</b><small>click: action &middot; right-click: destroy</small></div>
+    <div class="card glow" data-anim-id="card-2"><b>Fluid ripple</b><small>click triggers dotgrid ripple</small></div>
+    <div class="card" data-anim-id="card-3"><b>Lift + slam</b><small>click for action animation</small></div>
+    <div class="card" data-anim-id="card-4"><b>Particles</b><small>right-click to destroy</small></div>
+  </div>
+
+  <div class="ctrls">
+    <button id="btn-add">+ Add card</button>
+    <button id="btn-ripple">Ripple</button>
+    <button id="btn-vortex">Vortex</button>
+    <button id="btn-nuclear">Nuclear</button>
+  </div>
+
+  <!-- How to write a plugin -->
+  <div class="code-section">
+    <h2>Custom plugin</h2>
+<pre><span class="c">// A plugin is a plain object with categories and/or fx layers.</span>
+<span class="c">// Register with engine.use() before engine.init().</span>
+
+<span class="k">const</span> <span class="f">flashPlugin</span> = {
+  name: <span class="s">'flash'</span>,
+  categories: {
+    flash: {
+      play(el, opts) {
+        el.style.transition = <span class="s">'filter 0.1s'</span>;
+        el.style.filter = <span class="s">'brightness(3)'</span>;
+        setTimeout(() =&gt; {
+          el.style.filter = <span class="s">''</span>;
+          <span class="k">if</span> (opts.onDone) opts.onDone();
+        }, 200);
+      }
+    }
+  }
+};
+
+engine.use(flashPlugin);
+engine.play(<span class="s">'flash'</span>, someElement);</pre>
+  </div>
+</div>
+
+<script src="../dist/toto-fx.min.js"></script>
+<script>
+(function () {
+  // ── Theme definitions (inline for zero-dependency demo) ────
+  var T = {
+    midnight: { bg:'#0f1219', accent:'#c4a05a', gc:'rgba(196,160,90,.25)', gb:'rgba(196,160,90,.3)', dot:[90,95,120], rc:'#c4a05a', pc:[[196,160,90],[220,180,100],[140,130,120]] },
+    cyber:    { bg:'#0a0a14', accent:'#00e5ff', gc:'rgba(0,229,255,.25)', gb:'rgba(0,229,255,.3)', dot:[60,60,100], rc:'#00e5ff', pc:[[0,229,255],[255,46,170],[0,255,163]] },
+    warm:     { bg:'#0a0a0a', accent:'#c45a3c', gc:'rgba(196,90,60,.25)', gb:'rgba(196,90,60,.3)', dot:[100,80,60], rc:'#c45a3c', pc:[[196,90,60],[220,140,80],[140,90,70]] },
+  };
+  var cur = 'midnight';
+
+  function theme(id) {
+    var t = T[id]; if (!t) return; cur = id;
+    document.body.style.background = t.bg;
+    var s = document.documentElement.style;
+    s.setProperty('--accent', t.accent);
+    s.setProperty('--gc', t.gc);
+    s.setProperty('--gb', t.gb);
+    if (dg) dg.configure({ baseColor: t.dot });
+    document.querySelectorAll('.tbtn').forEach(function (b) { b.classList.toggle('on', b.dataset.theme === id); });
+  }
+
+  // ── Dotgrid: fluid-simulation background ───────────────────
+  // createDotgrid returns an independent instance with its own
+  // fluid sim, canvas, and render loop.
+  var dg = TotoFX.createDotgrid({
+    container: '#dotgrid-bg', dotSize: 24, fontSize: 12,
+    baseOpacity: 0.15, baseColor: T.midnight.dot,
+    palette: 'default', densityDecay: 0.988, velDecay: 0.93,
+  });
+  dg.init();
+  setTimeout(function () {
+    dg.ripple(innerWidth / 2, innerHeight / 3, { radius: 400, color: T.midnight.rc, density: 0.4 });
+  }, 300);
+
+  // ── Engine: state-driven animation controller ──────────────
+  // Categories registered here define how each animation behaves.
+  var engine = TotoFX.createEngine({
+    resolveElement: function (k) { return document.querySelector('[data-anim-id="' + k + '"]'); },
+  });
+
+  // Persistent glow (runs until cleared)
+  engine.registerCategory('persist', {
+    play: function (el) { el.classList.add('glow'); },
+    stop: function (el) { el.classList.remove('glow'); },
+  });
+
+  // Action: lift + slam, dotgrid ripple, particles
+  engine.registerCategory('action', {
+    play: function (el, opts) {
+      el.classList.remove('action'); void el.offsetWidth; el.classList.add('action');
+      var r = el.getBoundingClientRect(), cx = r.left + r.width/2, cy = r.top + r.height/2, t = T[cur];
+      dg.ripple(cx, cy, { radius: 250, color: t.rc, density: 0.5 });
+      spawn(cx, cy, 12, t.pc);
+      el.addEventListener('animationend', function h() { el.removeEventListener('animationend', h); el.classList.remove('action'); if (opts.onDone) opts.onDone(); });
+    },
+  });
+
+  // Enter: fade + slide for new cards
+  engine.registerCategory('enter', {
+    play: function (el, opts) {
+      el.classList.add('entering');
+      el.addEventListener('animationend', function h() { el.removeEventListener('animationend', h); el.classList.remove('entering'); if (opts.onDone) opts.onDone(); });
+    },
+  });
+
+  // Destroy: flash, shrink, crater, remove
+  engine.registerCategory('destroy', {
+    play: function (el, opts) {
+      el.classList.add('destroying');
+      var r = el.getBoundingClientRect(), cx = r.left + r.width/2, cy = r.top + r.height/2, t = T[cur];
+      dg.crater(cx, cy, 180, 0.8, { cracks: 5 });
+      spawn(cx, cy, 24, t.pc);
+      el.addEventListener('animationend', function h() { el.removeEventListener('animationend', h); el.remove(); if (opts.onDone) opts.onDone(); });
+    },
+  });
+
+  engine.init();
+
+  // ── Particle system ────────────────────────────────────────
+  // This demo uses a lightweight inline particle spawner to keep
+  // the example self-contained. In your app, use the FX module instead:
+  //
+  //   var FX = TotoFX.FX;
+  //   FX.spawnParticles(cx, cy, {
+  //     count: 20,
+  //     colors: [[255,100,50], [255,200,0]],
+  //     chars: ['*','+','#'],
+  //     speed: 4,
+  //     gravity: 0.15,
+  //   });
+  //   FX.doScreenShake();       // screen shake
+  //   FX.doImpactFlash();       // white flash
+  //
+  // See docs/fx-api.md for the full FX API reference.
+  var pc = document.createElement('canvas');
+  pc.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:10';
+  document.body.appendChild(pc);
+  var ctx = pc.getContext('2d'), pts = [], chars = ['#','*','+','=','~','^','@'];
+
+  function resize() { pc.width = innerWidth; pc.height = innerHeight; }
+  resize(); addEventListener('resize', resize);
+
+  function spawn(cx, cy, n, colors) {
+    for (var i = 0; i < n; i++) {
+      var a = Math.random() * Math.PI * 2, sp = 1.5 + Math.random() * 4;
+      var c = colors[(Math.random() * colors.length) | 0];
+      pts.push({ x:cx, y:cy, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp-1.5, l:1, d:.015+Math.random()*.02, ch:chars[(Math.random()*chars.length)|0], c:c, sz:10+Math.random()*6 });
+    }
+  }
+
+  (function tick() {
+    ctx.clearRect(0, 0, pc.width, pc.height);
+    for (var i = pts.length - 1; i >= 0; i--) {
+      var p = pts[i]; p.x += p.vx; p.y += p.vy; p.vy += .08; p.l -= p.d;
+      if (p.l <= 0) { pts.splice(i, 1); continue; }
+      ctx.globalAlpha = p.l;
+      ctx.fillStyle = 'rgb(' + p.c[0] + ',' + p.c[1] + ',' + p.c[2] + ')';
+      ctx.font = (p.sz * p.l) + 'px monospace';
+      ctx.fillText(p.ch, p.x, p.y);
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(tick);
+  })();
+
+  // ── Event wiring ───────────────────────────────────────────
+  var grid = document.getElementById('cards'), n = 4;
+
+  grid.addEventListener('click', function (e) {
+    var c = e.target.closest('.card'); if (c) engine.play('action', c);
+  });
+  grid.addEventListener('contextmenu', function (e) {
+    var c = e.target.closest('.card'); if (!c) return; e.preventDefault(); engine.play('destroy', c);
+  });
+
+  document.getElementById('btn-add').addEventListener('click', function () {
+    n++; var c = document.createElement('div'); c.className = 'card'; c.setAttribute('data-anim-id', 'card-' + n);
+    c.innerHTML = '<b>Card ' + n + '</b><small>click: action &middot; right-click: destroy</small>';
+    grid.appendChild(c); engine.play('enter', c);
+  });
+
+  document.getElementById('btn-ripple').addEventListener('click', function () { dg.ripple(innerWidth/2, innerHeight/2, { radius:500, color:T[cur].rc, density:.6 }); });
+  document.getElementById('btn-vortex').addEventListener('click', function () { dg.vortex(innerWidth/2, innerHeight/2, { radius:350, speed:2, color:T[cur].rc }); });
+  document.getElementById('btn-nuclear').addEventListener('click', function () { dg.nuclear(innerWidth/2, innerHeight/2, { radius:400, color:T[cur].rc }); });
+
+  document.querySelectorAll('.tbtn').forEach(function (b) { b.addEventListener('click', function () { theme(b.dataset.theme); }); });
+
+  theme('midnight');
+})();
+</script>
+</body>
+</html>
