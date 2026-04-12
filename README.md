@@ -1,20 +1,16 @@
-# TotoFX
+# [TotoFX](https://toto.tech/playground)
 
-An animation engine that survives DOM replacement. A State-Driven Rendering Architecture (SDRA) for web UIs. A layers based approach to animating. Fluid-simulation backgrounds, 59+ animation variants, plugin system, and theme engine that stack independently. Zero dependencies.
+An animation engine that survives DOM replacement.
 
-The animation engine behind [Toto](https://toto.tech) — the interaction layer between you, your agents, and your world model.
+TotoFX is a State-Driven Rendering Architecture (SDRA) for web UIs — a layers-based approach to animating that treats animation as a **state reconciliation problem**, not a DOM lifecycle. Fluid-simulation backgrounds, 59+ animation variants, plugin system, and theme engine that stack independently. Zero dependencies. Framework-agnostic.
 
-Built on techniques from [pretext](https://github.com/chenglou/pretext) by Cheng Lou -- Semi-Lagrangian fluid simulation applied to UI rendering.
+Built on techniques from [pretext](https://github.com/chenglou/pretext) by Cheng Lou — Semi-Lagrangian fluid simulation applied to UI rendering.
 
-**[Try toto-fx in the playground](https://toto.tech/playground)** -- Create a random animation, create your own animation. True user configurability. Look at the 'Advanced' tab to see the near infinite flexibility. 
+Most animation libraries assume you control the DOM. You create an element, animate it, remove it. But if your app uses htmx, morphdom, idiomorph, Turbo, LiveView, or any server-driven approach that *replaces* DOM nodes, those animations die on every swap.
 
-## Why TotoFX
+TotoFX solves this. You declare that a key should be animating — the engine finds the element, starts the animation, and watches for DOM changes. When the DOM gets replaced, the engine detects the mutation, resolves the new element, and resumes at the correct phase. No flicker, no restart, no manual bookkeeping. The same mental model as React's reconciler, but for animations and framework-agnostic.
 
-Most animation libraries assume you control the DOM. You create an element, animate it, remove it — a straightforward lifecycle. But if your app uses htmx, morphdom, idiomorph, Turbo, LiveView, or any server-driven approach that *replaces* DOM nodes, those animations die on every swap.
-
-TotoFX treats animation as a **state reconciliation problem**. You declare that a key should be animating — the engine finds the element, starts the animation, and watches for DOM changes. When the DOM gets replaced (morphed, swapped, re-rendered), the engine detects the mutation, resolves the new element, and resumes the animation at the correct phase. No flicker, no restart, no manual bookkeeping.
-
-This is the same mental model as React's reconciler, but for animations and framework-agnostic. It works with htmx, vanilla JS, React, Vue, or anything else that touches the DOM.
+**[Try it in the playground](https://toto.tech/playground)** — create a random animation, build your own, or explore the Advanced tab for near-infinite flexibility.
 
 ## Features
 
