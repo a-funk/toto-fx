@@ -2,7 +2,7 @@
 
 An animation engine that survives DOM replacement.
 
-TotoFX is a State-Driven Rendering Architecture (SDRA) for web UIs — a layers-based approach to animating that treats animation as a **state reconciliation problem**, not a DOM lifecycle. Fluid-simulation backgrounds, 59+ animation variants, plugin system, and theme engine that stack independently. Zero dependencies. Framework-agnostic.
+TotoFX is a State-Driven Rendering Architecture (SDRA) for web UIs — a layers-based approach to animating that treats animation as a **state reconciliation problem**, not a DOM lifecycle. Fluid-simulation backgrounds, animation plugin system, and theme engine that stack independently. Zero dependencies. Framework-agnostic.
 
 Built on techniques and arcitectural inspiration from [pretext](https://github.com/chenglou/pretext) by Cheng Lou.
 
