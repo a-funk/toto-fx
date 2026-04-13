@@ -4,13 +4,17 @@ An animation engine that survives DOM replacement.
 
 TotoFX is a State-Driven Rendering Architecture (SDRA) for web UIs — a layers-based approach to animating that treats animation as a **state reconciliation problem**, not a DOM lifecycle. Fluid-simulation backgrounds, 59+ animation variants, plugin system, and theme engine that stack independently. Zero dependencies. Framework-agnostic.
 
-Built on techniques from [pretext](https://github.com/chenglou/pretext) by Cheng Lou — Semi-Lagrangian fluid simulation applied to UI rendering.
+Built on techniques and arcitectural inspiration from [pretext](https://github.com/chenglou/pretext) by Cheng Lou.
 
 Most animation libraries assume you control the DOM. You create an element, animate it, remove it. But if your app uses htmx, morphdom, idiomorph, Turbo, LiveView, or any server-driven approach that *replaces* DOM nodes, those animations die on every swap.
 
 TotoFX solves this. You declare that a key should be animating — the engine finds the element, starts the animation, and watches for DOM changes. When the DOM gets replaced, the engine detects the mutation, resolves the new element, and resumes at the correct phase. No flicker, no restart, no manual bookkeeping. The same mental model as React's reconciler, but for animations and framework-agnostic.
 
 **[Try it in the playground](https://toto.tech/playground)** — create a random animation, build your own, or explore the Advanced tab for near-infinite flexibility.
+
+### Roadmap
+Apply TotoFXt to video editing tools.
+Graph-based views. 
 
 ## Features
 
