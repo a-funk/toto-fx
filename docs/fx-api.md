@@ -778,6 +778,47 @@ ctx.fillStyle = 'red';
 ctx.fillRect(100, 100, 50, 50);
 ```
 
+### `registerFxDraw(id, drawFn)`
+
+Register a draw callback with the FX canvas compositor. The compositor runs one `clearRect` per frame, then calls all registered callbacks in sequence. Each callback receives a `save()`/`restore()`-wrapped 2D context.
+
+This is the correct way to render custom animations on the FX canvas. Never run your own `requestAnimationFrame` loop or call `clearRect` on the FX canvas directly.
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Unique draw ID (use `nextFxDrawId()` to generate) |
+| `drawFn` | `function(fxCtx, now)` | Draw callback called every frame |
+
+```js
+import { registerFxDraw, deregisterFxDraw, nextFxDrawId, getFxCtx } from 'toto-fx/fx';
+
+const id = nextFxDrawId('my-effect');
+registerFxDraw(id, function (fxCtx, now) {
+  fxCtx.fillStyle = 'red';
+  fxCtx.fillText('*', 100, 100);
+  // When done:
+  deregisterFxDraw(id);
+});
+```
+
+### `deregisterFxDraw(id)`
+
+Remove a draw callback from the compositor. Call this when your animation completes, before calling `finalize()`. When the last callback is removed, the compositor stops and clears the canvas.
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | The draw ID returned by `nextFxDrawId()` |
+
+### `nextFxDrawId(prefix)`
+
+Generate a unique draw ID for use with `registerFxDraw`. Each call returns a new ID.
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `prefix` | `string` | Optional prefix (e.g. `'death-explode'`). Defaults to `'fx'`. |
+
+**Returns:** `string` — e.g. `'death-explode-1'`, `'death-explode-2'`
+
 ---
 
 ## Drawing Helpers

@@ -359,3 +359,112 @@ myPlugin.play(el, { params: {}, helpers: mockFX, onDone: function () {} });
 8. **Declare dependencies** -- if your plugin requires FX, set `requires: ['FX']` so the engine can warn when dependencies are missing.
 
 9. **Keep `cleanup()` idempotent** -- it may be called multiple times or on elements that never played. Reset styles unconditionally without side effects.
+
+10. **Use the compositor for canvas animations** -- never run your own `requestAnimationFrame` loop on the FX canvas. Use `FX.registerFxDraw()` instead (see Rendering Layers below).
+
+---
+
+## Rendering Layers
+
+TotoFX has three rendering layers. Understanding when to use each is the most important architectural decision for a plugin author.
+
+### Layer 1: FX Canvas Compositor (`registerFxDraw`)
+
+Raw canvas access for bespoke frame-by-frame rendering. The compositor runs one `clearRect` per frame, then calls all registered draw callbacks in sequence. Each callback gets a `save()`/`restore()`-isolated 2D context.
+
+**Use when:** your animation needs direct canvas control -- complex scene rendering, multi-phase state machines, coordinated ASCII art, gradients, stroke paths, rotated text blocks.
+
+**Built-in users:** all death variants (explosions, lightning bolts, steamroller, piranhas), all cute variants (fireworks, butterflies, snowfall).
+
+```js
+play: function (el, ctx) {
+  var FX = ctx.helpers || AnimationFX;
+  var pos = FX.prepareCard(el);
+  var startTime = performance.now();
+  var _drawId = FX.nextFxDrawId('my-animation');
+
+  // Set up state (particles, phases, etc.)
+  var fragments = [];
+  // ... populate fragments ...
+
+  FX.registerFxDraw(_drawId, function (fxCtx, now) {
+    var elapsed = now - startTime;
+
+    // Draw your scene -- NO clearRect needed, compositor handles it
+    fxCtx.textAlign = 'center';
+    fragments.forEach(function (f) {
+      // ... update and draw each fragment ...
+    });
+
+    // When done, deregister and finalize
+    if (elapsed >= duration) {
+      FX.deregisterFxDraw(_drawId);
+      FX.finalize(el, { onDone: ctx.onDone });
+    }
+  });
+}
+```
+
+**Rules:**
+- Never call `fxCtx.clearRect()` -- the compositor clears once per frame before calling your callback
+- Never run your own `requestAnimationFrame` loop on the FX canvas
+- Always call `FX.deregisterFxDraw(_drawId)` before `FX.finalize()`
+- Multiple animations can draw concurrently -- the compositor composites them all
+
+### Layer 2: Particle System (`spawnParticles`)
+
+High-level convenience API for independent physics-driven particles. You push particles into a shared array; a centralized tick loop advances them all with gravity, drag, and fade. Renders to a separate particle canvas.
+
+**Use when:** you need a burst of ASCII characters that fly outward, fall with gravity, and fade. This covers ~90% of animation particle needs.
+
+**Built-in users:** all thud/completion variants (anime-slam, crater, stratosphere, etc.).
+
+```js
+FX.spawnParticles(cx, cy, {
+  count: 40,
+  spread: 8,
+  gravity: 0.15,
+  life: 80,
+  size: [2, 6],
+  chars: ['*', '+', '#'],
+  upBias: 3,
+});
+```
+
+**Why not use this for everything?** Particles are stateless independent points. They can't express coordinated scenes (a steamroller driving across), phased state machines (crosshair tracking then firing), or interleaved DOM + canvas work (clipPath burning while flames render). For those, use the compositor.
+
+### Layer 3: DOM Animations (`requestAnimationFrame`)
+
+CSS transforms, transitions, and style manipulations on the card element itself. The card lift/fall/impact pipeline uses this.
+
+**Use when:** your animation moves, scales, rotates, or fades the card element without needing canvas rendering. Simple and performant.
+
+```js
+play: function (el, ctx) {
+  var startTime = performance.now();
+  function tick(now) {
+    var t = Math.min((now - startTime) / 600, 1);
+    el.style.transform = 'translateY(' + (-200 * (1 - t)) + 'px)';
+    if (t < 1) requestAnimationFrame(tick);
+    else { el.style.transform = ''; ctx.onDone(); }
+  }
+  requestAnimationFrame(tick);
+}
+```
+
+### Combining Layers
+
+Most built-in animations combine layers. A thud animation uses Layer 3 (card lift via CSS transforms) + Layer 2 (impact particles). A death animation uses Layer 1 (scene rendering on FX canvas) + Layer 3 (card style manipulation like `clipPath`, `opacity`). You can freely mix layers -- they render on separate surfaces and don't interfere.
+
+### Canvas Stack (bottom to top)
+
+| Z-Index | Canvas | Owner | Purpose |
+|---------|--------|-------|---------|
+| page flow | Dotgrid `<canvas>` | Dotgrid module | Fluid simulation grid |
+| 9998 | `#animation-canvas` | Particle system | `spawnParticles` output |
+| 9999 | `#fx-canvas` | Compositor | `registerFxDraw` output |
+| DOM | Card elements | CSS transforms | `liftCard`, `promoteCard` |
+
+### Animation Context
+
+The engine maintains a context stack for concurrent animations. Each `setContext()` pushes a frame; each `clearContext()` pops it. This prevents one animation's cleanup from poisoning another's settings (flash, speed, dotgrid overrides). Plugin authors don't manage this directly -- the engine handles it via `_withScopedContext()`.

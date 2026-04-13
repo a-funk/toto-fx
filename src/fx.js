@@ -315,7 +315,7 @@ export const fxConfig = {
 // Allows per-call speed and fx overrides without changing every
 // animation function signature. Set via setContext(), cleared
 // via clearContext() or automatically when the animation ends.
-let _ctx = {
+const _ctxDefault = {
   speed: 1,
   fxOverrides: null,
   completion: null,
@@ -323,6 +323,8 @@ let _ctx = {
   disableFlash: false,
   particleStyle: null,
 };
+let _ctxStack = [];
+let _ctx = _ctxDefault;
 
 /**
  * Speed-divide helper: scales a duration by the current speed context.
@@ -1137,13 +1139,6 @@ export function promoteCard(card) {
  * @param {Function} onDone - Callback fired after the lift transition completes.
  */
 export function liftCard(card, shadow, cx, cy, peakZ, liftDuration, rotX, rotY, onDone) {
-  // Pause dotgrid during lift+fall to free frame budget for canvas effects.
-  // Auto-resume after lift+fall duration so the impact ripple can play.
-  if (_hasDotgrid() && _Dotgrid.pause) {
-    const totalAnimDur = speedScale(liftDuration) + 500; // lift + estimated fall + buffer
-    _Dotgrid.pause(totalAnimDur);
-  }
-
   // Promote card to body-level for unclipped 3D transforms
   promoteCard(card);
 
@@ -1792,40 +1787,43 @@ export function setContext(opts) {
   if (_hasDotgrid() && _Dotgrid.reset && opts && opts.resetDotgrid) {
     _Dotgrid.reset();
   }
-  _ctx.speed = (opts && opts.speed) || 1;
-  _ctx.fxOverrides = (opts && (opts.fxOverrides || opts.fx)) || null;
-  _ctx.completion = (opts && opts.completion) || null;
-  _ctx.dotgridOverride = (opts && opts.dotgridOverride) || null;
-  _ctx.disableFlash = (opts && opts.disableFlash) || false;
-  _ctx.particleStyle = (opts && opts.particleStyle) || null;
+  // Push a new context frame — clearContext pops it, restoring the previous
+  const frame = {
+    speed: (opts && opts.speed) || 1,
+    fxOverrides: (opts && (opts.fxOverrides || opts.fx)) || null,
+    completion: (opts && opts.completion) || null,
+    dotgridOverride: (opts && opts.dotgridOverride) || null,
+    disableFlash: (opts && opts.disableFlash) || false,
+    particleStyle: (opts && opts.particleStyle) || null,
+  };
+  _ctxStack.push(frame);
+  _ctx = frame;
   _dotgridOverrideFired = false;
 }
 
 /**
- * Reset the runtime animation context to defaults (speed=1, no overrides).
- * Called after each animation completes.
+ * Pop the current animation context, restoring the previous one.
+ * If the stack is empty, resets to safe defaults. This prevents
+ * Animation A's cleanup from poisoning Animation B's context.
  */
 export function clearContext() {
-  _ctx.speed = 1;
-  _ctx.fxOverrides = null;
-  _ctx.completion = null;
-  _ctx.dotgridOverride = null;
-  _ctx.disableFlash = false;
-  _ctx.particleStyle = null;
+  _ctxStack.pop();
+  _ctx = _ctxStack.length > 0 ? _ctxStack[_ctxStack.length - 1] : _ctxDefault;
   _dotgridOverrideFired = false;
-  // Stop speed lines to prevent orphaned RAF loops
-  _speedLinesActive = false;
+  // Stop speed lines if no animations remain
+  if (_ctxStack.length === 0) _speedLinesActive = false;
 }
 
 // ── Query ────────────────────────────────────────────────────────
 
 /**
- * Check whether the FX system is idle (no particles or speed lines active).
+ * Check whether the FX system is idle (no particles, speed lines, context frames, or FX draws active).
  *
  * @returns {boolean} True if no animations are currently rendering.
  */
 export function isIdle() {
-  return particles.length === 0 && !_speedLinesActive;
+  return particles.length === 0 && !_speedLinesActive
+    && _ctxStack.length === 0 && Object.keys(_fxDrawCallbacks).length === 0;
 }
 
 /**
@@ -1836,6 +1834,72 @@ export function isIdle() {
  */
 export function getAdaptiveQuality() {
   return _adaptiveQuality;
+}
+
+// ── FX Canvas Compositor ────────────────────────────────────────
+// Central render loop for the FX canvas. Death/cute animations register
+// draw callbacks instead of running their own RAF loops. One clearRect
+// per frame, then all active callbacks draw — no cross-animation wipe.
+let _fxDrawCallbacks = {};
+let _fxDrawRAF = null;
+let _fxDrawIdCounter = 0;
+
+/**
+ * Register a draw callback on the FX canvas compositor.
+ * The compositor runs a single RAF loop, clears the canvas once per frame,
+ * then calls all registered callbacks with (ctx, timestamp).
+ *
+ * @param {string} id - Unique draw callback ID (use nextFxDrawId()).
+ * @param {Function} drawFn - Called each frame with (ctx, now).
+ */
+export function registerFxDraw(id, drawFn) {
+  _fxDrawCallbacks[id] = drawFn;
+  if (!_fxDrawRAF) _tickFxDraw();
+}
+
+/**
+ * Remove a draw callback from the FX canvas compositor.
+ *
+ * @param {string} id - The draw callback ID to remove.
+ */
+export function deregisterFxDraw(id) {
+  delete _fxDrawCallbacks[id];
+}
+
+function _tickFxDraw() {
+  _fxDrawRAF = requestAnimationFrame(function(now) {
+    const ctx = getFxCtx();
+    if (!ctx) { _fxDrawRAF = null; return; }
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+    const ids = Object.keys(_fxDrawCallbacks);
+    for (let i = 0; i < ids.length; i++) {
+      const cb = _fxDrawCallbacks[ids[i]];
+      if (cb) {
+        ctx.save();
+        cb(ctx, now);
+        ctx.restore();
+      }
+    }
+
+    if (Object.keys(_fxDrawCallbacks).length > 0) {
+      _tickFxDraw();
+    } else {
+      _fxDrawRAF = null;
+      // Final clear after all animations finish
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    }
+  });
+}
+
+/**
+ * Generate a unique draw callback ID for the FX canvas compositor.
+ *
+ * @param {string} [prefix='fx'] - ID prefix (e.g. 'death-explode').
+ * @returns {string} Unique ID string.
+ */
+export function nextFxDrawId(prefix) {
+  return (prefix || 'fx') + '-' + (++_fxDrawIdCounter);
 }
 
 // ── Warmup ───────────────────────────────────────────────────────
@@ -1873,8 +1937,9 @@ export function warmup() {
   if (phantom.parentNode) phantom.parentNode.removeChild(phantom);
 
   // Warm the impact flash overlay — cache ref + prime rAF path
+  // Skip if animations are in flight to avoid clobbering an active flash
   _flashEl = document.querySelector(_selectors.flashOverlay);
-  if (_flashEl) {
+  if (_flashEl && isIdle()) {
     _flashEl.style.transition = 'none';
     _flashEl.style.background = '#000';
     _flashEl.style.opacity = '0';
@@ -2023,6 +2088,11 @@ export const FX = {
   getFxCanvas,
   getFxCtx,
   drawAsciiChar,
+
+  // FX canvas compositor (concurrent animations)
+  registerFxDraw,
+  deregisterFxDraw,
+  nextFxDrawId,
 
   // Shared helpers
   tickFrame,

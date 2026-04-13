@@ -22,7 +22,17 @@
 
 import { FX } from '../fx.js';
 
+
 // ── Helpers ─────────────────────────────────────────────────────
+
+/**
+ * Get the app shell container element (or body as fallback).
+ * @returns {HTMLElement}
+ * @private
+ */
+function getApp() {
+  return document.body;
+}
 
 /**
  * Pick a random element from an array.
@@ -81,49 +91,38 @@ function standardCleanup(el) {
   el.style.borderColor = '';
 }
 
-/**
- * Resolve the FX helpers object from plugin context.
- * Prefers context-injected helpers, falls back to the imported FX module.
- * @param {Object} pctx - Plugin context
- * @returns {Object} FX helpers
- * @private
- */
-function resolveFX(pctx) {
-  return pctx.helpers || FX;
-}
-
 // ── ASCII character sets ──────────────────────────────────────
-var CONFETTI_CHARS = ['\u2665', '\u2605', '\u2726', '\u266A', '\u273F', '\u2740', '\u2606', '\u266B', '\u2734', '\u2727'];
-var FLOWER_CHARS = ['\u273F', '\u2740', '\u273E', '\u2741', '\u2698', '\u2743'];
-var SPARKLE_CHARS = ['\u2726', '\u2727', '\u2605', '\u2606', '\u00B7', '*', '\u2728', '+'];
-var STAR_CHARS = ['\u2605', '\u2606', '\u00B7', '\u2726', '~', '*'];
-var HEART_CHARS = ['\u2665', '\u2661', '\u2764', '\u2765'];
-var FIREWORK_CHARS = ['\u2605', '\u2726', '*', '+', '\u2727', '\u00B7', '\u2606', '\u273F'];
+const CONFETTI_CHARS = ['\u2665', '\u2605', '\u2726', '\u266A', '\u273F', '\u2740', '\u2606', '\u266B', '\u2734', '\u2727'];
+const FLOWER_CHARS = ['\u273F', '\u2740', '\u273E', '\u2741', '\u2698', '\u2743'];
+const SPARKLE_CHARS = ['\u2726', '\u2727', '\u2605', '\u2606', '\u00B7', '*', '\u2728', '+'];
+const STAR_CHARS = ['\u2605', '\u2606', '\u00B7', '\u2726', '~', '*'];
+const HEART_CHARS = ['\u2665', '\u2661', '\u2764', '\u2765'];
+const FIREWORK_CHARS = ['\u2605', '\u2726', '*', '+', '\u2727', '\u00B7', '\u2606', '\u273F'];
 
 // ── Realistic flower character sets ──────────────────────────
-var REAL_LEAF_CHARS = ['\u2663', '\u2767', '\u2571', '\u2572'];
-var GROUND_CHARS = ['\u2593', '\u2591', '~'];
+const REAL_LEAF_CHARS = ['\u2663', '\u2767', '\u2571', '\u2572'];
+const GROUND_CHARS = ['\u2593', '\u2591', '~'];
 
 // ── Color palettes ──────────────────────────────────────────
-var RAINBOW = ['#cf6e5e', '#d99a7c', '#c9a84c', '#6aab8e', '#6da3b8', '#9b85c4', '#d4728c'];
-var PASTEL = ['#e8b4b8', '#e8d0b4', '#e8e4b4', '#b4e8c9', '#b4dae8', '#d0b4e8', '#e8b4cb'];
-var ROYGBIV = ['#cf4040', '#d98040', '#c9c040', '#40a860', '#4080cf', '#5530a0', '#8030a0'];
+const RAINBOW = ['#cf6e5e', '#d99a7c', '#c9a84c', '#6aab8e', '#6da3b8', '#9b85c4', '#d4728c'];
+const PASTEL = ['#e8b4b8', '#e8d0b4', '#e8e4b4', '#b4e8c9', '#b4dae8', '#d0b4e8', '#e8b4cb'];
+const ROYGBIV = ['#cf4040', '#d98040', '#c9c040', '#40a860', '#4080cf', '#5530a0', '#8030a0'];
 
 // ── Impressionist flower palettes (Monet / Morisot) ──────────
-var MONET_PINKS = ['#e8a0b0', '#d48898', '#f0c0cc', '#c87888', '#dca0b0', '#e8b8c4'];
-var MONET_LAVENDERS = ['#b8a0d0', '#a890c0', '#c8b0d8', '#9880b0', '#d0c0e0', '#c0a8d0'];
-var MONET_YELLOWS = ['#e8d490', '#d8c478', '#f0e0a8', '#c8b468', '#e0cc88', '#f0dca0'];
-var MONET_WHITES = ['#f0e8e0', '#e8e0d8', '#f8f0e8', '#e0d8d0', '#f0e8e4'];
-var MONET_GREENS = ['#7aaa7a', '#6a9a6a', '#88b888', '#5a8a5a', '#98c098', '#78a078'];
-var MONET_STEM_GREENS = ['#6a9a68', '#5a8a58', '#78a878', '#508050', '#88b088'];
-var MONET_FLOWER_PALETTES = [MONET_PINKS, MONET_LAVENDERS, MONET_YELLOWS, MONET_WHITES];
+const MONET_PINKS = ['#e8a0b0', '#d48898', '#f0c0cc', '#c87888', '#dca0b0', '#e8b8c4'];
+const MONET_LAVENDERS = ['#b8a0d0', '#a890c0', '#c8b0d8', '#9880b0', '#d0c0e0', '#c0a8d0'];
+const MONET_YELLOWS = ['#e8d490', '#d8c478', '#f0e0a8', '#c8b468', '#e0cc88', '#f0dca0'];
+const MONET_WHITES = ['#f0e8e0', '#e8e0d8', '#f8f0e8', '#e0d8d0', '#f0e8e4'];
+const MONET_GREENS = ['#7aaa7a', '#6a9a6a', '#88b888', '#5a8a5a', '#98c098', '#78a078'];
+const MONET_STEM_GREENS = ['#6a9a68', '#5a8a58', '#78a878', '#508050', '#88b088'];
+const MONET_FLOWER_PALETTES = [MONET_PINKS, MONET_LAVENDERS, MONET_YELLOWS, MONET_WHITES];
 
 // ── Earthy ground colors ──────────────────────────────────────
-var GROUND_GREENS = ['#5a8a58', '#4a7a48', '#6a9a68', '#3d6d3b', '#78a878'];
-var GROUND_BROWNS = ['#8a7a60', '#7a6a50', '#6a5a40', '#9a8a70', '#a09080'];
+const GROUND_GREENS = ['#5a8a58', '#4a7a48', '#6a9a68', '#3d6d3b', '#78a878'];
+const GROUND_BROWNS = ['#8a7a60', '#7a6a50', '#6a5a40', '#9a8a70', '#a09080'];
 
 // ── Flower species definitions ──────────────────────────────
-var FLOWER_SPECIES = [
+const FLOWER_SPECIES = [
   { name: 'rose', outerChar: '\u2740', innerChar: '\u273F', pistilChar: '*',
     palettes: [MONET_PINKS], headSize: [22, 28], petalLayers: 3 },
   { name: 'lavender', outerChar: '\u273F', innerChar: '\u273E', pistilChar: '\u2726',
@@ -147,62 +146,42 @@ var FLOWER_SPECIES = [
 ];
 
 // ── Cat ASCII art ──────────────────────────────────────────
-var CAT_FACES = ['=^.^=', '=^..^=', '=^-^=', '=^o.o^=', '=^~^='];
-var CAT_CHARS = ['\u273F', '\u2665', '*', '~', '\u00B7', '\u2726', '\u2605'];
-var CAT_COLORS = ['#e8b4b8', '#d4728c', '#c97088', '#d99a7c', '#f0c0cc', '#e0a0b0', '#c8a090'];
-var CAT_FUR_COLORS = ['#8a7060', '#a08878', '#705848', '#c0a890', '#5a4a3a', '#b09880'];
+const CAT_FACES = ['=^.^=', '=^..^=', '=^-^=', '=^o.o^=', '=^~^='];
+const CAT_CHARS = ['\u273F', '\u2665', '*', '~', '\u00B7', '\u2726', '\u2605'];
+const CAT_COLORS = ['#e8b4b8', '#d4728c', '#c97088', '#d99a7c', '#f0c0cc', '#e0a0b0', '#c8a090'];
+const CAT_FUR_COLORS = ['#8a7060', '#a08878', '#705848', '#c0a890', '#5a4a3a', '#b09880'];
 
 // ── Dog ASCII art ──────────────────────────────────────────
-var DOG_FACES = ['U^ェ^U', 'U・ω・U', 'U^.^U', 'Uo.oU'];
-var DOG_TAIL_FRAMES = ['/', '|', '\\', '|'];
-var DOG_CHARS = ['\u2665', '\u2605', '*', '\u2726', '\u273F', '\u00B7', '~'];
-var DOG_COLORS = ['#c9a84c', '#d99a7c', '#cf6e5e', '#e8d0b4', '#d4a850', '#b08840', '#e0c080'];
-var DOG_FUR_COLORS = ['#c0a070', '#a08050', '#8a6a40', '#d0b880', '#e0c898', '#706040'];
+const DOG_FACES = ['U^ェ^U', 'U・ω・U', 'U^.^U', 'Uo.oU'];
+const DOG_TAIL_FRAMES = ['/', '|', '\\', '|'];
+const DOG_CHARS = ['\u2665', '\u2605', '*', '\u2726', '\u273F', '\u00B7', '~'];
+const DOG_COLORS = ['#c9a84c', '#d99a7c', '#cf6e5e', '#e8d0b4', '#d4a850', '#b08840', '#e0c080'];
+const DOG_FUR_COLORS = ['#c0a070', '#a08050', '#8a6a40', '#d0b880', '#e0c898', '#706040'];
 
 // ── Snowfall characters ──────────────────────────────────────
-var SNOW_CHARS = ['*', '\u2726', '\u00B7', '+', '\u2605', '\u2727', '\u273F'];
-var SNOW_COLORS = ['#e8e4e0', '#d0ccc8', '#f0ece8', '#c8c4c0', '#e0dcd8', '#f8f4f0', '#d8d4d0'];
-var ICE_COLORS = ['#b4dae8', '#a0cce0', '#c8e4f0', '#90c0d8', '#d0e8f4'];
+const SNOW_CHARS = ['*', '\u2726', '\u00B7', '+', '\u2605', '\u2727', '\u273F'];
+const SNOW_COLORS = ['#e8e4e0', '#d0ccc8', '#f0ece8', '#c8c4c0', '#e0dcd8', '#f8f4f0', '#d8d4d0'];
+const ICE_COLORS = ['#b4dae8', '#a0cce0', '#c8e4f0', '#90c0d8', '#d0e8f4'];
 
 // ── Ocean characters ──────────────────────────────────────────
-var WAVE_CHARS = ['~', '\u2248', '\u223C', '\u2307', '-', '_'];
-var FISH_CHARS = ['><>', '<><', '><))\'>', '<\'((><'];
-var BUBBLE_CHARS = ['o', 'O', '\u00B0', '\u00B7'];
-var OCEAN_COLORS = ['#4080c0', '#3070b0', '#5090d0', '#2060a0', '#6da3b8', '#80b8d0'];
-var OCEAN_FOAM = ['#e8e4e0', '#f0ece8', '#d8d4d0', '#f8f4f0'];
-var OCEAN_DEEP = ['#2050a0', '#1840a0', '#3060b0', '#103080'];
+const WAVE_CHARS = ['~', '\u2248', '\u223C', '\u2307', '-', '_'];
+const FISH_CHARS = ['><>', '<><', '><))\'>', '<\'((><'];
+const BUBBLE_CHARS = ['o', 'O', '\u00B0', '\u00B7'];
+const OCEAN_COLORS = ['#4080c0', '#3070b0', '#5090d0', '#2060a0', '#6da3b8', '#80b8d0'];
+const OCEAN_FOAM = ['#e8e4e0', '#f0ece8', '#d8d4d0', '#f8f4f0'];
+const OCEAN_DEEP = ['#2050a0', '#1840a0', '#3060b0', '#103080'];
 
 // ── Firefly characters ──────────────────────────────────────
-var FIREFLY_CHARS = ['*', '\u00B7', '\u2726', '\u2727', '+'];
-var FIREFLY_GLOW = ['#c9a84c', '#d4a850', '#e8d490', '#f0e0a8', '#d8c478'];
-var NIGHT_GREENS = ['#3a5a3a', '#2a4a2a', '#4a6a4a', '#1a3a1a', '#5a7a5a'];
-var NIGHT_BLUES = ['#2a3a5a', '#1a2a4a', '#3a4a6a', '#0a1a3a'];
-
-
-/**
- * Safe viewport height accessor. Returns a sensible default when
- * running outside a browser (e.g. Node / SSR).
- * @returns {number}
- * @private
- */
-function viewportHeight() {
-  return (typeof window !== 'undefined' && window.innerHeight) || 800;
-}
-
-/**
- * Safe viewport width accessor.
- * @returns {number}
- * @private
- */
-function viewportWidth() {
-  return (typeof window !== 'undefined' && window.innerWidth) || 1024;
-}
+const FIREFLY_CHARS = ['*', '\u00B7', '\u2726', '\u2727', '+'];
+const FIREFLY_GLOW = ['#c9a84c', '#d4a850', '#e8d490', '#f0e0a8', '#d8c478'];
+const NIGHT_GREENS = ['#3a5a3a', '#2a4a2a', '#4a6a4a', '#1a3a1a', '#5a7a5a'];
+const NIGHT_BLUES = ['#2a3a5a', '#1a2a4a', '#3a4a6a', '#0a1a3a'];
 
 
 // ═══════════════════════════════════════════════════════════════════
 //  1. CONFETTI BURST
 // ═══════════════════════════════════════════════════════════════════
-export var confettiPlugin = {
+export const confettiPlugin = {
   name: 'confetti',
   category: 'action',
   style: 'cute',
@@ -218,23 +197,19 @@ export var confettiPlugin = {
   },
   requires: ['FX'],
   play: function(el, pctx) {
-    var FX = resolveFX(pctx);
-    var opts = buildOpts(pctx);
-    var pm = FX.resolveParams(confettiPlugin.params, pctx.params);
-    var intensity = FX.intensityScale(pctx.intensity || 5);
-    var center = FX.prepareCard(el);
-    var ctx = FX.getFxCtx();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    FX.resetDrawFont();
-    var particles = [];
-    var particleCount = FX.pCount(Math.floor(lerp(pm.minParticles, pm.maxParticles, intensity)));
-    var effectDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
-    var dotRadius = lerp(120, 400, intensity);
+    const opts = buildOpts(pctx);
+    const pm = FX.resolveParams(confettiPlugin.params, pctx.params);
+    const intensity = FX.intensityScale(pctx.intensity || 5);
+    const center = FX.prepareCard(el);
+    const _drawId = FX.nextFxDrawId('cute-confetti');
+    const particles = [];
+    const particleCount = FX.pCount(Math.floor(lerp(pm.minParticles, pm.maxParticles, intensity)));
+    const effectDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
+    const dotRadius = lerp(120, 400, intensity);
 
-    for (var i = 0; i < particleCount; i++) {
-      var angle = Math.random() * Math.PI * 2;
-      var speed = lerp(100, 200, intensity) + Math.random() * lerp(150, 400, intensity);
+    for (let i = 0; i < particleCount; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = lerp(100, 200, intensity) + Math.random() * lerp(150, 400, intensity);
       particles.push({
         x: center.cx + randRange(-center.w * 0.3, center.w * 0.3),
         y: center.cy + randRange(-center.h * 0.3, center.h * 0.3),
@@ -247,35 +222,34 @@ export var confettiPlugin = {
       });
     }
 
-    var startTime = performance.now();
+    const startTime = performance.now();
     FX.doDotgridRipple(center.cx, center.cy, { color: '#d4728c', radius: dotRadius, duration: effectDuration * 0.6 });
     FX.doImpactFlash(false);
     FX.doScreenShake(false);
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
-      var elapsed = now - startTime;
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      const elapsed = now - startTime;
 
       if (elapsed < 300) {
-        var t = elapsed / 300;
+        const t = elapsed / 300;
         el.style.transform = 'scale(' + (1 + t * 0.08) + ')';
         el.style.boxShadow = '0 0 ' + (t * 30) + 'px rgba(212, 114, 140, ' + (t * 0.2) + ')';
       } else if (elapsed < 700) {
-        var t2 = (elapsed - 300) / 400;
+        const t2 = (elapsed - 300) / 400;
         el.style.transform = 'scale(' + (1.08 - t2 * t2 * 0.3) + ')';
         el.style.opacity = String(1 - t2 * t2);
         el.style.boxShadow = '';
       }
 
-      var dt = 0.016;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+      const dt = 0.016;
+      fxCtx.textAlign = 'center';
+      fxCtx.textBaseline = 'middle';
       particles.forEach(function (p) {
         if (elapsed < p.delay) return;
         p.life += 16;
         if (p.life >= p.maxLife) return;
-        var lr = p.life / p.maxLife;
+        const lr = p.life / p.maxLife;
         p.vy += pm.gravity * dt;
         p.vx += p.drift * dt;
         p.vx *= 0.98;
@@ -283,20 +257,17 @@ export var confettiPlugin = {
         p.x += p.vx * dt;
         p.y += p.vy * dt;
         p.rotation += p.rotSpeed * dt;
-        var a = 1 - Math.pow(lr, 1.5);
-        FX.drawChar(ctx, p.char, p.x, p.y, p.color, p.size * (1 + (1 - lr) * 0.3), a, p.rotation);
+        const a = 1 - Math.pow(lr, 1.5);
+        FX.drawChar(fxCtx, p.char, p.x, p.y, p.color, p.size * (1 + (1 - lr) * 0.3), a, p.rotation);
       });
 
-      if (elapsed < effectDuration) {
-        requestAnimationFrame(frame);
-      } else {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      if (elapsed >= effectDuration) {
+        FX.deregisterFxDraw(_drawId);
         el.style.transform = '';
         el.style.boxShadow = '';
         FX.finalize(el, opts);
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     standardCleanup(el);
@@ -306,7 +277,7 @@ export var confettiPlugin = {
 // ═══════════════════════════════════════════════════════════════════
 //  2. FLOWER GARDEN
 // ═══════════════════════════════════════════════════════════════════
-export var flowersPlugin = {
+export const flowersPlugin = {
   name: 'flowers',
   category: 'action',
   style: 'cute',
@@ -322,33 +293,29 @@ export var flowersPlugin = {
   },
   requires: ['FX'],
   play: function(el, pctx) {
-    var FX = resolveFX(pctx);
-    var opts = buildOpts(pctx);
-    var pm = FX.resolveParams(flowersPlugin.params, pctx.params);
-    var intensity = FX.intensityScale(pctx.intensity || 5);
-    var center = FX.prepareCard(el);
-    var ctx = FX.getFxCtx();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    FX.resetDrawFont();
-    var startTime = performance.now();
-    var totalDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
-    var isHighIntensity = intensity >= 0.8;
-    var isMedIntensity = intensity >= 0.5;
+    const opts = buildOpts(pctx);
+    const pm = FX.resolveParams(flowersPlugin.params, pctx.params);
+    const intensity = FX.intensityScale(pctx.intensity || 5);
+    const center = FX.prepareCard(el);
+    const _drawId = FX.nextFxDrawId('cute-flowers');
+    const startTime = performance.now();
+    const totalDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
+    const isHighIntensity = intensity >= 0.8;
+    const isMedIntensity = intensity >= 0.5;
 
-    var flowerCount = Math.floor(lerp(pm.minFlowers, pm.maxFlowers, intensity));
-    var flowers = [];
-    var gardenWidth = center.w + lerp(20, 80, intensity);
-    var gardenLeft = center.rect.left - lerp(10, 40, intensity);
+    const flowerCount = Math.floor(lerp(pm.minFlowers, pm.maxFlowers, intensity));
+    const flowers = [];
+    const gardenWidth = center.w + lerp(20, 80, intensity);
+    const gardenLeft = center.rect.left - lerp(10, 40, intensity);
 
-    for (var i = 0; i < flowerCount; i++) {
-      var species = FLOWER_SPECIES[i % FLOWER_SPECIES.length];
-      var palette = pick(species.palettes);
-      var baseX = gardenLeft + ((i + 0.5) / flowerCount) * gardenWidth;
-      var stemHeight = lerp(35, pm.maxStemHeight, intensity) + Math.random() * lerp(15, 50, intensity);
-      var headSizeBase = lerp(species.headSize[0], species.headSize[1], intensity);
+    for (let i = 0; i < flowerCount; i++) {
+      const species = FLOWER_SPECIES[i % FLOWER_SPECIES.length];
+      const palette = pick(species.palettes);
+      const baseX = gardenLeft + ((i + 0.5) / flowerCount) * gardenWidth;
+      const stemHeight = lerp(35, pm.maxStemHeight, intensity) + Math.random() * lerp(15, 50, intensity);
+      const headSizeBase = lerp(species.headSize[0], species.headSize[1], intensity);
 
-      var flower = {
+      const flower = {
         species: species, baseX: baseX + randRange(-15, 15), baseY: center.rect.bottom,
         stemHeight: stemHeight, stemColor: pick(MONET_STEM_GREENS), petalColors: palette,
         growDelay: i * lerp(120, 30, intensity) + Math.random() * lerp(200, 60, intensity),
@@ -359,9 +326,9 @@ export var flowersPlugin = {
         _topX: undefined, _topY: undefined, _bloomT: 0
       };
 
-      var leafCount = Math.floor(lerp(1, 5, intensity)) + (Math.random() > 0.4 ? 1 : 0);
-      for (var j = 0; j < leafCount; j++) {
-        var side = (j % 2 === 0) ? -1 : 1;
+      const leafCount = Math.floor(lerp(1, 5, intensity)) + (Math.random() > 0.4 ? 1 : 0);
+      for (let j = 0; j < leafCount; j++) {
+        const side = (j % 2 === 0) ? -1 : 1;
         flower.leaves.push({
           heightRatio: 0.12 + (j / leafCount) * 0.55, side: side,
           char: pick(REAL_LEAF_CHARS),
@@ -374,14 +341,14 @@ export var flowersPlugin = {
       flowers.push(flower);
     }
 
-    var psz = pm.particleSize / 10;
+    const psz = pm.particleSize / 10;
 
     // Garden butterflies
-    var gardenButterflies = [];
+    const gardenButterflies = [];
     if (isMedIntensity) {
-      var bflyCount = Math.floor(lerp(0, 6, intensity));
-      var bflyColors = ['#e8b4b8', '#b4dae8', '#d0b4e8', '#e8e4b4', '#b4e8c9', '#e8b4cb'];
-      for (var bi = 0; bi < bflyCount; bi++) {
+      const bflyCount = Math.floor(lerp(0, 6, intensity));
+      const bflyColors = ['#e8b4b8', '#b4dae8', '#d0b4e8', '#e8e4b4', '#b4e8c9', '#e8b4cb'];
+      for (let bi = 0; bi < bflyCount; bi++) {
         gardenButterflies.push({
           x: gardenLeft + Math.random() * gardenWidth,
           y: center.rect.bottom - lerp(30, 80, intensity) - Math.random() * 40,
@@ -394,10 +361,10 @@ export var flowersPlugin = {
     }
 
     // Garden bees
-    var gardenBees = [];
+    const gardenBees = [];
     if (isMedIntensity) {
-      var beeCount = Math.floor(lerp(0, 4, intensity));
-      for (var bei = 0; bei < beeCount; bei++) {
+      const beeCount = Math.floor(lerp(0, 4, intensity));
+      for (let bei = 0; bei < beeCount; bei++) {
         gardenBees.push({
           x: gardenLeft + Math.random() * gardenWidth,
           y: center.rect.bottom - 50 - Math.random() * 40,
@@ -410,10 +377,10 @@ export var flowersPlugin = {
     }
 
     // Pollen
-    var pollenParticles = [];
+    const pollenParticles = [];
     if (isHighIntensity) {
-      var pollenCount = FX.pCount(Math.floor(lerp(0, 35, intensity)));
-      for (var pi = 0; pi < pollenCount; pi++) {
+      const pollenCount = FX.pCount(Math.floor(lerp(0, 35, intensity)));
+      for (let pi = 0; pi < pollenCount; pi++) {
         pollenParticles.push({
           x: gardenLeft + Math.random() * gardenWidth,
           y: center.rect.bottom - Math.random() * lerp(40, 120, intensity),
@@ -426,10 +393,10 @@ export var flowersPlugin = {
     }
 
     // Breeze / dandelion puffs
-    var breezeParticles = [];
+    const breezeParticles = [];
     if (isMedIntensity) {
-      var breezeCount = FX.pCount(Math.floor(lerp(0, 10, intensity)));
-      for (var bri = 0; bri < breezeCount; bri++) {
+      const breezeCount = FX.pCount(Math.floor(lerp(0, 10, intensity)));
+      for (let bri = 0; bri < breezeCount; bri++) {
         breezeParticles.push({
           x: gardenLeft - 30 + Math.random() * 30,
           y: center.rect.bottom - 30 - Math.random() * 80,
@@ -441,39 +408,38 @@ export var flowersPlugin = {
       }
     }
 
-    var dotRadius = lerp(120, 400, intensity);
+    const dotRadius = lerp(120, 400, intensity);
     FX.doDotgridRipple(center.cx, center.rect.bottom, { color: '#6aab8e', radius: dotRadius, duration: totalDuration * 0.7 });
     FX.doImpactFlash(false);
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
-      var elapsed = now - startTime;
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      const elapsed = now - startTime;
 
       if (elapsed < 800) {
-        var t = elapsed / 800;
+        const t = elapsed / 800;
         el.style.opacity = String(1 - t * 0.85);
         el.style.transform = 'scale(' + (1 - t * 0.02) + ')';
       } else {
         el.style.opacity = '0.15';
       }
 
-      var breezeWind = Math.sin(elapsed * 0.0008) * 2;
+      const breezeWind = Math.sin(elapsed * 0.0008) * 2;
 
       // Multi-layer ground / soil
-      var groundY = center.rect.bottom + 2;
-      var groundWidth2 = gardenWidth + 40;
-      var groundLeft2 = gardenLeft - 20;
-      var groundDensity = Math.floor(lerp(10, 40, intensity));
-      var groundAlpha = Math.min(elapsed / 600, 1) * lerp(0.3, 0.8, intensity);
+      const groundY = center.rect.bottom + 2;
+      const groundWidth2 = gardenWidth + 40;
+      const groundLeft2 = gardenLeft - 20;
+      const groundDensity = Math.floor(lerp(10, 40, intensity));
+      const groundAlpha = Math.min(elapsed / 600, 1) * lerp(0.3, 0.8, intensity);
 
-      for (var layer = 0; layer < Math.floor(lerp(1, 3, intensity)); layer++) {
-        var layerY = groundY + layer * lerp(6, 10, intensity);
-        var layerAlpha = groundAlpha * (1 - layer * 0.25);
-        for (var g = 0; g < groundDensity; g++) {
-          var gx = groundLeft2 + (g / groundDensity) * groundWidth2 + randRange(-3, 3);
-          var soilChars = layer === 0 ? GROUND_CHARS : ['\u2591', '\u2592', '\u00B7', '~'];
-          FX.drawChar(ctx, pick(soilChars), gx, layerY + randRange(-2, 4),
+      for (let layer = 0; layer < Math.floor(lerp(1, 3, intensity)); layer++) {
+        const layerY = groundY + layer * lerp(6, 10, intensity);
+        const layerAlpha = groundAlpha * (1 - layer * 0.25);
+        for (let g = 0; g < groundDensity; g++) {
+          const gx = groundLeft2 + (g / groundDensity) * groundWidth2 + randRange(-3, 3);
+          const soilChars = layer === 0 ? GROUND_CHARS : ['\u2591', '\u2592', '\u00B7', '~'];
+          FX.drawChar(fxCtx, pick(soilChars), gx, layerY + randRange(-2, 4),
             layer === 0 ? (Math.random() > 0.4 ? pick(GROUND_GREENS) : pick(GROUND_BROWNS)) : pick(GROUND_BROWNS),
             lerp(7, 13, intensity), layerAlpha * (layer === 0 ? 1 : 0.6), 0);
         }
@@ -481,16 +447,16 @@ export var flowersPlugin = {
 
       // Grass tufts and ground cover
       if (isMedIntensity) {
-        var tufts = Math.floor(lerp(5, 25, intensity));
-        for (var gi = 0; gi < tufts; gi++) {
-          var gxi = groundLeft2 + (gi / tufts) * groundWidth2;
-          var grassSway = Math.sin(elapsed * 0.002 + gi * 0.5) * 0.15;
-          FX.drawChar(ctx, pick([',', '\'', '`', '"', ';', '|']), gxi + randRange(-4, 4),
+        const tufts = Math.floor(lerp(5, 25, intensity));
+        for (let gi = 0; gi < tufts; gi++) {
+          const gxi = groundLeft2 + (gi / tufts) * groundWidth2;
+          const grassSway = Math.sin(elapsed * 0.002 + gi * 0.5) * 0.15;
+          FX.drawChar(fxCtx, pick([',', '\'', '`', '"', ';', '|']), gxi + randRange(-4, 4),
             groundY - lerp(3, 8, intensity) + randRange(-2, 2),
             pick(MONET_GREENS), lerp(4, 8, intensity), groundAlpha * lerp(0.3, 0.7, intensity),
             grassSway + breezeWind * 0.05);
           if (isHighIntensity && Math.random() > 0.85) {
-            FX.drawChar(ctx, pick(['\u273F', '\u00B7', '\u00B7']),
+            FX.drawChar(fxCtx, pick(['\u273F', '\u00B7', '\u00B7']),
               gxi + randRange(-6, 6), groundY - lerp(6, 12, intensity),
               pick(MONET_PINKS.concat(MONET_YELLOWS)), 4, groundAlpha * 0.5 * lerp(0.3, 0.7, intensity), 0);
           }
@@ -499,9 +465,9 @@ export var flowersPlugin = {
 
       // Pebbles in soil
       if (isHighIntensity) {
-        var pebbleCount = Math.floor(lerp(0, 8, intensity));
-        for (var pb = 0; pb < pebbleCount; pb++) {
-          FX.drawChar(ctx, pick(['o', '\u00B7', 'O']),
+        const pebbleCount = Math.floor(lerp(0, 8, intensity));
+        for (let pb = 0; pb < pebbleCount; pb++) {
+          FX.drawChar(fxCtx, pick(['o', '\u00B7', 'O']),
             groundLeft2 + (pb / pebbleCount) * groundWidth2 + randRange(-5, 5),
             groundY + randRange(2, 14),
             pick(['#9a8a70', '#8a7a60', '#a09080', '#706858']),
@@ -512,80 +478,80 @@ export var flowersPlugin = {
       // Flowers with sequential growth
       flowers.forEach(function (f) {
         if (elapsed < f.growDelay) return;
-        var flowerElapsed = elapsed - f.growDelay;
-        var stemPhase = 800 * lerp(1.2, 0.6, intensity);
-        var stemT = Math.min(flowerElapsed / stemPhase, 1);
-        var easeStem = 1 - Math.pow(1 - stemT, 3);
-        var currentHeight = f.stemHeight * easeStem;
-        var sway = (Math.sin(f.swayPhase + elapsed * 0.001 * f.swaySpeed) * 3 + breezeWind) * easeStem;
-        var stemTopY = f.baseY - currentHeight;
-        var stemTopX = f.baseX + f.curvature * easeStem + sway;
-        var cpX = f.baseX + f.curvature * 0.6 + sway * 0.4;
-        var cpY = f.baseY - currentHeight * 0.5;
+        const flowerElapsed = elapsed - f.growDelay;
+        const stemPhase = 800 * lerp(1.2, 0.6, intensity);
+        const stemT = Math.min(flowerElapsed / stemPhase, 1);
+        const easeStem = 1 - Math.pow(1 - stemT, 3);
+        const currentHeight = f.stemHeight * easeStem;
+        const sway = (Math.sin(f.swayPhase + elapsed * 0.001 * f.swaySpeed) * 3 + breezeWind) * easeStem;
+        const stemTopY = f.baseY - currentHeight;
+        const stemTopX = f.baseX + f.curvature * easeStem + sway;
+        const cpX = f.baseX + f.curvature * 0.6 + sway * 0.4;
+        const cpY = f.baseY - currentHeight * 0.5;
         f._topX = stemTopX;
         f._topY = stemTopY;
         f._bloomT = stemT > 0.6 ? (stemT - 0.6) / 0.4 : 0;
 
         if (stemT > 0) {
-          var stemSegments = Math.floor(lerp(5, 12, intensity));
-          var stemAlpha = Math.min(stemT * 2.5, 1) * lerp(0.5, 0.85, intensity);
-          for (var s = 0; s <= stemSegments; s++) {
-            var st = s / stemSegments;
+          const stemSegments = Math.floor(lerp(5, 12, intensity));
+          const stemAlpha = Math.min(stemT * 2.5, 1) * lerp(0.5, 0.85, intensity);
+          for (let s = 0; s <= stemSegments; s++) {
+            const st = s / stemSegments;
             if (st > easeStem) break;
-            var sx = f.baseX * (1 - st) * (1 - st) + cpX * 2 * st * (1 - st) + stemTopX * st * st;
-            var sy = f.baseY * (1 - st) * (1 - st) + cpY * 2 * st * (1 - st) + stemTopY * st * st;
-            var stemChar = '\u2502';
+            const sx = f.baseX * (1 - st) * (1 - st) + cpX * 2 * st * (1 - st) + stemTopX * st * st;
+            const sy = f.baseY * (1 - st) * (1 - st) + cpY * 2 * st * (1 - st) + stemTopY * st * st;
+            const stemChar = '\u2502';
             if (s > 0) {
-              var prevT = (s - 1) / stemSegments;
-              var prevX = f.baseX * (1 - prevT) * (1 - prevT) + cpX * 2 * prevT * (1 - prevT) + stemTopX * prevT * prevT;
-              var dx = sx - prevX;
+              const prevT = (s - 1) / stemSegments;
+              const prevX = f.baseX * (1 - prevT) * (1 - prevT) + cpX * 2 * prevT * (1 - prevT) + stemTopX * prevT * prevT;
+              const dx = sx - prevX;
               if (dx > 1.5) stemChar = '\u2572';
               else if (dx < -1.5) stemChar = '\u2571';
             }
-            FX.drawChar(ctx, stemChar, sx, sy, f.stemColor, lerp(10, 16, intensity), stemAlpha, 0);
+            FX.drawChar(fxCtx, stemChar, sx, sy, f.stemColor, lerp(10, 16, intensity), stemAlpha, 0);
             if (f.hasThorns && s > 1 && s < stemSegments - 1 && s % 2 === 0) {
-              var thornSide = (s % 4 === 0) ? 1 : -1;
-              FX.drawChar(ctx, thornSide > 0 ? '>' : '<', sx + thornSide * 5, sy,
+              const thornSide = (s % 4 === 0) ? 1 : -1;
+              FX.drawChar(fxCtx, thornSide > 0 ? '>' : '<', sx + thornSide * 5, sy,
                 f.stemColor, 5, stemAlpha * 0.5, thornSide * 0.3);
             }
           }
-          ctx.save();
-          ctx.strokeStyle = f.stemColor;
-          ctx.lineWidth = lerp(1, 2, intensity);
-          ctx.globalAlpha = Math.min(stemT * 2.5, 1) * lerp(0.5, 0.85, intensity) * 0.4;
-          ctx.beginPath();
-          ctx.moveTo(f.baseX, f.baseY);
-          ctx.quadraticCurveTo(cpX, cpY, stemTopX, stemTopY);
-          ctx.stroke();
-          ctx.restore();
+          fxCtx.save();
+          fxCtx.strokeStyle = f.stemColor;
+          fxCtx.lineWidth = lerp(1, 2, intensity);
+          fxCtx.globalAlpha = Math.min(stemT * 2.5, 1) * lerp(0.5, 0.85, intensity) * 0.4;
+          fxCtx.beginPath();
+          fxCtx.moveTo(f.baseX, f.baseY);
+          fxCtx.quadraticCurveTo(cpX, cpY, stemTopX, stemTopY);
+          fxCtx.stroke();
+          fxCtx.restore();
         }
 
         // Leaves
         if (stemT > 0.3) {
-          var leafBaseT = (stemT - 0.3) / 0.7;
+          const leafBaseT = (stemT - 0.3) / 0.7;
           f.leaves.forEach(function (leaf, li) {
-            var leafT = Math.max(0, Math.min((leafBaseT - li * 0.12) / 0.35, 1));
+            const leafT = Math.max(0, Math.min((leafBaseT - li * 0.12) / 0.35, 1));
             if (leafT <= 0) return;
-            var easeLeaf = 1 - Math.pow(1 - leafT, 2);
-            var lt = leaf.heightRatio;
-            var lx = f.baseX * (1 - lt) * (1 - lt) + cpX * 2 * lt * (1 - lt) + stemTopX * lt * lt;
-            var ly = f.baseY * (1 - lt) * (1 - lt) + cpY * 2 * lt * (1 - lt) + stemTopY * lt * lt;
-            var leafAlpha = easeLeaf * lerp(0.4, 0.75, intensity);
-            var leafSize = leaf.size * easeLeaf;
-            var leafSway = Math.sin(elapsed * 0.002 + leaf.heightRatio * 3) * 0.1 + breezeWind * 0.02;
-            var lox = lx + leaf.side * leaf.offset * easeLeaf;
-            var loy = ly - 2;
-            FX.drawChar(ctx, leaf.char, lox, loy, pick(MONET_GREENS), leafSize, leafAlpha, leaf.angle + leafSway);
+            const easeLeaf = 1 - Math.pow(1 - leafT, 2);
+            const lt = leaf.heightRatio;
+            const lx = f.baseX * (1 - lt) * (1 - lt) + cpX * 2 * lt * (1 - lt) + stemTopX * lt * lt;
+            const ly = f.baseY * (1 - lt) * (1 - lt) + cpY * 2 * lt * (1 - lt) + stemTopY * lt * lt;
+            const leafAlpha = easeLeaf * lerp(0.4, 0.75, intensity);
+            const leafSize = leaf.size * easeLeaf;
+            const leafSway = Math.sin(elapsed * 0.002 + leaf.heightRatio * 3) * 0.1 + breezeWind * 0.02;
+            const lox = lx + leaf.side * leaf.offset * easeLeaf;
+            const loy = ly - 2;
+            FX.drawChar(fxCtx, leaf.char, lox, loy, pick(MONET_GREENS), leafSize, leafAlpha, leaf.angle + leafSway);
             if (leaf.hasVein) {
-              FX.drawChar(ctx, '-', lox + leaf.side * 2, loy,
+              FX.drawChar(fxCtx, '-', lox + leaf.side * 2, loy,
                 pick(MONET_STEM_GREENS), leafSize * 0.3, leafAlpha * 0.3, leaf.angle + leafSway);
             }
             if (intensity > 0.4) {
-              FX.drawChar(ctx, pick(['\u2663', '\u00B7']), lox + leaf.side * 3, loy + 2,
+              FX.drawChar(fxCtx, pick(['\u2663', '\u00B7']), lox + leaf.side * 3, loy + 2,
                 pick(MONET_GREENS), leafSize * 0.6, leafAlpha * 0.5, leaf.angle * 0.5);
             }
             if (intensity > 0.7) {
-              FX.drawChar(ctx, pick(['\u2663', '\u2767']), lox + leaf.side * 5, loy - 1,
+              FX.drawChar(fxCtx, pick(['\u2663', '\u2767']), lox + leaf.side * 5, loy - 1,
                 pick(MONET_GREENS), leafSize * 0.45, leafAlpha * 0.35, leaf.angle * 0.3 + 0.1);
             }
           });
@@ -593,57 +559,57 @@ export var flowersPlugin = {
 
         // Flower bloom
         if (stemT > 0.6) {
-          var bloomBaseT = (stemT - 0.6) / 0.4;
-          var budT = Math.min(bloomBaseT / 0.3, 1);
-          var openT = Math.max(0, Math.min((bloomBaseT - 0.3) / 0.4, 1));
-          var fullT = Math.max(0, Math.min((bloomBaseT - 0.7) / 0.3, 1));
-          var breathe = 1 + 0.05 * Math.sin(elapsed * 0.002 + f.swayPhase);
-          var hSize = f.headSize * lerp(0.8, 1.0, intensity);
+          const bloomBaseT = (stemT - 0.6) / 0.4;
+          const budT = Math.min(bloomBaseT / 0.3, 1);
+          const openT = Math.max(0, Math.min((bloomBaseT - 0.3) / 0.4, 1));
+          const fullT = Math.max(0, Math.min((bloomBaseT - 0.7) / 0.3, 1));
+          const breathe = 1 + 0.05 * Math.sin(elapsed * 0.002 + f.swayPhase);
+          const hSize = f.headSize * lerp(0.8, 1.0, intensity);
 
           if (budT > 0 && openT < 1) {
-            var budAlpha = budT * (1 - openT) * 0.5;
-            FX.drawChar(ctx, '*', stemTopX, stemTopY, pick(f.petalColors), hSize * 0.3 * budT, budAlpha, 0);
+            const budAlpha = budT * (1 - openT) * 0.5;
+            FX.drawChar(fxCtx, '*', stemTopX, stemTopY, pick(f.petalColors), hSize * 0.3 * budT, budAlpha, 0);
             if (budT > 0.5) {
-              for (var si = 0; si < 3; si++) {
-                var sa = (si / 3) * Math.PI * 2 + Math.PI / 2;
-                FX.drawChar(ctx, pick(['\u2663', ',']), stemTopX + Math.cos(sa) * 4,
+              for (let si = 0; si < 3; si++) {
+                const sa = (si / 3) * Math.PI * 2 + Math.PI / 2;
+                FX.drawChar(fxCtx, pick(['\u2663', ',']), stemTopX + Math.cos(sa) * 4,
                   stemTopY + Math.sin(sa) * 4, pick(MONET_GREENS), 5, budAlpha * 0.6, sa * 0.5);
               }
             }
           }
 
           if (openT > 0) {
-            var oe = 1 - Math.pow(1 - openT, 2);
-            var outerSize = hSize * oe * breathe;
-            var outerAlpha = openT * lerp(0.35, 0.65, intensity);
-            var outerPetalCount = f.species.petalLayers + Math.floor(lerp(0, 2, intensity));
-            for (var op = 0; op < outerPetalCount; op++) {
-              var opAngle = (op / outerPetalCount) * Math.PI * 2 + elapsed * 0.0003;
-              var spread = outerSize * 0.25 * oe;
-              FX.drawChar(ctx, f.species.outerChar,
+            const oe = 1 - Math.pow(1 - openT, 2);
+            const outerSize = hSize * oe * breathe;
+            const outerAlpha = openT * lerp(0.35, 0.65, intensity);
+            const outerPetalCount = f.species.petalLayers + Math.floor(lerp(0, 2, intensity));
+            for (let op = 0; op < outerPetalCount; op++) {
+              const opAngle = (op / outerPetalCount) * Math.PI * 2 + elapsed * 0.0003;
+              const spread = outerSize * 0.25 * oe;
+              FX.drawChar(fxCtx, f.species.outerChar,
                 stemTopX + Math.cos(opAngle) * spread, stemTopY + Math.sin(opAngle) * spread,
                 f.petalColors[op % f.petalColors.length], outerSize, outerAlpha, opAngle * 0.3);
             }
 
             if (openT > 0.3) {
-              var innerT = (openT - 0.3) / 0.7;
-              var innerSize = hSize * 0.75 * innerT * breathe;
-              var innerAlpha = innerT * lerp(0.4, 0.7, intensity);
-              var innerPetalCount = 2 + f.species.petalLayers + Math.floor(lerp(0, 2, intensity));
-              for (var ip = 0; ip < innerPetalCount; ip++) {
-                var ipAngle = (ip / innerPetalCount) * Math.PI * 2 + Math.PI / 6;
-                var ipSpread = innerSize * 0.15 * innerT;
-                FX.drawChar(ctx, f.species.innerChar,
+              const innerT = (openT - 0.3) / 0.7;
+              const innerSize = hSize * 0.75 * innerT * breathe;
+              const innerAlpha = innerT * lerp(0.4, 0.7, intensity);
+              const innerPetalCount = 2 + f.species.petalLayers + Math.floor(lerp(0, 2, intensity));
+              for (let ip = 0; ip < innerPetalCount; ip++) {
+                const ipAngle = (ip / innerPetalCount) * Math.PI * 2 + Math.PI / 6;
+                const ipSpread = innerSize * 0.15 * innerT;
+                FX.drawChar(fxCtx, f.species.innerChar,
                   stemTopX + Math.cos(ipAngle) * ipSpread, stemTopY + Math.sin(ipAngle) * ipSpread,
                   f.petalColors[(ip + 2) % f.petalColors.length], innerSize * 0.85, innerAlpha, ipAngle * 0.2);
               }
             }
 
             if (openT > 0.5) {
-              var hazeT = (openT - 0.5) / 0.5;
-              var hazeCount = Math.floor(lerp(1, 3, intensity));
-              for (var h = 0; h < hazeCount; h++) {
-                FX.drawChar(ctx, f.species.outerChar, stemTopX + randRange(-2, 2), stemTopY + randRange(-2, 2),
+              const hazeT = (openT - 0.5) / 0.5;
+              const hazeCount = Math.floor(lerp(1, 3, intensity));
+              for (let h = 0; h < hazeCount; h++) {
+                FX.drawChar(fxCtx, f.species.outerChar, stemTopX + randRange(-2, 2), stemTopY + randRange(-2, 2),
                   f.petalColors[Math.floor(Math.random() * f.petalColors.length)],
                   hSize * lerp(0.4, 0.65, intensity) * hazeT * breathe,
                   hazeT * lerp(0.12, 0.22, intensity), randRange(-0.15, 0.15));
@@ -651,27 +617,27 @@ export var flowersPlugin = {
             }
 
             if (fullT > 0) {
-              FX.drawChar(ctx, f.species.pistilChar, stemTopX, stemTopY,
+              FX.drawChar(fxCtx, f.species.pistilChar, stemTopX, stemTopY,
                 pick(['#c9a84c', '#d8c478', '#e8d490', '#b0a040']),
                 lerp(4, 9, intensity) * fullT, fullT * 0.8, 0);
               if (fullT > 0.5) {
-                var sparkAlpha = (fullT - 0.5) * 0.4 * (Math.sin(elapsed * 0.004 + f.swayPhase) * 0.5 + 0.5);
-                FX.drawChar(ctx, '\u00B7', stemTopX + randRange(-1, 1), stemTopY - 2, '#f0e8e0', 3, sparkAlpha, 0);
+                const sparkAlpha = (fullT - 0.5) * 0.4 * (Math.sin(elapsed * 0.004 + f.swayPhase) * 0.5 + 0.5);
+                FX.drawChar(fxCtx, '\u00B7', stemTopX + randRange(-1, 1), stemTopY - 2, '#f0e8e0', 3, sparkAlpha, 0);
               }
               if (isHighIntensity && fullT > 0.8 && Math.random() > 0.92) {
-                FX.drawChar(ctx, pick([',', '\'']),
+                FX.drawChar(fxCtx, pick([',', '\'']),
                   stemTopX + randRange(-8, 8) + breezeWind * 3, stemTopY + randRange(5, 20),
                   pick(f.petalColors), 4, 0.3, randRange(-0.5, 0.5));
               }
             }
 
             if (openT > 0.4 && FX.shouldShadow()) {
-              ctx.save();
-              ctx.shadowColor = f.petalColors[0];
-              ctx.shadowBlur = lerp(4, 14, intensity) * openT;
-              FX.drawChar(ctx, f.species.outerChar, stemTopX, stemTopY,
+              fxCtx.save();
+              fxCtx.shadowColor = f.petalColors[0];
+              fxCtx.shadowBlur = lerp(4, 14, intensity) * openT;
+              FX.drawChar(fxCtx, f.species.outerChar, stemTopX, stemTopY,
                 f.petalColors[0], hSize * 0.5 * openT * breathe, openT * 0.1, 0);
-              ctx.restore();
+              fxCtx.restore();
             }
           }
         }
@@ -680,30 +646,30 @@ export var flowersPlugin = {
       // Garden butterflies
       gardenButterflies.forEach(function (b) {
         if (elapsed < b.delay) return;
-        var bLife = elapsed - b.delay;
-        var lr = Math.min(bLife / (totalDuration - b.delay), 1);
+        const bLife = elapsed - b.delay;
+        const lr = Math.min(bLife / (totalDuration - b.delay), 1);
         b.x += (b.vx + Math.sin(b.curvePhase + bLife * 0.001) * 25 * 0.3 + breezeWind * 0.5) * 0.016;
         b.y += (b.vy + Math.sin(bLife * 0.002) * 5) * 0.016;
-        var flap = Math.sin(b.flapPhase + bLife * 0.01 * b.flapSpeed);
-        var alpha = lr > 0.8 ? 1 - (lr - 0.8) / 0.2 : Math.min(bLife / 300, 1);
+        const flap = Math.sin(b.flapPhase + bLife * 0.01 * b.flapSpeed);
+        const alpha = lr > 0.8 ? 1 - (lr - 0.8) / 0.2 : Math.min(bLife / 300, 1);
         if (flap > 0) {
-          FX.drawChar(ctx, '\u2572', b.x - 4, b.y, b.color, b.size, alpha * 0.7, 0);
-          FX.drawChar(ctx, '\u2571', b.x + 4, b.y, b.color, b.size, alpha * 0.7, 0);
+          FX.drawChar(fxCtx, '\u2572', b.x - 4, b.y, b.color, b.size, alpha * 0.7, 0);
+          FX.drawChar(fxCtx, '\u2571', b.x + 4, b.y, b.color, b.size, alpha * 0.7, 0);
         } else {
-          FX.drawChar(ctx, '\u2571', b.x - 3, b.y, b.color, b.size * 0.7, alpha * 0.7, 0);
-          FX.drawChar(ctx, '\u2572', b.x + 3, b.y, b.color, b.size * 0.7, alpha * 0.7, 0);
+          FX.drawChar(fxCtx, '\u2571', b.x - 3, b.y, b.color, b.size * 0.7, alpha * 0.7, 0);
+          FX.drawChar(fxCtx, '\u2572', b.x + 3, b.y, b.color, b.size * 0.7, alpha * 0.7, 0);
         }
-        FX.drawChar(ctx, '\u00B7', b.x, b.y, b.color, 4, alpha * 0.5, 0);
+        FX.drawChar(fxCtx, '\u00B7', b.x, b.y, b.color, 4, alpha * 0.5, 0);
       });
 
       // Garden bees
       gardenBees.forEach(function (bee) {
         if (elapsed < bee.delay) return;
-        var bLife = elapsed - bee.delay;
-        var lr = Math.min(bLife / (totalDuration - bee.delay), 1);
-        var alpha = lr > 0.8 ? 1 - (lr - 0.8) / 0.2 : Math.min(bLife / 300, 1);
-        var tf = flowers[bee.targetFlower];
-        var tx, ty;
+        const bLife = elapsed - bee.delay;
+        const lr = Math.min(bLife / (totalDuration - bee.delay), 1);
+        const alpha = lr > 0.8 ? 1 - (lr - 0.8) / 0.2 : Math.min(bLife / 300, 1);
+        const tf = flowers[bee.targetFlower];
+        let tx, ty;
         if (tf && tf._topX !== undefined && tf._bloomT > 0.5) {
           tx = tf._topX + Math.cos(bee.orbitPhase + bLife * 0.003 * bee.orbitSpeed) * bee.orbitRadius;
           ty = tf._topY + Math.sin(bee.orbitPhase + bLife * 0.003 * bee.orbitSpeed) * bee.orbitRadius * 0.6;
@@ -711,48 +677,48 @@ export var flowersPlugin = {
           tx = bee.x + Math.sin(bLife * 0.002) * 20;
           ty = bee.y + Math.cos(bLife * 0.003) * 10;
         }
-        var buzzX = Math.sin(bee.buzzPhase + bLife * 0.05) * 1.5;
-        var buzzY = Math.cos(bee.buzzPhase + bLife * 0.07) * 1;
-        FX.drawChar(ctx, '=', tx + buzzX - 3, ty + buzzY, '#c9a84c', bee.size * 0.8, alpha * 0.6, 0);
-        FX.drawChar(ctx, '*', tx + buzzX, ty + buzzY, '#3d3530', bee.size * 0.6, alpha * 0.7, 0);
-        FX.drawChar(ctx, '=', tx + buzzX + 3, ty + buzzY, '#c9a84c', bee.size * 0.8, alpha * 0.6, 0);
+        const buzzX = Math.sin(bee.buzzPhase + bLife * 0.05) * 1.5;
+        const buzzY = Math.cos(bee.buzzPhase + bLife * 0.07) * 1;
+        FX.drawChar(fxCtx, '=', tx + buzzX - 3, ty + buzzY, '#c9a84c', bee.size * 0.8, alpha * 0.6, 0);
+        FX.drawChar(fxCtx, '*', tx + buzzX, ty + buzzY, '#3d3530', bee.size * 0.6, alpha * 0.7, 0);
+        FX.drawChar(fxCtx, '=', tx + buzzX + 3, ty + buzzY, '#c9a84c', bee.size * 0.8, alpha * 0.6, 0);
         if (Math.sin(bLife * 0.03) > 0) {
-          FX.drawChar(ctx, '\u00B7', tx + buzzX, ty + buzzY - 4, '#e8e4e0', 4, alpha * 0.4, 0);
+          FX.drawChar(fxCtx, '\u00B7', tx + buzzX, ty + buzzY - 4, '#e8e4e0', 4, alpha * 0.4, 0);
         }
       });
 
       // Pollen
       if (isHighIntensity) {
-        var pdt = 0.016;
+        const pdt = 0.016;
         pollenParticles.forEach(function (p) {
           if (elapsed < p.delay) return;
           p.life = elapsed - p.delay;
-          var lr = Math.min(p.life / (totalDuration - p.delay), 1);
+          const lr = Math.min(p.life / (totalDuration - p.delay), 1);
           p.x += (p.vx + Math.sin(p.phase + p.life * 0.002) * 8 + breezeWind) * pdt;
           p.y += p.vy * pdt;
-          var alpha = lr > 0.7 ? (1 - (lr - 0.7) / 0.3) : Math.min(p.life / 400, 1);
-          FX.drawChar(ctx, '\u00B7', p.x, p.y, p.color, p.size, alpha * 0.6, 0);
+          const alpha = lr > 0.7 ? (1 - (lr - 0.7) / 0.3) : Math.min(p.life / 400, 1);
+          FX.drawChar(fxCtx, '\u00B7', p.x, p.y, p.color, p.size, alpha * 0.6, 0);
         });
       }
 
       // Breeze / dandelion puffs
       breezeParticles.forEach(function (bp) {
         if (elapsed < bp.delay) return;
-        var bpLife = elapsed - bp.delay;
-        var lr = Math.min(bpLife / (totalDuration - bp.delay), 1);
+        const bpLife = elapsed - bp.delay;
+        const lr = Math.min(bpLife / (totalDuration - bp.delay), 1);
         bp.x += bp.vx * 0.016;
         bp.y += (bp.vy + Math.sin(bp.phase + bpLife * 0.001) * 4) * 0.016;
-        var alpha = lr > 0.7 ? (1 - (lr - 0.7) / 0.3) * 0.4 : Math.min(bpLife / 500, 0.4);
-        FX.drawChar(ctx, bp.char, bp.x, bp.y, bp.color, bp.size, alpha, bpLife * 0.001);
+        const alpha = lr > 0.7 ? (1 - (lr - 0.7) / 0.3) * 0.4 : Math.min(bpLife / 500, 0.4);
+        FX.drawChar(fxCtx, bp.char, bp.x, bp.y, bp.color, bp.size, alpha, bpLife * 0.001);
       });
 
       // Dappled light specks
       if (elapsed > 600 && elapsed < totalDuration - 600) {
-        var speckCount = Math.floor(lerp(2, 8, intensity));
-        for (var si2 = 0; si2 < speckCount; si2++) {
-          var sparkle = Math.sin(elapsed * 0.003 + si2 * 2.1) * 0.5 + 0.5;
+        const speckCount = Math.floor(lerp(2, 8, intensity));
+        for (let si2 = 0; si2 < speckCount; si2++) {
+          const sparkle = Math.sin(elapsed * 0.003 + si2 * 2.1) * 0.5 + 0.5;
           if (sparkle > 0.55) {
-            FX.drawChar(ctx, '\u00B7',
+            FX.drawChar(fxCtx, '\u00B7',
               center.cx + randRange(-gardenWidth * 0.55, gardenWidth * 0.55),
               center.rect.bottom - randRange(10, 90),
               pick(MONET_YELLOWS), lerp(2, 4, intensity), sparkle * lerp(0.15, 0.4, intensity), 0);
@@ -760,15 +726,12 @@ export var flowersPlugin = {
         }
       }
 
-      if (elapsed < totalDuration) {
-        requestAnimationFrame(frame);
-      } else {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      if (elapsed >= totalDuration) {
+        FX.deregisterFxDraw(_drawId);
         el.style.transform = '';
         FX.finalize(el, opts);
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     standardCleanup(el);
@@ -778,31 +741,27 @@ export var flowersPlugin = {
 // ═══════════════════════════════════════════════════════════════════
 //  3. SPARKLE SHOWER
 // ═══════════════════════════════════════════════════════════════════
-export var sparklePlugin = {
+export const sparklePlugin = {
   name: 'sparkle',
   category: 'action',
   style: 'cute',
   meta: { label: 'Sparkle Shower', description: 'Twinkling sparkle characters rise upward with blinking and glow', tags: ['sparkle', 'twinkle', 'gold'] },
   params: {
-    // sparkle has no user params currently -- placeholder for sandbox visibility
+    // sparkle has no user params currently — placeholder for sandbox visibility
   },
   requires: ['FX'],
   play: function(el, pctx) {
-    var FX = resolveFX(pctx);
-    var opts = buildOpts(pctx);
-    var intensity = FX.intensityScale(pctx.intensity || 5);
-    var center = FX.prepareCard(el);
-    var ctx = FX.getFxCtx();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    FX.resetDrawFont();
-    var startTime = performance.now();
-    var totalDuration = lerp(1800, 3800, intensity);
-    var particles = [];
-    var particleCount = FX.pCount(Math.floor(lerp(20, 150, intensity)));
-    var dotRadius = lerp(150, 400, intensity);
+    const opts = buildOpts(pctx);
+    const intensity = FX.intensityScale(pctx.intensity || 5);
+    const center = FX.prepareCard(el);
+    const _drawId = FX.nextFxDrawId('cute-sparkle');
+    const startTime = performance.now();
+    const totalDuration = lerp(1800, 3800, intensity);
+    const particles = [];
+    const particleCount = FX.pCount(Math.floor(lerp(20, 150, intensity)));
+    const dotRadius = lerp(150, 400, intensity);
 
-    for (var i = 0; i < particleCount; i++) {
+    for (let i = 0; i < particleCount; i++) {
       particles.push({
         x: center.rect.left + Math.random() * center.w,
         y: center.rect.top + Math.random() * center.h,
@@ -819,56 +778,52 @@ export var sparklePlugin = {
     FX.doDotgridRipple(center.cx, center.cy, { color: '#c9a84c', radius: dotRadius, duration: totalDuration * 0.7 });
     FX.doImpactFlash(false);
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
-      var elapsed = now - startTime;
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      const elapsed = now - startTime;
 
       if (elapsed < 600) {
-        var t = elapsed / 600;
+        const t = elapsed / 600;
         el.style.opacity = String(1 - t);
         el.style.transform = 'scale(' + (1 + t * 0.02) + ')';
       } else {
         el.style.opacity = '0';
       }
 
-      var dt = 0.016;
+      const dt = 0.016;
       particles.forEach(function (p) {
         if (elapsed < p.delay) return;
         p.life += 16;
         if (p.life >= p.maxLife) return;
-        var lr = p.life / p.maxLife;
+        const lr = p.life / p.maxLife;
         p.vy *= 0.995;
         p.x += (p.vx + p.drift) * dt;
         p.y += p.vy * dt;
         p.vx *= 0.99;
-        var blink = Math.sin(p.blinkPhase + p.life * 0.01 * p.blinkSpeed);
-        var twinkle = blink > 0 ? 1 : 0.2;
-        var alpha = (1 - Math.pow(lr, 2)) * twinkle;
+        const blink = Math.sin(p.blinkPhase + p.life * 0.01 * p.blinkSpeed);
+        const twinkle = blink > 0 ? 1 : 0.2;
+        const alpha = (1 - Math.pow(lr, 2)) * twinkle;
         if (alpha > 0.01) {
-          var ch = blink > 0.5 ? p.char : (blink > 0 ? '\u00B7' : '');
+          const ch = blink > 0.5 ? p.char : (blink > 0 ? '\u00B7' : '');
           if (ch) {
-            FX.drawChar(ctx, ch, p.x, p.y, p.color, p.size * (1 - lr * 0.3), alpha, 0);
+            FX.drawChar(fxCtx, ch, p.x, p.y, p.color, p.size * (1 - lr * 0.3), alpha, 0);
             if (FX.shouldShadow() && blink > 0.7) {
-              ctx.save();
-              ctx.shadowColor = p.color;
-              ctx.shadowBlur = 12;
-              FX.drawChar(ctx, ch, p.x, p.y, p.color, p.size * (1 - lr * 0.3), alpha * 0.5, 0);
-              ctx.restore();
+              fxCtx.save();
+              fxCtx.shadowColor = p.color;
+              fxCtx.shadowBlur = 12;
+              FX.drawChar(fxCtx, ch, p.x, p.y, p.color, p.size * (1 - lr * 0.3), alpha * 0.5, 0);
+              fxCtx.restore();
             }
           }
         }
       });
 
-      if (elapsed < totalDuration) {
-        requestAnimationFrame(frame);
-      } else {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      if (elapsed >= totalDuration) {
+        FX.deregisterFxDraw(_drawId);
         el.style.transform = '';
         FX.finalize(el, opts);
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     standardCleanup(el);
@@ -878,7 +833,7 @@ export var sparklePlugin = {
 // ═══════════════════════════════════════════════════════════════════
 //  4. SHOOTING STAR
 // ═══════════════════════════════════════════════════════════════════
-export var shootingstarPlugin = {
+export const shootingstarPlugin = {
   name: 'shootingstar',
   category: 'action',
   style: 'cute',
@@ -892,29 +847,24 @@ export var shootingstarPlugin = {
   },
   requires: ['FX'],
   play: function(el, pctx) {
-    var FX = resolveFX(pctx);
-    var opts = buildOpts(pctx);
-    var pm = FX.resolveParams(shootingstarPlugin.params, pctx.params);
-    var intensity = FX.intensityScale(pctx.intensity || 5);
-    var center = FX.prepareCard(el);
-    var ctx = FX.getFxCtx();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    FX.resetDrawFont();
-    var startTime = performance.now();
-    var totalDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
-    var trailParticles = [];
-    var dotRadius = lerp(180, 450, intensity);
+    const opts = buildOpts(pctx);
+    const pm = FX.resolveParams(shootingstarPlugin.params, pctx.params);
+    const intensity = FX.intensityScale(pctx.intensity || 5);
+    const center = FX.prepareCard(el);
+    const _drawId = FX.nextFxDrawId('cute-shootingstar');
+    const startTime = performance.now();
+    const totalDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
+    const trailParticles = [];
+    const dotRadius = lerp(180, 450, intensity);
 
     FX.doDotgridRipple(center.cx, center.cy, { color: '#c9a84c', radius: dotRadius, duration: totalDuration * 0.8 });
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
-      var elapsed = now - startTime;
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      const elapsed = now - startTime;
 
       if (elapsed < 400) {
-        var t = elapsed / 400;
+        const t = elapsed / 400;
         el.style.transform = 'scale(' + (1 + t * 0.05) + ') translateY(' + (t * 3) + 'px)';
         el.style.boxShadow = '0 0 ' + (t * 20) + 'px rgba(201, 168, 76, ' + (t * 0.3) + ')';
         if (Math.random() > 0.5) {
@@ -927,17 +877,17 @@ export var shootingstarPlugin = {
           });
         }
       } else {
-        var lt = Math.min((elapsed - 400) / 800, 1);
-        var ease = lt * lt * lt;
+        const lt = Math.min((elapsed - 400) / 800, 1);
+        const ease = lt * lt * lt;
         el.style.transform = 'translate(' + (ease * pm.flightDistanceX) + 'px, ' + (-ease * pm.flightDistanceY) + 'px) scale(' + Math.max(1.05 - ease * 1.1, 0) + ') rotate(' + (ease * pm.rotationDeg) + 'deg)';
         el.style.opacity = String(Math.max(1 - ease * 1.5, 0));
         el.style.boxShadow = '';
         if (lt < 0.3) FX.doScreenShake(false);
         if (lt < 0.8) {
-          var cx = center.cx + ease * pm.flightDistanceX;
-          var cy = center.cy - ease * pm.flightDistanceY;
-          var trailCount = FX.pCount(Math.floor(lerp(1, 5, intensity)));
-          for (var ti = 0; ti < trailCount; ti++) {
+          const cx = center.cx + ease * pm.flightDistanceX;
+          const cy = center.cy - ease * pm.flightDistanceY;
+          const trailCount = FX.pCount(Math.floor(lerp(1, 5, intensity)));
+          for (let ti = 0; ti < trailCount; ti++) {
             trailParticles.push({
               x: cx + randRange(-10, 10), y: cy + randRange(-5, 15),
               vx: randRange(-80, -20), vy: randRange(20, 80),
@@ -949,29 +899,26 @@ export var shootingstarPlugin = {
         }
       }
 
-      var dt = 0.016;
-      for (var i = 0; i < trailParticles.length; i++) {
-        var p = trailParticles[i];
+      const dt = 0.016;
+      for (let i = 0; i < trailParticles.length; i++) {
+        const p = trailParticles[i];
         p.life += 16;
         if (p.life >= p.maxLife) continue;
-        var lr = p.life / p.maxLife;
+        const lr = p.life / p.maxLife;
         p.x += p.vx * dt;
         p.y += p.vy * dt;
         p.vx *= 0.96;
         p.vy *= 0.96;
-        FX.drawChar(ctx, p.char, p.x, p.y, p.color, p.size * (1 - lr * 0.5), p.alpha * (1 - Math.pow(lr, 1.5)), 0);
+        FX.drawChar(fxCtx, p.char, p.x, p.y, p.color, p.size * (1 - lr * 0.5), p.alpha * (1 - Math.pow(lr, 1.5)), 0);
       }
 
-      if (elapsed < totalDuration) {
-        requestAnimationFrame(frame);
-      } else {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      if (elapsed >= totalDuration) {
+        FX.deregisterFxDraw(_drawId);
         el.style.transform = '';
         el.style.boxShadow = '';
         FX.finalize(el, opts);
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     standardCleanup(el);
@@ -981,7 +928,7 @@ export var shootingstarPlugin = {
 // ═══════════════════════════════════════════════════════════════════
 //  5. BUTTERFLY RELEASE
 // ═══════════════════════════════════════════════════════════════════
-export var butterfliesPlugin = {
+export const butterfliesPlugin = {
   name: 'butterflies',
   category: 'action',
   style: 'cute',
@@ -997,24 +944,20 @@ export var butterfliesPlugin = {
   },
   requires: ['FX'],
   play: function(el, pctx) {
-    var FX = resolveFX(pctx);
-    var opts = buildOpts(pctx);
-    var pm = FX.resolveParams(butterfliesPlugin.params, pctx.params);
-    var intensity = FX.intensityScale(pctx.intensity || 5);
-    var center = FX.prepareCard(el);
-    var ctx = FX.getFxCtx();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    FX.resetDrawFont();
-    var startTime = performance.now();
-    var totalDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
-    var butterflies = [];
-    var bColors = ['#e8b4b8', '#b4dae8', '#d0b4e8', '#e8e4b4', '#b4e8c9', '#e8b4cb', '#c8b6e0', '#a8d0e0'];
-    var bCount = FX.pCount(Math.floor(lerp(pm.minCount, pm.maxCount, intensity)));
-    var dotRadius = lerp(120, 300, intensity);
+    const opts = buildOpts(pctx);
+    const pm = FX.resolveParams(butterfliesPlugin.params, pctx.params);
+    const intensity = FX.intensityScale(pctx.intensity || 5);
+    const center = FX.prepareCard(el);
+    const _drawId = FX.nextFxDrawId('cute-butterflies');
+    const startTime = performance.now();
+    const totalDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
+    const butterflies = [];
+    const bColors = ['#e8b4b8', '#b4dae8', '#d0b4e8', '#e8e4b4', '#b4e8c9', '#e8b4cb', '#c8b6e0', '#a8d0e0'];
+    const bCount = FX.pCount(Math.floor(lerp(pm.minCount, pm.maxCount, intensity)));
+    const dotRadius = lerp(120, 300, intensity);
 
-    for (var i = 0; i < bCount; i++) {
-      var bAngle = (Math.random() - 0.5) * Math.PI * 0.8 - Math.PI / 2;
+    for (let i = 0; i < bCount; i++) {
+      const bAngle = (Math.random() - 0.5) * Math.PI * 0.8 - Math.PI / 2;
       butterflies.push({
         x: center.cx + randRange(-center.w * 0.3, center.w * 0.3),
         y: center.cy + randRange(-center.h * 0.2, center.h * 0.2),
@@ -1029,13 +972,12 @@ export var butterfliesPlugin = {
     FX.doDotgridRipple(center.cx, center.cy, { color: '#d0b4e8', radius: dotRadius, duration: totalDuration * 0.7 });
     FX.doImpactFlash(false);
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
-      var elapsed = now - startTime;
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      const elapsed = now - startTime;
 
       if (elapsed < 600) {
-        var t = elapsed / 600;
+        const t = elapsed / 600;
         el.style.opacity = String(1 - t);
         el.style.transform = 'scale(' + (1 - t * 0.05) + ')';
       }
@@ -1043,34 +985,31 @@ export var butterfliesPlugin = {
       butterflies.forEach(function (b) {
         if (elapsed < b.delay) return;
         b.life = elapsed - b.delay;
-        var lr = Math.min(b.life / (totalDuration - b.delay), 1);
-        var curve = Math.sin(b.curvePhase + b.life * 0.001 * b.curveFreq) * b.curveAmp;
+        const lr = Math.min(b.life / (totalDuration - b.delay), 1);
+        const curve = Math.sin(b.curvePhase + b.life * 0.001 * b.curveFreq) * b.curveAmp;
         b.x += (Math.cos(b.targetAngle) * b.speed + curve * 0.3) * 0.016;
         b.y += (Math.sin(b.targetAngle) * b.speed) * 0.016;
-        var flap = Math.sin(b.flapPhase + b.life * 0.01 * b.flapSpeed);
-        var alpha = lr > 0.7 ? 1 - (lr - 0.7) / 0.3 : Math.min(b.life / 200, 1);
+        const flap = Math.sin(b.flapPhase + b.life * 0.01 * b.flapSpeed);
+        const alpha = lr > 0.7 ? 1 - (lr - 0.7) / 0.3 : Math.min(b.life / 200, 1);
         if (flap > 0) {
-          FX.drawChar(ctx, '\u2572', b.x - 5, b.y, b.color, b.size, alpha, 0);
-          FX.drawChar(ctx, '\u2571', b.x + 5, b.y, b.color, b.size, alpha, 0);
+          FX.drawChar(fxCtx, '\u2572', b.x - 5, b.y, b.color, b.size, alpha, 0);
+          FX.drawChar(fxCtx, '\u2571', b.x + 5, b.y, b.color, b.size, alpha, 0);
         } else {
-          FX.drawChar(ctx, '\u2571', b.x - 4, b.y, b.color, b.size * 0.8, alpha, 0);
-          FX.drawChar(ctx, '\u2572', b.x + 4, b.y, b.color, b.size * 0.8, alpha, 0);
+          FX.drawChar(fxCtx, '\u2571', b.x - 4, b.y, b.color, b.size * 0.8, alpha, 0);
+          FX.drawChar(fxCtx, '\u2572', b.x + 4, b.y, b.color, b.size * 0.8, alpha, 0);
         }
-        FX.drawChar(ctx, '\u00B7', b.x, b.y, b.color, 6, alpha, 0);
+        FX.drawChar(fxCtx, '\u00B7', b.x, b.y, b.color, 6, alpha, 0);
         if (b.life > 100 && Math.random() > 0.7) {
-          FX.drawChar(ctx, '\u00B7', b.x + randRange(-3, 3), b.y + randRange(5, 15), b.color, 4, alpha * 0.3, 0);
+          FX.drawChar(fxCtx, '\u00B7', b.x + randRange(-3, 3), b.y + randRange(5, 15), b.color, 4, alpha * 0.3, 0);
         }
       });
 
-      if (elapsed < totalDuration) {
-        requestAnimationFrame(frame);
-      } else {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      if (elapsed >= totalDuration) {
+        FX.deregisterFxDraw(_drawId);
         el.style.transform = '';
         FX.finalize(el, opts);
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     standardCleanup(el);
@@ -1080,80 +1019,72 @@ export var butterfliesPlugin = {
 // ═══════════════════════════════════════════════════════════════════
 //  6. RAINBOW BRIDGE
 // ═══════════════════════════════════════════════════════════════════
-export var rainbowPlugin = {
+export const rainbowPlugin = {
   name: 'rainbow',
   category: 'action',
   style: 'cute',
   meta: { label: 'Rainbow Bridge', description: 'Card rides across a ROYGBIV rainbow arc with sparkle trail', tags: ['rainbow', 'arc', 'colorful'] },
   params: {
-    // rainbow has no user params currently -- placeholder for sandbox visibility
+    // rainbow has no user params currently — placeholder for sandbox visibility
   },
   requires: ['FX'],
   play: function(el, pctx) {
-    var FX = resolveFX(pctx);
-    var opts = buildOpts(pctx);
-    var intensity = FX.intensityScale(pctx.intensity || 5);
-    var center = FX.prepareCard(el);
-    var ctx = FX.getFxCtx();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    FX.resetDrawFont();
-    var startTime = performance.now();
-    var totalDuration = lerp(2000, 4000, intensity);
-    var acx = center.cx, acy = center.cy + 100, ar = lerp(200, 400, intensity);
-    var blockChars = ['\u2593', '\u2592', '\u2591'];
+    const opts = buildOpts(pctx);
+    const intensity = FX.intensityScale(pctx.intensity || 5);
+    const center = FX.prepareCard(el);
+    const _drawId = FX.nextFxDrawId('cute-rainbow');
+    const startTime = performance.now();
+    const totalDuration = lerp(2000, 4000, intensity);
+    const acx = center.cx, acy = center.cy + 100, ar = lerp(200, 400, intensity);
+    const blockChars = ['\u2593', '\u2592', '\u2591'];
 
     FX.doDotgridRipple(center.cx, center.cy, { color: '#c9a84c', radius: ar, duration: totalDuration * 0.8 });
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
-      var elapsed = now - startTime;
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      var bT = Math.min(elapsed / 1500, 1);
-      var bE = 1 - Math.pow(1 - bT, 2);
-      var drawnAngle = Math.PI + (0 - Math.PI) * bE;
+      const elapsed = now - startTime;
+      const bT = Math.min(elapsed / 1500, 1);
+      const bE = 1 - Math.pow(1 - bT, 2);
+      const drawnAngle = Math.PI + (0 - Math.PI) * bE;
 
-      var bandCount = Math.floor(lerp(4, 7, intensity));
-      for (var band = 0; band < bandCount; band++) {
-        var r = ar - band * lerp(8, 14, intensity);
-        var steps = Math.floor(lerp(40, 100, intensity) * bE);
-        for (var s = 0; s <= steps; s++) {
-          var sAngle = Math.PI + (drawnAngle - Math.PI) * (s / steps);
+      const bandCount = Math.floor(lerp(4, 7, intensity));
+      for (let band = 0; band < bandCount; band++) {
+        const r = ar - band * lerp(8, 14, intensity);
+        const steps = Math.floor(lerp(40, 100, intensity) * bE);
+        for (let s = 0; s <= steps; s++) {
+          const sAngle = Math.PI + (drawnAngle - Math.PI) * (s / steps);
           if (sAngle < Math.min(Math.PI, drawnAngle) || sAngle > Math.max(Math.PI, drawnAngle)) continue;
-          FX.drawChar(ctx, blockChars[band % 3], acx + Math.cos(sAngle) * r, acy + Math.sin(sAngle) * r,
+          FX.drawChar(fxCtx, blockChars[band % 3], acx + Math.cos(sAngle) * r, acy + Math.sin(sAngle) * r,
             ROYGBIV[band % ROYGBIV.length], lerp(10, 16, intensity),
             lerp(0.4, 0.7, intensity) * Math.min(s / 80 * 5, 1, (1 - s / 80) * 5), 0);
         }
       }
 
       if (elapsed > 800) {
-        var sT = Math.min((elapsed - 800) / 1700, 1);
-        var sE = sT * sT;
-        var ca = Math.PI + (0 - Math.PI) * sE;
-        var cx2 = acx + Math.cos(ca) * ar - center.cx;
-        var cy2 = acy + Math.sin(ca) * ar - center.cy;
+        const sT = Math.min((elapsed - 800) / 1700, 1);
+        const sE = sT * sT;
+        const ca = Math.PI + (0 - Math.PI) * sE;
+        const cx2 = acx + Math.cos(ca) * ar - center.cx;
+        const cy2 = acy + Math.sin(ca) * ar - center.cy;
         el.style.transform = 'translate(' + cx2 + 'px, ' + cy2 + 'px) scale(' + Math.max(1 - sT * 0.8, 0.1) + ') rotate(' + (sE * 360) + 'deg)';
         el.style.opacity = String(Math.max(1 - sT * 1.3, 0));
         if (sT < 0.9 && Math.random() > 0.5) {
-          FX.drawChar(ctx, pick(SPARKLE_CHARS), center.cx + cx2 + randRange(-10, 10), center.cy + cy2 + randRange(-10, 10),
+          FX.drawChar(fxCtx, pick(SPARKLE_CHARS), center.cx + cx2 + randRange(-10, 10), center.cy + cy2 + randRange(-10, 10),
             pick(ROYGBIV), 8 + Math.random() * 6, 0.5, Math.random() * Math.PI);
         }
       } else {
-        var pt = elapsed / 800;
+        const pt = elapsed / 800;
         el.style.transform = 'scale(' + (1 + Math.sin(pt * Math.PI * 3) * 0.02) + ')';
         el.style.boxShadow = '0 0 ' + (pt * 15) + 'px rgba(201, 168, 76, ' + (pt * 0.15) + ')';
       }
 
-      if (elapsed < totalDuration) {
-        requestAnimationFrame(frame);
-      } else {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      if (elapsed >= totalDuration) {
+        FX.deregisterFxDraw(_drawId);
         el.style.transform = '';
         el.style.boxShadow = '';
         FX.finalize(el, opts);
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     standardCleanup(el);
@@ -1163,7 +1094,7 @@ export var rainbowPlugin = {
 // ═══════════════════════════════════════════════════════════════════
 //  7. FIREWORKS
 // ═══════════════════════════════════════════════════════════════════
-export var fireworksPlugin = {
+export const fireworksPlugin = {
   name: 'fireworks',
   category: 'action',
   style: 'cute',
@@ -1178,23 +1109,19 @@ export var fireworksPlugin = {
   },
   requires: ['FX'],
   play: function(el, pctx) {
-    var FX = resolveFX(pctx);
-    var opts = buildOpts(pctx);
-    var pm = FX.resolveParams(fireworksPlugin.params, pctx.params);
-    var intensity = FX.intensityScale(pctx.intensity || 5);
-    var center = FX.prepareCard(el);
-    var ctx = FX.getFxCtx();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    FX.resetDrawFont();
-    var startTime = performance.now();
-    var totalDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
-    var burstCount = Math.floor(lerp(1, pm.maxBursts, intensity));
-    var bursts = [];
-    for (var i = 0; i < burstCount; i++) {
+    const opts = buildOpts(pctx);
+    const pm = FX.resolveParams(fireworksPlugin.params, pctx.params);
+    const intensity = FX.intensityScale(pctx.intensity || 5);
+    const center = FX.prepareCard(el);
+    const _drawId = FX.nextFxDrawId('cute-fireworks');
+    const startTime = performance.now();
+    const totalDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
+    const burstCount = Math.floor(lerp(1, pm.maxBursts, intensity));
+    const bursts = [];
+    for (let i = 0; i < burstCount; i++) {
       bursts.push({
         x: center.cx + randRange(-150, 150),
-        y: randRange(50, viewportHeight() * 0.3),
+        y: randRange(50, window.innerHeight * 0.3),
         delay: pm.launchDelay + i * lerp(400, 200, intensity),
         pattern: ['circle', 'star', 'willow'][i % 3],
         color: pick(RAINBOW),
@@ -1204,11 +1131,11 @@ export var fireworksPlugin = {
     }
 
     function createBurst(bx, by, pattern, color) {
-      var ps = [];
-      var count = FX.pCount(Math.floor(lerp(15, 50, intensity)));
-      for (var i = 0; i < count; i++) {
-        var bAngle = (i / count) * Math.PI * 2;
-        var speed;
+      const ps = [];
+      const count = FX.pCount(Math.floor(lerp(15, 50, intensity)));
+      for (let i = 0; i < count; i++) {
+        const bAngle = (i / count) * Math.PI * 2;
+        let speed;
         if (pattern === 'circle') speed = lerp(60, 140, intensity) + Math.random() * 60;
         else if (pattern === 'star') speed = (i % 3 === 0) ? lerp(80, 160, intensity) + Math.random() * 40 : lerp(40, 80, intensity) + Math.random() * 40;
         else speed = lerp(30, 70, intensity) + Math.random() * 100;
@@ -1222,19 +1149,18 @@ export var fireworksPlugin = {
       return ps;
     }
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
-      var elapsed = now - startTime;
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      const elapsed = now - startTime;
 
       if (elapsed < 800) {
-        var t = elapsed / 800;
-        var e = t * t;
+        const t = elapsed / 800;
+        const e = t * t;
         el.style.transform = 'translateY(' + (-e * (center.cy - 80)) + 'px) scale(' + Math.max(1 - e * 0.7, 0.2) + ')';
         el.style.opacity = String(Math.max(1 - e * 1.2, 0));
-        var ry = center.cy - e * (center.cy - 80);
-        for (var ti = 0; ti < FX.pCount(3); ti++) {
-          FX.drawChar(ctx, pick(['*', '+', '\u00B7', '^']), center.cx + randRange(-8, 8), ry + 20 + randRange(0, 30),
+        const ry = center.cy - e * (center.cy - 80);
+        for (let ti = 0; ti < FX.pCount(3); ti++) {
+          FX.drawChar(fxCtx, pick(['*', '+', '\u00B7', '^']), center.cx + randRange(-8, 8), ry + 20 + randRange(0, 30),
             pick(['#c9a84c', '#d4728c', '#d4a850']), 8 + Math.random() * 10, 0.5 + Math.random() * 0.3, Math.random() * Math.PI);
         }
       } else {
@@ -1250,39 +1176,36 @@ export var fireworksPlugin = {
           FX.doDotgridRipple(bp.x, bp.y, { color: bp.color, radius: lerp(120, 250, intensity), duration: 1000 });
         }
         if (bp.particles) {
-          var dt = 0.016;
-          for (var pi = 0; pi < bp.particles.length; pi++) {
-            var p = bp.particles[pi];
+          const dt = 0.016;
+          for (let pi = 0; pi < bp.particles.length; pi++) {
+            const p = bp.particles[pi];
             p.life += 16;
             if (p.life >= p.maxLife) continue;
-            var lr = p.life / p.maxLife;
+            const lr = p.life / p.maxLife;
             p.vy += p.gravity * dt;
             p.vx *= p.drag;
             p.vy *= p.drag;
             p.x += p.vx * dt;
             p.y += p.vy * dt;
-            var a = 1 - Math.pow(lr, 1.5);
-            FX.drawChar(ctx, p.char, p.x, p.y, p.color, p.size * (1 - lr * 0.4), a, 0);
+            const a = 1 - Math.pow(lr, 1.5);
+            FX.drawChar(fxCtx, p.char, p.x, p.y, p.color, p.size * (1 - lr * 0.4), a, 0);
             if (FX.shouldShadow() && a > 0.3) {
-              ctx.save();
-              ctx.shadowColor = p.color;
-              ctx.shadowBlur = 6;
-              FX.drawChar(ctx, p.char, p.x, p.y, p.color, p.size * (1 - lr * 0.4), a * 0.3, 0);
-              ctx.restore();
+              fxCtx.save();
+              fxCtx.shadowColor = p.color;
+              fxCtx.shadowBlur = 6;
+              FX.drawChar(fxCtx, p.char, p.x, p.y, p.color, p.size * (1 - lr * 0.4), a * 0.3, 0);
+              fxCtx.restore();
             }
           }
         }
       });
 
-      if (elapsed < totalDuration) {
-        requestAnimationFrame(frame);
-      } else {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      if (elapsed >= totalDuration) {
+        FX.deregisterFxDraw(_drawId);
         el.style.transform = '';
         FX.finalize(el, opts);
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     standardCleanup(el);
@@ -1292,7 +1215,7 @@ export var fireworksPlugin = {
 // ═══════════════════════════════════════════════════════════════════
 //  8. HEART EXPLOSION
 // ═══════════════════════════════════════════════════════════════════
-export var heartsPlugin = {
+export const heartsPlugin = {
   name: 'hearts',
   category: 'action',
   style: 'cute',
@@ -1307,25 +1230,21 @@ export var heartsPlugin = {
   },
   requires: ['FX'],
   play: function(el, pctx) {
-    var FX = resolveFX(pctx);
-    var opts = buildOpts(pctx);
-    var pm = FX.resolveParams(heartsPlugin.params, pctx.params);
-    var intensity = FX.intensityScale(pctx.intensity || 5);
-    var center = FX.prepareCard(el);
-    var ctx = FX.getFxCtx();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    FX.resetDrawFont();
-    var startTime = performance.now();
-    var totalDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
-    var hearts = [];
-    var hColors = ['#d4728c', '#c97088', '#cf6e5e', '#d99a7c', '#c44068', '#d07080', '#e0a0b0', '#b06070'];
-    var heartCount = FX.pCount(Math.floor(lerp(pm.minHearts, pm.maxHearts, intensity)));
-    var dotRadius = lerp(150, 350, intensity);
+    const opts = buildOpts(pctx);
+    const pm = FX.resolveParams(heartsPlugin.params, pctx.params);
+    const intensity = FX.intensityScale(pctx.intensity || 5);
+    const center = FX.prepareCard(el);
+    const _drawId = FX.nextFxDrawId('cute-hearts');
+    const startTime = performance.now();
+    const totalDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
+    const hearts = [];
+    const hColors = ['#d4728c', '#c97088', '#cf6e5e', '#d99a7c', '#c44068', '#d07080', '#e0a0b0', '#b06070'];
+    const heartCount = FX.pCount(Math.floor(lerp(pm.minHearts, pm.maxHearts, intensity)));
+    const dotRadius = lerp(150, 350, intensity);
 
-    for (var i = 0; i < heartCount; i++) {
-      var hAngle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.2;
-      var speed = lerp(80, 150, intensity) + Math.random() * lerp(100, 280, intensity);
+    for (let i = 0; i < heartCount; i++) {
+      const hAngle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.2;
+      const speed = lerp(80, 150, intensity) + Math.random() * lerp(100, 280, intensity);
       hearts.push({
         x: center.cx + randRange(-20, 20), y: center.cy,
         vx: Math.cos(hAngle) * speed, vy: Math.sin(hAngle) * speed,
@@ -1342,17 +1261,16 @@ export var heartsPlugin = {
     FX.doDotgridRipple(center.cx, center.cy, { color: '#d4728c', radius: dotRadius, duration: totalDuration * 0.7 });
     FX.doImpactFlash(false);
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
-      var elapsed = now - startTime;
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      const elapsed = now - startTime;
 
       if (elapsed < 200) {
-        var t = elapsed / 200;
+        const t = elapsed / 200;
         el.style.borderColor = 'rgba(212, 114, 140, ' + (t * 0.4) + ')';
         el.style.boxShadow = '0 0 ' + (t * 20) + 'px rgba(212, 114, 140, ' + (t * 0.2) + ')';
       } else if (elapsed < 600) {
-        var t2 = (elapsed - 200) / 400;
+        const t2 = (elapsed - 200) / 400;
         el.style.transform = 'scale(' + (1.05 - t2 * 0.25) + ')';
         el.style.opacity = String(1 - t2);
         el.style.boxShadow = '';
@@ -1360,13 +1278,13 @@ export var heartsPlugin = {
         el.style.opacity = '0';
       }
 
-      var dt = 0.016;
-      var newH = [];
+      const dt = 0.016;
+      const newH = [];
       hearts.forEach(function (h) {
         if (elapsed < h.delay) return;
         h.life += 16;
         if (h.life >= h.maxLife) return;
-        var lr = h.life / h.maxLife;
+        const lr = h.life / h.maxLife;
         h.vy += pm.gravity * dt;
         h.vx *= 0.99;
         h.vy *= 0.99;
@@ -1375,8 +1293,8 @@ export var heartsPlugin = {
         h.rotation += h.rotSpeed * dt;
         if (h.canSplit && !h.hasSplit && h.life > h.splitTime) {
           h.hasSplit = true;
-          for (var j = 0; j < 3; j++) {
-            var a = (Math.random() - 0.5) * Math.PI;
+          for (let j = 0; j < 3; j++) {
+            const a = (Math.random() - 0.5) * Math.PI;
             newH.push({
               x: h.x, y: h.y, vx: Math.cos(a) * 60 + h.vx * 0.3,
               vy: Math.sin(a) * 60 + h.vy * 0.3 - 30, char: pick(['\u2661', '\u2665']),
@@ -1387,32 +1305,29 @@ export var heartsPlugin = {
           }
           h.size *= 0.6;
         }
-        var alpha = 1 - Math.pow(lr, 1.8);
-        var pulse = 1 + 0.1 * Math.sin(h.life * 0.015);
-        FX.drawChar(ctx, h.char, h.x, h.y, h.color, h.size * pulse, alpha, h.rotation);
+        const alpha = 1 - Math.pow(lr, 1.8);
+        const pulse = 1 + 0.1 * Math.sin(h.life * 0.015);
+        FX.drawChar(fxCtx, h.char, h.x, h.y, h.color, h.size * pulse, alpha, h.rotation);
         if (FX.shouldShadow() && alpha > 0.3) {
-          ctx.save();
-          ctx.shadowColor = h.color;
-          ctx.shadowBlur = 8;
-          FX.drawChar(ctx, h.char, h.x, h.y, h.color, h.size * pulse, alpha * 0.3, h.rotation);
-          ctx.restore();
+          fxCtx.save();
+          fxCtx.shadowColor = h.color;
+          fxCtx.shadowBlur = 8;
+          FX.drawChar(fxCtx, h.char, h.x, h.y, h.color, h.size * pulse, alpha * 0.3, h.rotation);
+          fxCtx.restore();
         }
       });
-      for (var ni = 0; ni < newH.length; ni++) {
+      for (let ni = 0; ni < newH.length; ni++) {
         hearts.push(newH[ni]);
       }
 
-      if (elapsed < totalDuration) {
-        requestAnimationFrame(frame);
-      } else {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      if (elapsed >= totalDuration) {
+        FX.deregisterFxDraw(_drawId);
         el.style.transform = '';
         el.style.borderColor = '';
         el.style.boxShadow = '';
         FX.finalize(el, opts);
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     standardCleanup(el);
@@ -1420,9 +1335,9 @@ export var heartsPlugin = {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  9. CAT -- Cute ASCII cats with purring, pawing, and charm
+//  9. CAT — Cute ASCII cats with purring, pawing, and charm
 // ═══════════════════════════════════════════════════════════════════
-export var catPlugin = {
+export const catPlugin = {
   name: 'cat',
   category: 'action',
   style: 'cute',
@@ -1437,27 +1352,23 @@ export var catPlugin = {
   },
   requires: ['FX'],
   play: function(el, pctx) {
-    var FX = resolveFX(pctx);
-    var opts = buildOpts(pctx);
-    var pm = FX.resolveParams(catPlugin.params, pctx.params);
-    var intensity = FX.intensityScale(pctx.intensity || 5);
-    var center = FX.prepareCard(el);
-    var ctx = FX.getFxCtx();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    FX.resetDrawFont();
-    var startTime = performance.now();
-    var totalDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
+    const opts = buildOpts(pctx);
+    const pm = FX.resolveParams(catPlugin.params, pctx.params);
+    const intensity = FX.intensityScale(pctx.intensity || 5);
+    const center = FX.prepareCard(el);
+    const _drawId = FX.nextFxDrawId('cute-cat');
+    const startTime = performance.now();
+    const totalDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
 
-    var catColor = pick(CAT_FUR_COLORS);
-    var catSize = lerp(pm.minCatSize, pm.maxCatSize, intensity);
+    const catColor = pick(CAT_FUR_COLORS);
+    const catSize = lerp(pm.minCatSize, pm.maxCatSize, intensity);
 
     // Floating cat face particles
-    var catParticles = [];
-    var particleCount = FX.pCount(Math.floor(lerp(8, 50, intensity)));
-    for (var i = 0; i < particleCount; i++) {
-      var cAngle = Math.random() * Math.PI * 2;
-      var cSpeed = lerp(40, 100, intensity) + Math.random() * lerp(60, 150, intensity);
+    const catParticles = [];
+    const particleCount = FX.pCount(Math.floor(lerp(8, 50, intensity)));
+    for (let i = 0; i < particleCount; i++) {
+      const cAngle = Math.random() * Math.PI * 2;
+      const cSpeed = lerp(40, 100, intensity) + Math.random() * lerp(60, 150, intensity);
       catParticles.push({
         x: center.cx + randRange(-center.w * 0.3, center.w * 0.3),
         y: center.cy + randRange(-center.h * 0.2, center.h * 0.2),
@@ -1471,11 +1382,11 @@ export var catPlugin = {
     }
 
     // Paw print trail
-    var pawPrints = [];
-    var pawCount = FX.pCount(Math.floor(lerp(3, 10, intensity)));
-    for (var pi = 0; pi < pawCount; pi++) {
-      var px = center.cx + randRange(-center.w * 0.5, center.w * 0.5);
-      var py = center.cy + randRange(-center.h * 0.3, center.h * 0.5);
+    const pawPrints = [];
+    const pawCount = FX.pCount(Math.floor(lerp(3, 10, intensity)));
+    for (let pi = 0; pi < pawCount; pi++) {
+      const px = center.cx + randRange(-center.w * 0.5, center.w * 0.5);
+      const py = center.cy + randRange(-center.h * 0.3, center.h * 0.5);
       pawPrints.push({
         x: px, y: py, delay: 400 + pi * lerp(200, 80, intensity),
         size: lerp(6, 12, intensity) * pm.particleSize / 10, alpha: 0
@@ -1483,9 +1394,9 @@ export var catPlugin = {
     }
 
     // Purr lines
-    var purrLines = [];
-    var purrCount = FX.pCount(Math.floor(lerp(3, 12, intensity)));
-    for (var pli = 0; pli < purrCount; pli++) {
+    const purrLines = [];
+    const purrCount = FX.pCount(Math.floor(lerp(3, 12, intensity)));
+    for (let pli = 0; pli < purrCount; pli++) {
       purrLines.push({
         x: center.cx + randRange(-20, 20),
         y: center.cy + randRange(-10, 10),
@@ -1499,18 +1410,17 @@ export var catPlugin = {
     FX.doImpactFlash(false);
     FX.doScreenShake(false);
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
-      var elapsed = now - startTime;
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      const elapsed = now - startTime;
 
       // Card shrink with cat appearing
       if (elapsed < 400) {
-        var t = elapsed / 400;
+        const t = elapsed / 400;
         el.style.transform = 'scale(' + (1 + t * 0.05) + ')';
         el.style.boxShadow = '0 0 ' + (t * 20) + 'px rgba(212, 114, 140, ' + (t * 0.15) + ')';
       } else if (elapsed < 900) {
-        var t2 = (elapsed - 400) / 500;
+        const t2 = (elapsed - 400) / 500;
         el.style.transform = 'scale(' + (1.05 - t2 * t2 * 0.25) + ')';
         el.style.opacity = String(1 - t2 * t2);
         el.style.boxShadow = '';
@@ -1518,16 +1428,16 @@ export var catPlugin = {
 
       // Draw main cat ASCII art in center
       if (elapsed > 200 && elapsed < totalDuration - 800) {
-        var catAlpha = elapsed < 600 ? (elapsed - 200) / 400 : (elapsed > totalDuration - 1200 ? (totalDuration - 800 - elapsed) / 400 : 1);
+        const catAlpha = elapsed < 600 ? (elapsed - 200) / 400 : (elapsed > totalDuration - 1200 ? (totalDuration - 800 - elapsed) / 400 : 1);
         if (catAlpha > 0) {
-          var breathe = 1 + 0.03 * Math.sin(elapsed * 0.004);
-          var catFace = CAT_FACES[Math.floor((elapsed / 600) % CAT_FACES.length)];
-          FX.drawChar(ctx, catFace, center.cx, center.cy - 10, catColor, catSize * breathe, catAlpha * 0.8, 0);
+          const breathe = 1 + 0.03 * Math.sin(elapsed * 0.004);
+          const catFace = CAT_FACES[Math.floor((elapsed / 600) % CAT_FACES.length)];
+          FX.drawChar(fxCtx, catFace, center.cx, center.cy - 10, catColor, catSize * breathe, catAlpha * 0.8, 0);
 
           // Purr text
           if (elapsed > 800) {
-            var purrAlpha = Math.sin(elapsed * 0.003) * 0.3 + 0.3;
-            FX.drawChar(ctx, 'p u r r r', center.cx, center.cy + catSize + 5,
+            const purrAlpha = Math.sin(elapsed * 0.003) * 0.3 + 0.3;
+            FX.drawChar(fxCtx, 'p u r r r', center.cx, center.cy + catSize + 5,
               pick(CAT_COLORS), catSize * 0.4, purrAlpha * catAlpha, 0);
           }
         }
@@ -1536,15 +1446,15 @@ export var catPlugin = {
       // Paw prints appearing sequentially
       pawPrints.forEach(function (pp) {
         if (elapsed < pp.delay) return;
-        var ppLife = elapsed - pp.delay;
-        var fadeIn = Math.min(ppLife / 200, 1);
-        var fadeOut = ppLife > 1000 ? Math.max(1 - (ppLife - 1000) / 800, 0) : 1;
+        const ppLife = elapsed - pp.delay;
+        const fadeIn = Math.min(ppLife / 200, 1);
+        const fadeOut = ppLife > 1000 ? Math.max(1 - (ppLife - 1000) / 800, 0) : 1;
         pp.alpha = fadeIn * fadeOut * lerp(0.3, 0.6, intensity);
         if (pp.alpha > 0.01) {
-          FX.drawChar(ctx, '@', pp.x, pp.y + 3, pick(CAT_FUR_COLORS), pp.size * 0.7, pp.alpha, 0);
-          for (var t = 0; t < 3; t++) {
-            var ta = (-0.3 + t * 0.3);
-            FX.drawChar(ctx, '\u00B7', pp.x + Math.cos(ta - Math.PI / 2) * pp.size * 0.5,
+          FX.drawChar(fxCtx, '@', pp.x, pp.y + 3, pick(CAT_FUR_COLORS), pp.size * 0.7, pp.alpha, 0);
+          for (let t = 0; t < 3; t++) {
+            const ta = (-0.3 + t * 0.3);
+            FX.drawChar(fxCtx, '\u00B7', pp.x + Math.cos(ta - Math.PI / 2) * pp.size * 0.5,
               pp.y + Math.sin(ta - Math.PI / 2) * pp.size * 0.4,
               pick(CAT_FUR_COLORS), pp.size * 0.35, pp.alpha * 0.8, 0);
           }
@@ -1555,42 +1465,39 @@ export var catPlugin = {
       purrLines.forEach(function (pl) {
         if (elapsed < pl.delay) return;
         pl.life = elapsed - pl.delay;
-        var lr = Math.min(pl.life / 1200, 1);
-        var alpha = lr > 0.6 ? (1 - (lr - 0.6) / 0.4) : Math.min(pl.life / 200, 1);
-        var plx = pl.x + pl.vx * lr;
+        const lr = Math.min(pl.life / 1200, 1);
+        const alpha = lr > 0.6 ? (1 - (lr - 0.6) / 0.4) : Math.min(pl.life / 200, 1);
+        const plx = pl.x + pl.vx * lr;
         if (alpha > 0.01) {
-          FX.drawChar(ctx, '~', plx, pl.y, pick(CAT_COLORS), pl.size * (0.8 + lr * 0.3), alpha * 0.4, 0);
-          FX.drawChar(ctx, '~', plx + pl.size * 0.8, pl.y, pick(CAT_COLORS), pl.size * (0.6 + lr * 0.2), alpha * 0.3, 0);
+          FX.drawChar(fxCtx, '~', plx, pl.y, pick(CAT_COLORS), pl.size * (0.8 + lr * 0.3), alpha * 0.4, 0);
+          FX.drawChar(fxCtx, '~', plx + pl.size * 0.8, pl.y, pick(CAT_COLORS), pl.size * (0.6 + lr * 0.2), alpha * 0.3, 0);
         }
       });
 
       // Floating cat-themed particles
-      var dt = 0.016;
+      const dt = 0.016;
       catParticles.forEach(function (p) {
         if (elapsed < p.delay) return;
         p.life += 16;
         if (p.life >= p.maxLife) return;
-        var lr = p.life / p.maxLife;
+        const lr = p.life / p.maxLife;
         p.vy += pm.particleGravity * dt;
         p.vx *= 0.98;
         p.vy *= 0.98;
         p.x += p.vx * dt;
         p.y += p.vy * dt;
         p.rotation += p.rotSpeed * dt;
-        var a = 1 - Math.pow(lr, 1.5);
-        FX.drawChar(ctx, p.char, p.x, p.y, p.color, p.size * (1 + (1 - lr) * 0.2), a, p.rotation);
+        const a = 1 - Math.pow(lr, 1.5);
+        FX.drawChar(fxCtx, p.char, p.x, p.y, p.color, p.size * (1 + (1 - lr) * 0.2), a, p.rotation);
       });
 
-      if (elapsed < totalDuration) {
-        requestAnimationFrame(frame);
-      } else {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      if (elapsed >= totalDuration) {
+        FX.deregisterFxDraw(_drawId);
         el.style.transform = '';
         el.style.boxShadow = '';
         FX.finalize(el, opts);
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     standardCleanup(el);
@@ -1598,9 +1505,9 @@ export var catPlugin = {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  10. DOG -- Happy tail-wagging ASCII dogs
+//  10. DOG — Happy tail-wagging ASCII dogs
 // ═══════════════════════════════════════════════════════════════════
-export var dogPlugin = {
+export const dogPlugin = {
   name: 'dog',
   category: 'action',
   style: 'cute',
@@ -1616,29 +1523,25 @@ export var dogPlugin = {
   },
   requires: ['FX'],
   play: function(el, pctx) {
-    var FX = resolveFX(pctx);
-    var opts = buildOpts(pctx);
-    var pm = FX.resolveParams(dogPlugin.params, pctx.params);
-    var intensity = FX.intensityScale(pctx.intensity || 5);
-    var center = FX.prepareCard(el);
-    var ctx = FX.getFxCtx();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    FX.resetDrawFont();
-    var startTime = performance.now();
-    var totalDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
+    const opts = buildOpts(pctx);
+    const pm = FX.resolveParams(dogPlugin.params, pctx.params);
+    const intensity = FX.intensityScale(pctx.intensity || 5);
+    const center = FX.prepareCard(el);
+    const _drawId = FX.nextFxDrawId('cute-dog');
+    const startTime = performance.now();
+    const totalDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
 
-    var dogColor = pick(DOG_FUR_COLORS);
-    var dogSize = lerp(pm.minDogSize, pm.maxDogSize, intensity);
+    const dogColor = pick(DOG_FUR_COLORS);
+    const dogSize = lerp(pm.minDogSize, pm.maxDogSize, intensity);
 
     // Floating dog-themed particles
-    var dogParticles = [];
-    var particleCount = FX.pCount(Math.floor(lerp(10, 60, intensity)));
-    var boneChars = ['_', '=', 'o'];
-    for (var i = 0; i < particleCount; i++) {
-      var dAngle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.5;
-      var dSpeed = lerp(60, 140, intensity) + Math.random() * lerp(80, 200, intensity);
-      var isBone = Math.random() > 0.6;
+    const dogParticles = [];
+    const particleCount = FX.pCount(Math.floor(lerp(10, 60, intensity)));
+    const boneChars = ['_', '=', 'o'];
+    for (let i = 0; i < particleCount; i++) {
+      const dAngle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.5;
+      const dSpeed = lerp(60, 140, intensity) + Math.random() * lerp(80, 200, intensity);
+      const isBone = Math.random() > 0.6;
       dogParticles.push({
         x: center.cx + randRange(-center.w * 0.3, center.w * 0.3),
         y: center.cy + randRange(-center.h * 0.2, center.h * 0.2),
@@ -1653,9 +1556,9 @@ export var dogPlugin = {
     }
 
     // Tail wag particles
-    var tailParticles = [];
-    var tailCount = FX.pCount(Math.floor(lerp(4, 15, intensity)));
-    for (var ti = 0; ti < tailCount; ti++) {
+    const tailParticles = [];
+    const tailCount = FX.pCount(Math.floor(lerp(4, 15, intensity)));
+    for (let ti = 0; ti < tailCount; ti++) {
       tailParticles.push({
         baseX: center.cx + lerp(15, 25, intensity),
         baseY: center.cy + 5,
@@ -1665,10 +1568,10 @@ export var dogPlugin = {
     }
 
     // Bark text bubbles
-    var barks = [];
-    var barkTexts = ['WOOF!', 'ARF!', 'YAP!', 'BARK!', '*pant*', '*wag*'];
-    var barkCount = Math.floor(lerp(1, 5, intensity));
-    for (var bki = 0; bki < barkCount; bki++) {
+    const barks = [];
+    const barkTexts = ['WOOF!', 'ARF!', 'YAP!', 'BARK!', '*pant*', '*wag*'];
+    const barkCount = Math.floor(lerp(1, 5, intensity));
+    for (let bki = 0; bki < barkCount; bki++) {
       barks.push({
         x: center.cx + randRange(-40, 40),
         y: center.cy - 25 - Math.random() * 30,
@@ -1682,17 +1585,16 @@ export var dogPlugin = {
     FX.doImpactFlash(false);
     FX.doScreenShake(false);
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
-      var elapsed = now - startTime;
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      const elapsed = now - startTime;
 
       if (elapsed < 300) {
-        var t = elapsed / 300;
+        const t = elapsed / 300;
         el.style.transform = 'scale(' + (1 + t * 0.08) + ')';
         el.style.boxShadow = '0 0 ' + (t * 25) + 'px rgba(201, 168, 76, ' + (t * 0.2) + ')';
       } else if (elapsed < 800) {
-        var t2 = (elapsed - 300) / 500;
+        const t2 = (elapsed - 300) / 500;
         el.style.transform = 'scale(' + (1.08 - t2 * t2 * 0.3) + ')';
         el.style.opacity = String(1 - t2 * t2);
         el.style.boxShadow = '';
@@ -1700,29 +1602,29 @@ export var dogPlugin = {
 
       // Draw main dog face in center
       if (elapsed > 150 && elapsed < totalDuration - 800) {
-        var dogAlpha = elapsed < 500 ? (elapsed - 150) / 350 : (elapsed > totalDuration - 1200 ? (totalDuration - 800 - elapsed) / 400 : 1);
+        const dogAlpha = elapsed < 500 ? (elapsed - 150) / 350 : (elapsed > totalDuration - 1200 ? (totalDuration - 800 - elapsed) / 400 : 1);
         if (dogAlpha > 0) {
-          var bounce = Math.abs(Math.sin(elapsed * 0.006)) * 3;
-          var dogFace = DOG_FACES[Math.floor((elapsed / 500) % DOG_FACES.length)];
-          FX.drawChar(ctx, dogFace, center.cx, center.cy - 8 - bounce, dogColor, dogSize, dogAlpha * 0.8, 0);
+          const bounce = Math.abs(Math.sin(elapsed * 0.006)) * 3;
+          const dogFace = DOG_FACES[Math.floor((elapsed / 500) % DOG_FACES.length)];
+          FX.drawChar(fxCtx, dogFace, center.cx, center.cy - 8 - bounce, dogColor, dogSize, dogAlpha * 0.8, 0);
 
           // Tail wagging
-          var tailAngle = Math.sin(elapsed * pm.tailSpeed) * 0.6;
-          var tailChar = DOG_TAIL_FRAMES[Math.floor((elapsed / 80) % DOG_TAIL_FRAMES.length)];
-          FX.drawChar(ctx, tailChar, center.cx + 25, center.cy - bounce,
+          const tailAngle = Math.sin(elapsed * pm.tailSpeed) * 0.6;
+          const tailChar = DOG_TAIL_FRAMES[Math.floor((elapsed / 80) % DOG_TAIL_FRAMES.length)];
+          FX.drawChar(fxCtx, tailChar, center.cx + 25, center.cy - bounce,
             dogColor, dogSize * 0.7, dogAlpha * 0.6, tailAngle);
 
           // Tongue (panting)
           if (Math.sin(elapsed * 0.005) > 0) {
-            FX.drawChar(ctx, 'P', center.cx + 2, center.cy + dogSize * 0.4 - bounce,
+            FX.drawChar(fxCtx, 'P', center.cx + 2, center.cy + dogSize * 0.4 - bounce,
               '#cf6e5e', dogSize * 0.35, dogAlpha * 0.5, 0.1);
           }
 
           // Happy bouncing ears
-          var earBounce = Math.sin(elapsed * 0.008) * 2;
-          FX.drawChar(ctx, '/', center.cx - dogSize * 0.5, center.cy - dogSize * 0.5 - bounce + earBounce,
+          const earBounce = Math.sin(elapsed * 0.008) * 2;
+          FX.drawChar(fxCtx, '/', center.cx - dogSize * 0.5, center.cy - dogSize * 0.5 - bounce + earBounce,
             dogColor, dogSize * 0.5, dogAlpha * 0.5, -0.3);
-          FX.drawChar(ctx, '\\', center.cx + dogSize * 0.5, center.cy - dogSize * 0.5 - bounce + earBounce,
+          FX.drawChar(fxCtx, '\\', center.cx + dogSize * 0.5, center.cy - dogSize * 0.5 - bounce + earBounce,
             dogColor, dogSize * 0.5, dogAlpha * 0.5, 0.3);
         }
       }
@@ -1731,10 +1633,10 @@ export var dogPlugin = {
       barks.forEach(function (bk) {
         if (elapsed < bk.delay) return;
         bk.life = elapsed - bk.delay;
-        var lr = Math.min(bk.life / 1000, 1);
-        var alpha = lr > 0.6 ? (1 - (lr - 0.6) / 0.4) : Math.min(bk.life / 150, 1);
+        const lr = Math.min(bk.life / 1000, 1);
+        const alpha = lr > 0.6 ? (1 - (lr - 0.6) / 0.4) : Math.min(bk.life / 150, 1);
         if (alpha > 0.01) {
-          FX.drawChar(ctx, bk.text, bk.x, bk.y - bk.life * 0.03,
+          FX.drawChar(fxCtx, bk.text, bk.x, bk.y - bk.life * 0.03,
             pick(DOG_COLORS), bk.size, alpha * 0.7, 0);
         }
       });
@@ -1742,49 +1644,46 @@ export var dogPlugin = {
       // Tail wag motion lines
       tailParticles.forEach(function (tp) {
         if (elapsed < tp.delay) return;
-        var tLife = elapsed - tp.delay;
-        var lr = Math.min(tLife / 800, 1);
-        var alpha = lr > 0.5 ? (1 - (lr - 0.5) / 0.5) : Math.min(tLife / 100, 1);
-        var swish = Math.sin(tp.phase + elapsed * 0.012) * tp.length;
+        const tLife = elapsed - tp.delay;
+        const lr = Math.min(tLife / 800, 1);
+        const alpha = lr > 0.5 ? (1 - (lr - 0.5) / 0.5) : Math.min(tLife / 100, 1);
+        const swish = Math.sin(tp.phase + elapsed * 0.012) * tp.length;
         if (alpha > 0.01) {
-          FX.drawChar(ctx, '~', center.cx + 30 + swish, center.cy + (tp.phase * 3) - 5,
+          FX.drawChar(fxCtx, '~', center.cx + 30 + swish, center.cy + (tp.phase * 3) - 5,
             pick(['#c9a84c', '#d99a7c']), lerp(6, 10, intensity), alpha * 0.35, swish * 0.02);
         }
       });
 
       // Floating particles
-      var dt = 0.016;
+      const dt = 0.016;
       dogParticles.forEach(function (p) {
         if (elapsed < p.delay) return;
         p.life += 16;
         if (p.life >= p.maxLife) return;
-        var lr = p.life / p.maxLife;
+        const lr = p.life / p.maxLife;
         p.vy += pm.particleGravity * dt;
         p.vx *= 0.98;
         p.vy *= 0.98;
         p.x += p.vx * dt;
         p.y += p.vy * dt;
         p.rotation += p.rotSpeed * dt;
-        var a = 1 - Math.pow(lr, 1.5);
+        const a = 1 - Math.pow(lr, 1.5);
         if (p.isBone) {
-          FX.drawChar(ctx, 'o', p.x - p.size * 0.3, p.y, p.color, p.size * 0.5, a, p.rotation);
-          FX.drawChar(ctx, '=', p.x, p.y, p.color, p.size * 0.4, a, p.rotation);
-          FX.drawChar(ctx, 'o', p.x + p.size * 0.3, p.y, p.color, p.size * 0.5, a, p.rotation);
+          FX.drawChar(fxCtx, 'o', p.x - p.size * 0.3, p.y, p.color, p.size * 0.5, a, p.rotation);
+          FX.drawChar(fxCtx, '=', p.x, p.y, p.color, p.size * 0.4, a, p.rotation);
+          FX.drawChar(fxCtx, 'o', p.x + p.size * 0.3, p.y, p.color, p.size * 0.5, a, p.rotation);
         } else {
-          FX.drawChar(ctx, p.char, p.x, p.y, p.color, p.size * (1 + (1 - lr) * 0.2), a, p.rotation);
+          FX.drawChar(fxCtx, p.char, p.x, p.y, p.color, p.size * (1 + (1 - lr) * 0.2), a, p.rotation);
         }
       });
 
-      if (elapsed < totalDuration) {
-        requestAnimationFrame(frame);
-      } else {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      if (elapsed >= totalDuration) {
+        FX.deregisterFxDraw(_drawId);
         el.style.transform = '';
         el.style.boxShadow = '';
         FX.finalize(el, opts);
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     standardCleanup(el);
@@ -1792,34 +1691,30 @@ export var dogPlugin = {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  11. SNOWFALL -- Gentle snowflakes drifting down
+//  11. SNOWFALL — Gentle snowflakes drifting down
 // ═══════════════════════════════════════════════════════════════════
-export var snowfallPlugin = {
+export const snowfallPlugin = {
   name: 'snowfall',
   category: 'action',
   style: 'cute',
   meta: { label: 'Snowfall', description: 'Gentle snowflakes drift down with ice crystals and snow accumulation', tags: ['snow', 'winter', 'gentle'] },
   params: {
-    // snowfall has no user params currently -- placeholder for sandbox visibility
+    // snowfall has no user params currently — placeholder for sandbox visibility
   },
   requires: ['FX'],
   play: function(el, pctx) {
-    var FX = resolveFX(pctx);
-    var opts = buildOpts(pctx);
-    var intensity = FX.intensityScale(pctx.intensity || 5);
-    var center = FX.prepareCard(el);
-    var ctx = FX.getFxCtx();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    FX.resetDrawFont();
-    var startTime = performance.now();
-    var totalDuration = lerp(2500, 5000, intensity);
+    const opts = buildOpts(pctx);
+    const intensity = FX.intensityScale(pctx.intensity || 5);
+    const center = FX.prepareCard(el);
+    const _drawId = FX.nextFxDrawId('cute-snowfall');
+    const startTime = performance.now();
+    const totalDuration = lerp(2500, 5000, intensity);
 
-    var snowflakes = [];
-    var flakeCount = FX.pCount(Math.floor(lerp(15, 120, intensity)));
-    for (var i = 0; i < flakeCount; i++) {
+    const snowflakes = [];
+    const flakeCount = FX.pCount(Math.floor(lerp(15, 120, intensity)));
+    for (let i = 0; i < flakeCount; i++) {
       snowflakes.push({
-        x: randRange(0, viewportWidth()),
+        x: randRange(0, window.innerWidth),
         y: randRange(-100, -20),
         vx: (Math.random() - 0.5) * 30,
         vy: lerp(30, 80, intensity) + Math.random() * lerp(30, 60, intensity),
@@ -1836,10 +1731,10 @@ export var snowfallPlugin = {
     }
 
     // Ice crystal accents
-    var crystals = [];
+    const crystals = [];
     if (intensity > 0.5) {
-      var crystalCount = FX.pCount(Math.floor(lerp(0, 8, intensity)));
-      for (var ci = 0; ci < crystalCount; ci++) {
+      const crystalCount = FX.pCount(Math.floor(lerp(0, 8, intensity)));
+      for (let ci = 0; ci < crystalCount; ci++) {
         crystals.push({
           x: center.cx + randRange(-center.w * 0.6, center.w * 0.6),
           y: center.cy + randRange(-center.h * 0.4, center.h * 0.4),
@@ -1852,14 +1747,13 @@ export var snowfallPlugin = {
     FX.doDotgridRipple(center.cx, center.cy, { color: '#b4dae8', radius: lerp(150, 400, intensity), duration: totalDuration * 0.7 });
     FX.doImpactFlash(false);
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
-      var elapsed = now - startTime;
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      const elapsed = now - startTime;
 
       // Card freeze and fade
       if (elapsed < 600) {
-        var t = elapsed / 600;
+        const t = elapsed / 600;
         el.style.opacity = String(1 - t * 0.9);
         el.style.transform = 'scale(' + (1 + t * 0.01) + ')';
       } else {
@@ -1867,28 +1761,27 @@ export var snowfallPlugin = {
       }
 
       // Falling snowflakes
-      var dt = 0.016;
-      var vh = viewportHeight();
+      const dt = 0.016;
       snowflakes.forEach(function (sf) {
         if (elapsed < sf.delay) return;
-        var sfLife = elapsed - sf.delay;
-        var drift = Math.sin(sf.phase + sfLife * 0.001 * sf.driftSpeed) * sf.driftAmp;
+        const sfLife = elapsed - sf.delay;
+        const drift = Math.sin(sf.phase + sfLife * 0.001 * sf.driftSpeed) * sf.driftAmp;
         sf.x += (sf.vx + drift * 0.05) * dt;
         sf.y += sf.vy * dt;
         sf.rotation += sf.rotSpeed * dt;
 
-        var alpha = sfLife < 300 ? sfLife / 300 : (sf.y > vh - 50 ? Math.max(1 - (sf.y - (vh - 50)) / 50, 0) : 1);
-        var globalFade = elapsed > totalDuration - 800 ? (totalDuration - elapsed) / 800 : 1;
+        const alpha = sfLife < 300 ? sfLife / 300 : (sf.y > window.innerHeight - 50 ? Math.max(1 - (sf.y - (window.innerHeight - 50)) / 50, 0) : 1);
+        const globalFade = elapsed > totalDuration - 800 ? (totalDuration - elapsed) / 800 : 1;
 
-        if (alpha > 0.01 && sf.y < vh + 20) {
-          FX.drawChar(ctx, sf.char, sf.x, sf.y, sf.color, sf.size, alpha * globalFade * lerp(0.4, 0.8, intensity), sf.rotation);
+        if (alpha > 0.01 && sf.y < window.innerHeight + 20) {
+          FX.drawChar(fxCtx, sf.char, sf.x, sf.y, sf.color, sf.size, alpha * globalFade * lerp(0.4, 0.8, intensity), sf.rotation);
           // Glow on larger flakes
           if (FX.shouldShadow() && sf.size > 10) {
-            ctx.save();
-            ctx.shadowColor = '#b4dae8';
-            ctx.shadowBlur = 8;
-            FX.drawChar(ctx, sf.char, sf.x, sf.y, sf.color, sf.size, alpha * globalFade * 0.2, sf.rotation);
-            ctx.restore();
+            fxCtx.save();
+            fxCtx.shadowColor = '#b4dae8';
+            fxCtx.shadowBlur = 8;
+            FX.drawChar(fxCtx, sf.char, sf.x, sf.y, sf.color, sf.size, alpha * globalFade * 0.2, sf.rotation);
+            fxCtx.restore();
           }
         }
       });
@@ -1897,50 +1790,47 @@ export var snowfallPlugin = {
       crystals.forEach(function (cr) {
         if (elapsed < cr.delay) return;
         cr.life = elapsed - cr.delay;
-        var lr = Math.min(cr.life / 1500, 1);
-        var alpha = lr > 0.7 ? (1 - (lr - 0.7) / 0.3) : Math.min(cr.life / 400, 1);
+        const lr = Math.min(cr.life / 1500, 1);
+        const alpha = lr > 0.7 ? (1 - (lr - 0.7) / 0.3) : Math.min(cr.life / 400, 1);
         if (alpha > 0.01) {
-          var spin = cr.life * 0.0005;
+          const spin = cr.life * 0.0005;
           // Draw 6-pointed crystal
-          for (var arm = 0; arm < 6; arm++) {
-            var crAngle = (arm / 6) * Math.PI * 2 + spin;
-            var len = cr.size * lr;
-            FX.drawChar(ctx, '-', cr.x + Math.cos(crAngle) * len * 0.5,
+          for (let arm = 0; arm < 6; arm++) {
+            const crAngle = (arm / 6) * Math.PI * 2 + spin;
+            const len = cr.size * lr;
+            FX.drawChar(fxCtx, '-', cr.x + Math.cos(crAngle) * len * 0.5,
               cr.y + Math.sin(crAngle) * len * 0.5,
               pick(ICE_COLORS), cr.size * 0.4, alpha * 0.5, crAngle);
-            FX.drawChar(ctx, '*', cr.x + Math.cos(crAngle) * len,
+            FX.drawChar(fxCtx, '*', cr.x + Math.cos(crAngle) * len,
               cr.y + Math.sin(crAngle) * len,
               pick(ICE_COLORS), cr.size * 0.3, alpha * 0.4, 0);
           }
-          FX.drawChar(ctx, '*', cr.x, cr.y, pick(ICE_COLORS), cr.size * 0.5, alpha * 0.6, spin);
+          FX.drawChar(fxCtx, '*', cr.x, cr.y, pick(ICE_COLORS), cr.size * 0.5, alpha * 0.6, spin);
         }
       });
 
       // Ground snow accumulation
       if (elapsed > 1000) {
-        var accT = Math.min((elapsed - 1000) / 2000, 1);
-        var accAlpha = accT * lerp(0.2, 0.5, intensity);
-        var accWidth = center.w + 60;
-        var accLeft = center.rect.left - 30;
-        var accDensity = Math.floor(lerp(5, 20, intensity));
-        var globalFade2 = elapsed > totalDuration - 800 ? (totalDuration - elapsed) / 800 : 1;
-        for (var gi = 0; gi < accDensity; gi++) {
-          var gxi = accLeft + (gi / accDensity) * accWidth;
-          FX.drawChar(ctx, pick(['\u2591', '\u2592', '*', '\u00B7']), gxi + randRange(-4, 4),
+        const accT = Math.min((elapsed - 1000) / 2000, 1);
+        const accAlpha = accT * lerp(0.2, 0.5, intensity);
+        const accWidth = center.w + 60;
+        const accLeft = center.rect.left - 30;
+        const accDensity = Math.floor(lerp(5, 20, intensity));
+        const globalFade2 = elapsed > totalDuration - 800 ? (totalDuration - elapsed) / 800 : 1;
+        for (let gi = 0; gi < accDensity; gi++) {
+          const gxi = accLeft + (gi / accDensity) * accWidth;
+          FX.drawChar(fxCtx, pick(['\u2591', '\u2592', '*', '\u00B7']), gxi + randRange(-4, 4),
             center.rect.bottom + randRange(-2, 6),
             pick(SNOW_COLORS), lerp(6, 12, intensity), accAlpha * globalFade2, 0);
         }
       }
 
-      if (elapsed < totalDuration) {
-        requestAnimationFrame(frame);
-      } else {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      if (elapsed >= totalDuration) {
+        FX.deregisterFxDraw(_drawId);
         el.style.transform = '';
         FX.finalize(el, opts);
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     standardCleanup(el);
@@ -1948,41 +1838,36 @@ export var snowfallPlugin = {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  12. OCEAN -- Waves, fish, and bubbles
+//  12. OCEAN — Waves, fish, and bubbles
 // ═══════════════════════════════════════════════════════════════════
-export var oceanPlugin = {
+export const oceanPlugin = {
   name: 'ocean',
   category: 'action',
   style: 'cute',
   meta: { label: 'Ocean', description: 'Waves, swimming fish, rising bubbles, and swaying seaweed', tags: ['ocean', 'water', 'fish'] },
   params: {
-    // ocean has no user params currently -- placeholder for sandbox visibility
+    // ocean has no user params currently — placeholder for sandbox visibility
   },
   requires: ['FX'],
   play: function(el, pctx) {
-    var FX = resolveFX(pctx);
-    var opts = buildOpts(pctx);
-    var intensity = FX.intensityScale(pctx.intensity || 5);
-    var center = FX.prepareCard(el);
-    var ctx = FX.getFxCtx();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    FX.resetDrawFont();
-    var startTime = performance.now();
-    var totalDuration = lerp(2500, 5000, intensity);
+    const opts = buildOpts(pctx);
+    const intensity = FX.intensityScale(pctx.intensity || 5);
+    const center = FX.prepareCard(el);
+    const _drawId = FX.nextFxDrawId('cute-ocean');
+    const startTime = performance.now();
+    const totalDuration = lerp(2500, 5000, intensity);
 
     // Wave rows
-    var waveRows = Math.floor(lerp(3, 8, intensity));
-    var waveDensity = Math.floor(lerp(15, 40, intensity));
+    const waveRows = Math.floor(lerp(3, 8, intensity));
+    const waveDensity = Math.floor(lerp(15, 40, intensity));
 
     // Fish swimming across
-    var fish = [];
-    var fishCount = FX.pCount(Math.floor(lerp(2, 10, intensity)));
-    var vw = viewportWidth();
-    for (var i = 0; i < fishCount; i++) {
-      var goingRight = Math.random() > 0.5;
+    const fish = [];
+    const fishCount = FX.pCount(Math.floor(lerp(2, 10, intensity)));
+    for (let i = 0; i < fishCount; i++) {
+      const goingRight = Math.random() > 0.5;
       fish.push({
-        x: goingRight ? -50 - Math.random() * 100 : vw + 50 + Math.random() * 100,
+        x: goingRight ? -50 - Math.random() * 100 : window.innerWidth + 50 + Math.random() * 100,
         y: center.cy + randRange(-center.h * 0.3, center.h * 0.5),
         vx: (goingRight ? 1 : -1) * (lerp(40, 100, intensity) + Math.random() * 60),
         char: goingRight ? pick(['><>', '><))\'>' ]) : pick(['<><', '<\'((><']),
@@ -1995,9 +1880,9 @@ export var oceanPlugin = {
     }
 
     // Bubbles rising
-    var bubbles = [];
-    var bubbleCount = FX.pCount(Math.floor(lerp(8, 40, intensity)));
-    for (var bi = 0; bi < bubbleCount; bi++) {
+    const bubbles = [];
+    const bubbleCount = FX.pCount(Math.floor(lerp(8, 40, intensity)));
+    for (let bi = 0; bi < bubbleCount; bi++) {
       bubbles.push({
         x: center.cx + randRange(-center.w * 0.5, center.w * 0.5),
         y: center.rect.bottom + 20 + Math.random() * 40,
@@ -2012,9 +1897,9 @@ export var oceanPlugin = {
     }
 
     // Seaweed at bottom
-    var seaweeds = [];
-    var seaweedCount = FX.pCount(Math.floor(lerp(2, 8, intensity)));
-    for (var si = 0; si < seaweedCount; si++) {
+    const seaweeds = [];
+    const seaweedCount = FX.pCount(Math.floor(lerp(2, 8, intensity)));
+    for (let si = 0; si < seaweedCount; si++) {
       seaweeds.push({
         baseX: center.rect.left + ((si + 0.5) / seaweedCount) * center.w,
         baseY: center.rect.bottom + 10,
@@ -2027,92 +1912,88 @@ export var oceanPlugin = {
     FX.doDotgridRipple(center.cx, center.cy, { color: '#4080c0', radius: lerp(150, 400, intensity), duration: totalDuration * 0.7 });
     FX.doImpactFlash(false);
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
-      var elapsed = now - startTime;
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      const elapsed = now - startTime;
 
       // Card sinks into water
       if (elapsed < 800) {
-        var t = elapsed / 800;
+        const t = elapsed / 800;
         el.style.transform = 'translateY(' + (t * 40) + 'px) scale(' + (1 - t * 0.1) + ')';
         el.style.opacity = String(1 - t);
       }
 
-      var globalFade = elapsed > totalDuration - 800 ? (totalDuration - elapsed) / 800 : 1;
+      const globalFade = elapsed > totalDuration - 800 ? (totalDuration - elapsed) / 800 : 1;
 
       // Wave rows
-      var waveAlpha = Math.min(elapsed / 600, 1) * lerp(0.3, 0.7, intensity);
-      for (var row = 0; row < waveRows; row++) {
-        var rowY = center.cy - center.h * 0.3 + (row / waveRows) * center.h * 1.0;
-        var rowPhase = elapsed * 0.002 + row * 0.8;
-        var rowColor = row < waveRows * 0.3 ? pick(OCEAN_COLORS) : pick(OCEAN_DEEP);
-        for (var w = 0; w < waveDensity; w++) {
-          var wx = center.rect.left - 20 + (w / waveDensity) * (center.w + 40);
-          var waveY = rowY + Math.sin(rowPhase + w * 0.3) * lerp(3, 8, intensity);
-          FX.drawChar(ctx, pick(WAVE_CHARS), wx, waveY, rowColor,
+      const waveAlpha = Math.min(elapsed / 600, 1) * lerp(0.3, 0.7, intensity);
+      for (let row = 0; row < waveRows; row++) {
+        const rowY = center.cy - center.h * 0.3 + (row / waveRows) * center.h * 1.0;
+        const rowPhase = elapsed * 0.002 + row * 0.8;
+        const rowColor = row < waveRows * 0.3 ? pick(OCEAN_COLORS) : pick(OCEAN_DEEP);
+        for (let w = 0; w < waveDensity; w++) {
+          const wx = center.rect.left - 20 + (w / waveDensity) * (center.w + 40);
+          const waveY = rowY + Math.sin(rowPhase + w * 0.3) * lerp(3, 8, intensity);
+          FX.drawChar(fxCtx, pick(WAVE_CHARS), wx, waveY, rowColor,
             lerp(8, 14, intensity), waveAlpha * globalFade * (0.4 + row * 0.08), 0);
         }
         // Foam on top waves
         if (row === 0) {
-          var foamCount = Math.floor(waveDensity * 0.3);
-          for (var fi = 0; fi < foamCount; fi++) {
-            var fx = center.rect.left + (fi / foamCount) * center.w;
-            var fy = rowY + Math.sin(rowPhase + fi * 0.5) * 5 - 5;
-            FX.drawChar(ctx, pick(['.', '\u00B7', ',']), fx, fy, pick(OCEAN_FOAM),
+          const foamCount = Math.floor(waveDensity * 0.3);
+          for (let fi = 0; fi < foamCount; fi++) {
+            const fx = center.rect.left + (fi / foamCount) * center.w;
+            const fy = rowY + Math.sin(rowPhase + fi * 0.5) * 5 - 5;
+            FX.drawChar(fxCtx, pick(['.', '\u00B7', ',']), fx, fy, pick(OCEAN_FOAM),
               lerp(4, 8, intensity), waveAlpha * globalFade * 0.4, 0);
           }
         }
       }
 
       // Fish
-      var dt = 0.016;
+      const dt = 0.016;
       fish.forEach(function (f) {
         if (elapsed < f.delay) return;
         f.x += f.vx * dt;
-        var wiggle = Math.sin(f.wigglePhase + elapsed * 0.005) * f.wiggleAmp;
-        var fAlpha = Math.min((elapsed - f.delay) / 300, 1) * globalFade;
+        const wiggle = Math.sin(f.wigglePhase + elapsed * 0.005) * f.wiggleAmp;
+        const fAlpha = Math.min((elapsed - f.delay) / 300, 1) * globalFade;
         if (fAlpha > 0.01) {
-          FX.drawChar(ctx, f.char, f.x, f.y + wiggle, f.color, f.size, fAlpha * lerp(0.4, 0.7, intensity), 0);
+          FX.drawChar(fxCtx, f.char, f.x, f.y + wiggle, f.color, f.size, fAlpha * lerp(0.4, 0.7, intensity), 0);
         }
       });
 
       // Bubbles
       bubbles.forEach(function (b) {
         if (elapsed < b.delay) return;
-        var bLife = elapsed - b.delay;
+        const bLife = elapsed - b.delay;
         b.y += b.vy * dt;
-        var wobble = Math.sin(b.phase + bLife * 0.003) * b.wobbleAmp;
-        var alpha = Math.min(bLife / 200, 1) * (b.y < center.rect.top - 30 ? 0 : 1) * globalFade;
+        const wobble = Math.sin(b.phase + bLife * 0.003) * b.wobbleAmp;
+        const alpha = Math.min(bLife / 200, 1) * (b.y < center.rect.top - 30 ? 0 : 1) * globalFade;
         if (alpha > 0.01 && b.y > center.rect.top - 50) {
-          FX.drawChar(ctx, b.char, b.x + wobble, b.y, b.color, b.size, alpha * lerp(0.3, 0.6, intensity), 0);
+          FX.drawChar(fxCtx, b.char, b.x + wobble, b.y, b.color, b.size, alpha * lerp(0.3, 0.6, intensity), 0);
         }
       });
 
       // Seaweed
-      var seaweedAlpha = Math.min(elapsed / 800, 1) * lerp(0.3, 0.6, intensity) * globalFade;
+      const seaweedAlpha = Math.min(elapsed / 800, 1) * lerp(0.3, 0.6, intensity) * globalFade;
       seaweeds.forEach(function (sw) {
-        for (var s = 0; s < sw.segments; s++) {
-          var segT = s / sw.segments;
-          var sway = Math.sin(sw.phase + elapsed * 0.002 + s * 0.5) * (8 + s * 2);
-          var sx = sw.baseX + sway;
-          var sy = sw.baseY - segT * sw.height;
-          var segChar = s === sw.segments - 1 ? pick(['\u2663', '\u273F']) : pick(['\u2502', '\u2571', '\u2572']);
-          FX.drawChar(ctx, segChar, sx, sy,
+        for (let s = 0; s < sw.segments; s++) {
+          const segT = s / sw.segments;
+          const sway = Math.sin(sw.phase + elapsed * 0.002 + s * 0.5) * (8 + s * 2);
+          const sx = sw.baseX + sway;
+          const sy = sw.baseY - segT * sw.height;
+          const segChar = s === sw.segments - 1 ? pick(['\u2663', '\u273F']) : pick(['\u2502', '\u2571', '\u2572']);
+          FX.drawChar(fxCtx, segChar, sx, sy,
             pick(MONET_GREENS.concat(['#4a7a48', '#3d6d3b'])),
             lerp(8, 14, intensity), seaweedAlpha * (0.5 + segT * 0.3), sway * 0.02);
         }
       });
 
-      if (elapsed < totalDuration) {
-        requestAnimationFrame(frame);
-      } else {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      if (elapsed >= totalDuration) {
+        FX.deregisterFxDraw(_drawId);
         el.style.transform = '';
         FX.finalize(el, opts);
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     standardCleanup(el);
@@ -2120,33 +2001,29 @@ export var oceanPlugin = {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  13. FIREFLIES -- Warm summer night with glowing fireflies
+//  13. FIREFLIES — Warm summer night with glowing fireflies
 // ═══════════════════════════════════════════════════════════════════
-export var firefliesPlugin = {
+export const firefliesPlugin = {
   name: 'fireflies',
   category: 'action',
   style: 'cute',
   meta: { label: 'Fireflies', description: 'Warm summer night with pulsing firefly glow, foliage silhouettes, and star twinkles', tags: ['fireflies', 'night', 'glow'] },
   params: {
-    // fireflies has no user params currently -- placeholder for sandbox visibility
+    // fireflies has no user params currently — placeholder for sandbox visibility
   },
   requires: ['FX'],
   play: function(el, pctx) {
-    var FX = resolveFX(pctx);
-    var opts = buildOpts(pctx);
-    var intensity = FX.intensityScale(pctx.intensity || 5);
-    var center = FX.prepareCard(el);
-    var ctx = FX.getFxCtx();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    FX.resetDrawFont();
-    var startTime = performance.now();
-    var totalDuration = lerp(2800, 5500, intensity);
+    const opts = buildOpts(pctx);
+    const intensity = FX.intensityScale(pctx.intensity || 5);
+    const center = FX.prepareCard(el);
+    const _drawId = FX.nextFxDrawId('cute-fireflies');
+    const startTime = performance.now();
+    const totalDuration = lerp(2800, 5500, intensity);
 
     // Fireflies with glow pulsing
-    var fireflies = [];
-    var fireflyCount = FX.pCount(Math.floor(lerp(5, 35, intensity)));
-    for (var i = 0; i < fireflyCount; i++) {
+    const fireflies = [];
+    const fireflyCount = FX.pCount(Math.floor(lerp(5, 35, intensity)));
+    for (let i = 0; i < fireflyCount; i++) {
       fireflies.push({
         x: center.cx + randRange(-center.w * 0.8, center.w * 0.8),
         y: center.cy + randRange(-center.h * 0.6, center.h * 0.6),
@@ -2165,10 +2042,10 @@ export var firefliesPlugin = {
     }
 
     // Night foliage silhouettes at edges
-    var foliage = [];
-    var foliageCount = FX.pCount(Math.floor(lerp(5, 20, intensity)));
-    for (var fi = 0; fi < foliageCount; fi++) {
-      var fSide = Math.random() > 0.5 ? -1 : 1;
+    const foliage = [];
+    const foliageCount = FX.pCount(Math.floor(lerp(5, 20, intensity)));
+    for (let fi = 0; fi < foliageCount; fi++) {
+      const fSide = Math.random() > 0.5 ? -1 : 1;
       foliage.push({
         x: center.cx + fSide * (center.w * 0.4 + Math.random() * center.w * 0.3),
         y: center.rect.bottom - Math.random() * center.h * 0.5,
@@ -2180,9 +2057,9 @@ export var firefliesPlugin = {
     }
 
     // Gentle star twinkles in background
-    var bgStars = [];
-    var starCount = FX.pCount(Math.floor(lerp(5, 25, intensity)));
-    for (var si = 0; si < starCount; si++) {
+    const bgStars = [];
+    const starCount = FX.pCount(Math.floor(lerp(5, 25, intensity)));
+    for (let si = 0; si < starCount; si++) {
       bgStars.push({
         x: randRange(center.rect.left - 80, center.rect.right + 80),
         y: randRange(center.rect.top - 60, center.cy),
@@ -2196,27 +2073,26 @@ export var firefliesPlugin = {
     FX.doDotgridRipple(center.cx, center.cy, { color: '#c9a84c', radius: lerp(120, 300, intensity), duration: totalDuration * 0.7 });
     FX.doImpactFlash(false);
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
-      var elapsed = now - startTime;
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      const elapsed = now - startTime;
 
       // Card dims and fades like a light going out
       if (elapsed < 800) {
-        var t = elapsed / 800;
+        const t = elapsed / 800;
         el.style.opacity = String(1 - t * 0.9);
         el.style.transform = 'scale(' + (1 - t * 0.02) + ')';
       } else {
         el.style.opacity = '0.1';
       }
 
-      var globalFade = elapsed > totalDuration - 1000 ? (totalDuration - elapsed) / 1000 : 1;
+      const globalFade = elapsed > totalDuration - 1000 ? (totalDuration - elapsed) / 1000 : 1;
 
-      // Night sky gradient feel -- subtle dark overlay chars
+      // Night sky gradient feel — subtle dark overlay chars
       if (elapsed > 300) {
-        var nightAlpha = Math.min((elapsed - 300) / 800, 1) * 0.15 * globalFade;
-        for (var ni = 0; ni < 5; ni++) {
-          FX.drawChar(ctx, '\u2591',
+        const nightAlpha = Math.min((elapsed - 300) / 800, 1) * 0.15 * globalFade;
+        for (let ni = 0; ni < 5; ni++) {
+          FX.drawChar(fxCtx, '\u2591',
             center.cx + randRange(-center.w * 0.6, center.w * 0.6),
             center.cy + randRange(-center.h * 0.5, center.h * 0.5),
             pick(NIGHT_BLUES), lerp(12, 20, intensity), nightAlpha, 0);
@@ -2225,60 +2101,60 @@ export var firefliesPlugin = {
 
       // Background stars
       bgStars.forEach(function (star) {
-        var twinkle = Math.sin(star.phase + elapsed * 0.002 * star.speed) * 0.5 + 0.5;
-        FX.drawChar(ctx, star.char, star.x, star.y, '#e8e4e0',
+        const twinkle = Math.sin(star.phase + elapsed * 0.002 * star.speed) * 0.5 + 0.5;
+        FX.drawChar(fxCtx, star.char, star.x, star.y, '#e8e4e0',
           star.size, twinkle * lerp(0.15, 0.35, intensity) * globalFade, 0);
       });
 
       // Night foliage
       foliage.forEach(function (f) {
-        var sway = Math.sin(f.swayPhase + elapsed * 0.001) * 3;
-        FX.drawChar(ctx, f.char, f.x + sway, f.y, f.color,
+        const sway = Math.sin(f.swayPhase + elapsed * 0.001) * 3;
+        FX.drawChar(fxCtx, f.char, f.x + sway, f.y, f.color,
           f.size, lerp(0.2, 0.4, intensity) * globalFade, sway * 0.02);
       });
 
       // Fireflies with pulsing glow
       fireflies.forEach(function (ff) {
         if (elapsed < ff.delay) return;
-        var ffLife = elapsed - ff.delay;
+        const ffLife = elapsed - ff.delay;
 
         // Drift in gentle figure-8 / wandering paths
-        var driftX = Math.sin(ff.driftPhase + ffLife * 0.001 * ff.driftSpeed) * ff.driftAmpX;
-        var driftY = Math.cos(ff.driftPhase * 1.3 + ffLife * 0.001 * ff.driftSpeed * 0.7) * ff.driftAmpY;
-        var ffx = ff.x + driftX;
-        var ffy = ff.y + driftY;
+        const driftX = Math.sin(ff.driftPhase + ffLife * 0.001 * ff.driftSpeed) * ff.driftAmpX;
+        const driftY = Math.cos(ff.driftPhase * 1.3 + ffLife * 0.001 * ff.driftSpeed * 0.7) * ff.driftAmpY;
+        const ffx = ff.x + driftX;
+        const ffy = ff.y + driftY;
 
-        // Glow pulse -- slow breathe between bright and dim
-        var glow = Math.sin(ff.glowPhase + ffLife * 0.002 * ff.glowSpeed);
-        var glowAlpha = glow > 0 ? glow * glow : 0;
-        var fadeIn = Math.min(ffLife / 500, 1);
-        var alpha = fadeIn * globalFade;
+        // Glow pulse — slow breathe between bright and dim
+        const glow = Math.sin(ff.glowPhase + ffLife * 0.002 * ff.glowSpeed);
+        const glowAlpha = glow > 0 ? glow * glow : 0;
+        const fadeIn = Math.min(ffLife / 500, 1);
+        const alpha = fadeIn * globalFade;
 
         if (alpha > 0.01) {
           // Dim body always visible
-          FX.drawChar(ctx, '\u00B7', ffx, ffy, ff.color, ff.size * 0.6, alpha * 0.3, 0);
+          FX.drawChar(fxCtx, '\u00B7', ffx, ffy, ff.color, ff.size * 0.6, alpha * 0.3, 0);
 
           // Bright glow pulse
           if (glowAlpha > 0.05) {
-            FX.drawChar(ctx, pick(FIREFLY_CHARS), ffx, ffy, ff.color,
+            FX.drawChar(fxCtx, pick(FIREFLY_CHARS), ffx, ffy, ff.color,
               ff.size * (0.8 + glowAlpha * 0.4), alpha * glowAlpha * lerp(0.5, 0.9, intensity), 0);
 
             // Glow halo
             if (FX.shouldShadow()) {
-              ctx.save();
-              ctx.shadowColor = ff.color;
-              ctx.shadowBlur = lerp(6, 16, intensity) * glowAlpha;
-              FX.drawChar(ctx, '*', ffx, ffy, ff.color,
+              fxCtx.save();
+              fxCtx.shadowColor = ff.color;
+              fxCtx.shadowBlur = lerp(6, 16, intensity) * glowAlpha;
+              FX.drawChar(fxCtx, '*', ffx, ffy, ff.color,
                 ff.size * 0.4, alpha * glowAlpha * 0.3, 0);
-              ctx.restore();
+              fxCtx.restore();
             }
           }
 
           // Trail dots
           if (ffLife > 200 && glowAlpha > 0.3) {
-            var trailX = ffx - driftX * 0.1;
-            var trailY = ffy - driftY * 0.1;
-            FX.drawChar(ctx, '\u00B7', trailX, trailY, ff.color,
+            const trailX = ffx - driftX * 0.1;
+            const trailY = ffy - driftY * 0.1;
+            FX.drawChar(fxCtx, '\u00B7', trailX, trailY, ff.color,
               ff.size * 0.3, alpha * glowAlpha * 0.15, 0);
           }
         }
@@ -2286,21 +2162,18 @@ export var firefliesPlugin = {
 
       // Occasional cricket chirp visual
       if (elapsed > 600 && Math.random() > 0.97) {
-        var chirpX = center.cx + randRange(-center.w * 0.5, center.w * 0.5);
-        var chirpY = center.rect.bottom - randRange(5, 20);
-        FX.drawChar(ctx, pick([',', '\'', '`']), chirpX, chirpY,
+        const chirpX = center.cx + randRange(-center.w * 0.5, center.w * 0.5);
+        const chirpY = center.rect.bottom - randRange(5, 20);
+        FX.drawChar(fxCtx, pick([',', '\'', '`']), chirpX, chirpY,
           pick(NIGHT_GREENS), 4, 0.3 * globalFade, 0);
       }
 
-      if (elapsed < totalDuration) {
-        requestAnimationFrame(frame);
-      } else {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      if (elapsed >= totalDuration) {
+        FX.deregisterFxDraw(_drawId);
         el.style.transform = '';
         FX.finalize(el, opts);
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     standardCleanup(el);
@@ -2316,7 +2189,7 @@ export var firefliesPlugin = {
  * All 13 cute animation variant plugins.
  * @type {Array<Object>}
  */
-export var variants = {
+export const variants = {
   confetti: confettiPlugin,
   flowers: flowersPlugin,
   sparkle: sparklePlugin,
@@ -2344,7 +2217,7 @@ export function install(registry) {
 /**
  * Plugin descriptor for engine.use() integration.
  */
-export var cutePlugin = {
+export const cutePlugin = {
   name: 'cute',
   install: install,
 };

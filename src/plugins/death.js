@@ -12,6 +12,7 @@
 
 import { FX } from '../fx.js';
 
+
 // ── Character sets ──────────────────────────────────────────────
 const EXPLOSION_CHARS = ['#', '@', '*', '%', '!', '&', 'X', 'W', 'M', '+', '=', '/', '\\', '<', '>', '{', '}', '^', '~'];
 const FIRE_CHARS = ['^', '~', '*', '#', '@', '%', '&', 'W', 'M', 'N', '/', '\\', '|', '{', '}'];
@@ -23,7 +24,7 @@ const BLOOD_CHARS = ['#', '@', '%', '&', '*', '=', '+', ':', ';', '~', 'x', 'X',
 function lerp(a, b, t) { return a + (b - a) * t; }
 
 /**
- * Get the root container element for overlay positioning.
+ * Get the app shell container element (or body as fallback).
  * @returns {HTMLElement}
  * @private
  */
@@ -58,10 +59,10 @@ function stripBindings(node) {
 }
 
 /**
- * Extract the task title text from an element.
+ * Extract the task title text from a todo item element.
  *
- * @param {HTMLElement} el - The item element.
- * @returns {string} The text content, or empty string if not found.
+ * @param {HTMLElement} el - The todo item element.
+ * @returns {string} The task text, or empty string if not found.
  * @private
  */
 function getTaskText(el) {
@@ -70,7 +71,7 @@ function getTaskText(el) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  EXPLODE -- directional ASCII fragment explosion
+//  EXPLODE — directional ASCII fragment explosion
 // ═══════════════════════════════════════════════════════════════
 export const explodePlugin = {
   name: 'explode',
@@ -81,7 +82,7 @@ export const explodePlugin = {
     fragmentCount: { label: 'Fragment Count', type: 'range', min: 10, max: 150, default: 60, step: 5, unit: '', group: 'particles' },
     smokeCount: { label: 'Smoke Puffs', type: 'range', min: 5, max: 60, default: 25, step: 5, unit: '', group: 'particles' },
     particleSize: { label: 'Particle Size', type: 'range', min: 2, max: 40, default: 14, step: 1, unit: '', group: 'particles' },
-    gravity: { label: 'Gravity', type: 'range', min: 100, max: 1200, default: 600, step: 50, unit: 'px/s\u00B2', group: 'physics' },
+    gravity: { label: 'Gravity', type: 'range', min: 100, max: 1200, default: 600, step: 50, unit: 'px/s²', group: 'physics' },
     minSpeed: { label: 'Min Speed', type: 'range', min: 50, max: 500, default: 200, step: 10, unit: 'px/s', group: 'motion' },
     speedRange: { label: 'Speed Range', type: 'range', min: 100, max: 1000, default: 500, step: 25, unit: 'px/s', group: 'motion' },
     duration: { label: 'Duration', type: 'range', min: 500, max: 3000, default: 1500, step: 100, unit: 'ms', group: 'timing' },
@@ -93,9 +94,9 @@ export const explodePlugin = {
     const p = FX.resolveParams(explodePlugin.params, ctx.params);
     const pos = FX.prepareCard(el);
     const cx = pos.cx, cy = pos.cy;
-    const fxCtx = FX.getFxCtx();
+    const _drawId = FX.nextFxDrawId('death-explode');
 
-    // Extract text from the item for fragment characters
+    // Extract text from the todo item for fragment characters
     const cardText = (el.textContent || el.innerText || '').replace(/\s+/g, '').split('');
     const fragChars = cardText.length >= 3 ? cardText : EXPLOSION_CHARS;
 
@@ -151,11 +152,10 @@ export const explodePlugin = {
     const startTime = performance.now();
     const duration = p.duration;
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
       const elapsed = now - startTime;
       const dt = 1 / 60;
-      fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
 
       fxCtx.textAlign = 'center';
       fxCtx.textBaseline = 'middle';
@@ -206,22 +206,19 @@ export const explodePlugin = {
         fxCtx.restore();
       });
 
-      if (elapsed < duration) {
-        requestAnimationFrame(frame);
-      } else {
-        fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
+      if (elapsed >= duration) {
+        FX.deregisterFxDraw(_drawId);
         FX.finalize(el, { intensity: ctx.intensity, speed: ctx.speed, fx: ctx.fx, onDone: ctx.onDone, params: ctx.params });
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
-    // Explode destroys card via FX.destroyCard -- no injected DOM to remove
+    // Explode destroys card via FX.destroyCard — no injected DOM to remove
   },
 };
 
 // ═══════════════════════════════════════════════════════════════
-//  INCINERATE -- fast burn from bottom with ASCII flame chars
+//  INCINERATE — fast burn from bottom with ASCII flame chars
 // ═══════════════════════════════════════════════════════════════
 export const incineratePlugin = {
   name: 'incinerate',
@@ -241,7 +238,7 @@ export const incineratePlugin = {
     const p = FX.resolveParams(incineratePlugin.params, ctx.params);
     const pos = FX.prepareCard(el);
     const rect = pos.rect;
-    const fxCtx = FX.getFxCtx();
+    const _drawId = FX.nextFxDrawId('death-incinerate');
     const startTime = performance.now();
     const duration = p.burnDuration;
 
@@ -271,7 +268,7 @@ export const incineratePlugin = {
       }
     }
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
       const elapsed = now - startTime;
       const t = Math.min(elapsed / duration, 1);
@@ -284,8 +281,6 @@ export const incineratePlugin = {
       spawnFlame(t);
       if (t > 0.2) spawnFlame(t);
       if (!isMobile && t > 0.5) spawnFlame(t);
-
-      fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
 
       // Fire glow band at burn edge
       const glowY = rect.top + rect.height * (1 - t);
@@ -336,16 +331,13 @@ export const incineratePlugin = {
         fxCtx.restore();
       });
 
-      if (t < 1) {
-        requestAnimationFrame(frame);
-      } else {
-        fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
+      if (t >= 1) {
+        FX.deregisterFxDraw(_drawId);
         el.style.clipPath = '';
         el.style.boxShadow = '';
         FX.finalize(el, { intensity: ctx.intensity, speed: ctx.speed, fx: ctx.fx, onDone: ctx.onDone, params: ctx.params });
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     el.style.clipPath = '';
@@ -354,7 +346,7 @@ export const incineratePlugin = {
 };
 
 // ═══════════════════════════════════════════════════════════════
-//  SHREDDER -- sword slashes cut card into strips that fall apart
+//  SHREDDER — sword slashes cut card into strips that fall apart
 // ═══════════════════════════════════════════════════════════════
 export const shredderPlugin = {
   name: 'shredder',
@@ -375,7 +367,7 @@ export const shredderPlugin = {
     const p = FX.resolveParams(shredderPlugin.params, ctx.params);
     const pos = FX.prepareCard(el);
     const rect = pos.rect;
-    const fxCtx = FX.getFxCtx();
+    const _drawId = FX.nextFxDrawId('death-shredder');
     const stripCount = p.stripCount;
     const stripH = rect.height / stripCount;
     const startTime = performance.now();
@@ -400,16 +392,15 @@ export const shredderPlugin = {
       });
     }
 
-    let slashPhaseComplete = false;
-    let container = null;
+    const slashPhaseComplete = false;
+    const container = null;
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
       const elapsed = now - startTime;
 
       // Slash phase
       if (elapsed < totalSlashTime) {
-        fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
 
         slashes.forEach(function(s) {
           const slashElapsed = elapsed - s.startTime;
@@ -458,14 +449,12 @@ export const shredderPlugin = {
           }
         });
 
-        requestAnimationFrame(frame);
         return;
       }
 
       // Create strips
       if (!slashPhaseComplete) {
         slashPhaseComplete = true;
-        fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
         el.style.visibility = 'hidden';
 
         container = document.createElement('div');
@@ -497,16 +486,13 @@ export const shredderPlugin = {
         strips[i].style.opacity = String(Math.max(1 - fallTime / (fallDuration * 0.8), 0));
       }
 
-      if (ft < 1) {
-        requestAnimationFrame(frame);
-      } else {
-        fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
+      if (ft >= 1) {
+        FX.deregisterFxDraw(_drawId);
         container.remove();
         el.style.visibility = '';
         FX.finalize(el, { intensity: ctx.intensity, speed: ctx.speed, fx: ctx.fx, onDone: ctx.onDone, params: ctx.params });
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     el.style.visibility = '';
@@ -517,7 +503,7 @@ export const shredderPlugin = {
 };
 
 // ═══════════════════════════════════════════════════════════════
-//  GUILLOTINE -- blade drops, cuts card in two, halves fall apart
+//  GUILLOTINE — blade drops, cuts card in two, halves fall apart
 // ═══════════════════════════════════════════════════════════════
 export const guillotinePlugin = {
   name: 'guillotine',
@@ -528,7 +514,7 @@ export const guillotinePlugin = {
     bladeDropDuration: { label: 'Blade Drop Speed', type: 'range', min: 80, max: 600, default: 200, step: 20, unit: 'ms', group: 'timing' },
     fallDuration: { label: 'Fall Duration', type: 'range', min: 400, max: 2500, default: 1000, step: 100, unit: 'ms', group: 'timing' },
     cutPosition: { label: 'Cut Position', type: 'range', min: 0.2, max: 0.8, default: 0.5, step: 0.05, unit: '', group: 'visual' },
-    gravity: { label: 'Gravity', type: 'range', min: 200, max: 1200, default: 600, step: 50, unit: 'px/s\u00B2', group: 'physics' },
+    gravity: { label: 'Gravity', type: 'range', min: 200, max: 1200, default: 600, step: 50, unit: 'px/s²', group: 'physics' },
     bloodCount: { label: 'Blood Splatter', type: 'range', min: 5, max: 60, default: 30, step: 5, unit: '', group: 'particles' },
     particleSize: { label: 'Particle Size', type: 'range', min: 2, max: 30, default: 12, step: 1, unit: '', group: 'particles' },
   },
@@ -538,7 +524,7 @@ export const guillotinePlugin = {
     const p = FX.resolveParams(guillotinePlugin.params, ctx.params);
     const pos = FX.prepareCard(el);
     const rect = pos.rect;
-    const fxCtx = FX.getFxCtx();
+    const _drawId = FX.nextFxDrawId('death-guillotine');
     const startTime = performance.now();
     const bladeDropDuration = p.bladeDropDuration;
     const fallDuration = p.fallDuration;
@@ -564,9 +550,9 @@ export const guillotinePlugin = {
     document.body.appendChild(container);
 
     const bloodChars = [];
-    let impactDone = false;
+    const impactDone = false;
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
       const elapsed = now - startTime;
 
@@ -574,8 +560,6 @@ export const guillotinePlugin = {
       if (elapsed < bladeDropDuration) {
         const bt = elapsed / bladeDropDuration;
         const bladeY = -60 + (cutY + 60) * (bt * bt);
-
-        fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
 
         const bladeWidth = rect.width + 40;
         const charSize = 14;
@@ -597,7 +581,6 @@ export const guillotinePlugin = {
           }
         }
 
-        requestAnimationFrame(frame);
         return;
       }
 
@@ -643,7 +626,6 @@ export const guillotinePlugin = {
       });
 
       // Draw blood chars
-      fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
       bloodChars.forEach(function(b) {
         b.x += b.vx / 60;
         b.y += b.vy / 60;
@@ -655,16 +637,13 @@ export const guillotinePlugin = {
           b.size, 1, b.rotation);
       });
 
-      if (ft < 1) {
-        requestAnimationFrame(frame);
-      } else {
-        fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
+      if (ft >= 1) {
+        FX.deregisterFxDraw(_drawId);
         container.remove();
         el.style.visibility = '';
         FX.finalize(el, { intensity: ctx.intensity, speed: ctx.speed, fx: ctx.fx, onDone: ctx.onDone, params: ctx.params });
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     el.style.visibility = '';
@@ -675,7 +654,7 @@ export const guillotinePlugin = {
 };
 
 // ═══════════════════════════════════════════════════════════════
-//  HEARTBEAT -- accelerating pulse -> ECG spike -> flatline
+//  HEARTBEAT — accelerating pulse → ECG spike → flatline
 // ═══════════════════════════════════════════════════════════════
 export const heartbeatPlugin = {
   name: 'heartbeat',
@@ -692,10 +671,10 @@ export const heartbeatPlugin = {
     const pos = FX.prepareCard(el);
     const rect = pos.rect;
     const cx = pos.cx, cy = pos.cy;
-    const fxCtx = FX.getFxCtx();
+    const _drawId = FX.nextFxDrawId('death-heartbeat');
     const startTime = performance.now();
     const duration = p.duration;
-    let heartbeatDotgridFired = false;
+    const heartbeatDotgridFired = false;
 
     function ecgWave(t) {
       if (t < 0.1) return 0;
@@ -712,12 +691,11 @@ export const heartbeatPlugin = {
       return 0;
     }
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
       const elapsed = now - startTime;
       const t = Math.min(elapsed / duration, 1);
 
-      fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
       fxCtx.font = '14px monospace';
       fxCtx.textAlign = 'center';
       fxCtx.textBaseline = 'middle';
@@ -888,16 +866,13 @@ export const heartbeatPlugin = {
         }
       }
 
-      if (elapsed < duration) {
-        requestAnimationFrame(frame);
-      } else {
-        fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
+      if (elapsed >= duration) {
+        FX.deregisterFxDraw(_drawId);
         el.style.boxShadow = '';
         el.style.borderColor = '';
         FX.finalize(el, { intensity: ctx.intensity, speed: ctx.speed, fx: ctx.fx, onDone: ctx.onDone, params: ctx.params });
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     el.style.boxShadow = '';
@@ -907,7 +882,7 @@ export const heartbeatPlugin = {
 };
 
 // ═══════════════════════════════════════════════════════════════
-//  SNIPER -- crosshair lock-on -> bang -> card falls over
+//  SNIPER — crosshair lock-on → bang → card falls over
 // ═══════════════════════════════════════════════════════════════
 export const sniperPlugin = {
   name: 'sniper',
@@ -926,7 +901,7 @@ export const sniperPlugin = {
     const p = FX.resolveParams(sniperPlugin.params, ctx.params);
     const pos = FX.prepareCard(el);
     const cx = pos.cx, cy = pos.cy;
-    const fxCtx = FX.getFxCtx();
+    const _drawId = FX.nextFxDrawId('death-sniper');
     const startTime = performance.now();
     const lockOnDuration = p.lockOnDuration;
     const bangDuration = p.bangDuration;
@@ -934,14 +909,13 @@ export const sniperPlugin = {
     const totalDuration = lockOnDuration + bangDuration + afterDuration;
 
     // Start crosshair from click position if available, otherwise random offset
-    let crossX = (ctx.clickX != null) ? ctx.clickX : cx + (Math.random() - 0.5) * 100;
-    let crossY = (ctx.clickY != null) ? ctx.clickY : cy + (Math.random() - 0.5) * 60;
-    let bangFired = false;
+    const crossX = (ctx.clickX != null) ? ctx.clickX : cx + (Math.random() - 0.5) * 100;
+    const crossY = (ctx.clickY != null) ? ctx.clickY : cy + (Math.random() - 0.5) * 60;
+    const bangFired = false;
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
       const elapsed = now - startTime;
-      fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
 
       if (elapsed < lockOnDuration) {
         // Crosshair tracks toward target
@@ -976,7 +950,6 @@ export const sniperPlugin = {
         fxCtx.fillStyle = 'rgba(255, 0, 0, ' + (0.02 + ease * 0.03) + ')';
         fxCtx.fillRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
 
-        requestAnimationFrame(frame);
       } else if (elapsed < lockOnDuration + bangDuration) {
         // BANG
         if (!bangFired) {
@@ -993,7 +966,6 @@ export const sniperPlugin = {
             });
           }
         }
-        requestAnimationFrame(frame);
       } else {
         // Card falls over
         const afterT = (elapsed - lockOnDuration - bangDuration) / afterDuration;
@@ -1024,16 +996,13 @@ export const sniperPlugin = {
           }
         }
 
-        if (afterT < 1) {
-          requestAnimationFrame(frame);
-        } else {
-          fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
+        if (afterT >= 1) {
+          FX.deregisterFxDraw(_drawId);
           el.style.transform = '';
           FX.finalize(el, { intensity: ctx.intensity, speed: ctx.speed, fx: ctx.fx, onDone: ctx.onDone, params: ctx.params });
         }
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     el.style.transform = '';
@@ -1042,7 +1011,7 @@ export const sniperPlugin = {
 };
 
 // ═══════════════════════════════════════════════════════════════
-//  EATEN -- ASCII jaws chomp rhythmically, crumbs fall
+//  EATEN — ASCII jaws chomp rhythmically, crumbs fall
 // ═══════════════════════════════════════════════════════════════
 export const eatenPlugin = {
   name: 'eaten',
@@ -1063,7 +1032,7 @@ export const eatenPlugin = {
     const pos = FX.prepareCard(el);
     const rect = pos.rect;
     const cx = pos.cx, cy = pos.cy;
-    const fxCtx = FX.getFxCtx();
+    const _drawId = FX.nextFxDrawId('death-eaten');
     const startTime = performance.now();
     const app = getApp();
     const shakeEnabled = FX.fxEnabled('shake');
@@ -1076,7 +1045,7 @@ export const eatenPlugin = {
     const burpDuration = p.burpDuration;
     const totalDuration = approachDuration + chewTotalDuration + swallowDuration + burpDuration;
 
-    let eatenDotgridFired = false;
+    const eatenDotgridFired = false;
     const teethCount = Math.ceil(rect.width / 14);
     const taskText = getTaskText(el);
     const taskLetters = taskText.split('').filter(function(c) { return c !== ' '; });
@@ -1127,7 +1096,7 @@ export const eatenPlugin = {
       }
     }
 
-    function drawTeeth(topY, botY, jawGap, alpha) {
+    function drawTeeth(fxCtx, topY, botY, jawGap, alpha) {
       fxCtx.textAlign = 'center';
       fxCtx.textBaseline = 'middle';
       for (let i = 0; i < teethCount; i++) {
@@ -1147,11 +1116,11 @@ export const eatenPlugin = {
       }
     }
 
-    function drawStuckLetters() {
+    function drawStuckLetters(fxCtx) {
       fxCtx.textAlign = 'center';
       fxCtx.textBaseline = 'middle';
       stuckLetters.forEach(function(s) {
-        let displayChar = s.char;
+        const displayChar = s.char;
         if (s.mangleLevel >= 3) displayChar = CRUMB_CHARS[Math.floor(Math.random() * CRUMB_CHARS.length)];
         else if (s.mangleLevel >= 2) displayChar = Math.random() > 0.5 ? s.char.toLowerCase() : s.char;
         fxCtx.save();
@@ -1164,7 +1133,7 @@ export const eatenPlugin = {
       });
     }
 
-    function drawCrumbs(dt) {
+    function drawCrumbs(fxCtx, dt) {
       crumbs.forEach(function(c) {
         c.x += c.vx * dt;
         c.y += c.vy * dt;
@@ -1179,16 +1148,14 @@ export const eatenPlugin = {
       });
     }
 
-    let lastNow = startTime;
-    let lastChewIdx = -1;
+    const lastNow = startTime;
+    const lastChewIdx = -1;
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
       const elapsed = now - startTime;
       const dt = Math.min((now - lastNow) / 1000, 0.05);
       lastNow = now;
-
-      fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
 
       // Phase 1: Jaws approach
       if (elapsed < approachDuration) {
@@ -1196,8 +1163,7 @@ export const eatenPlugin = {
         const ease = t * t;
         const topY = rect.top - 70 + ease * 60;
         const botY = rect.bottom + 70 - ease * 60;
-        drawTeeth(topY, botY, rect.height + 140 - ease * 120, ease);
-        requestAnimationFrame(frame);
+        drawTeeth(fxCtx, topY, botY, rect.height + 140 - ease * 120, ease);
 
       // Phase 2: Chewing
       } else if (elapsed < approachDuration + chewTotalDuration) {
@@ -1228,8 +1194,8 @@ export const eatenPlugin = {
         const clipBot = consumeProgress * 50;
         el.style.clipPath = 'inset(' + clipTop + '% 0 ' + clipBot + '% 0)';
 
-        drawTeeth(topY, botY, jawGap, 0.9);
-        drawStuckLetters();
+        drawTeeth(fxCtx, topY, botY, jawGap, 0.9);
+        drawStuckLetters(fxCtx);
 
         if (closeOpen > 0.8 && Math.random() > 0.4) {
           const side = Math.random() > 0.5 ? rect.left - 5 : rect.right + 5;
@@ -1237,12 +1203,11 @@ export const eatenPlugin = {
         }
         if (Math.random() > 0.6) spawnCrumbs(rect.left + Math.random() * rect.width, botY + 5, 1);
 
-        drawCrumbs(dt);
+        drawCrumbs(fxCtx, dt);
 
         if (shakeEnabled && closeOpen > 0.7) {
           app.style.transform = 'translate(' + ((Math.random() - 0.5) * 2) + 'px, ' + ((Math.random() - 0.5) * 2) + 'px)';
         }
-        requestAnimationFrame(frame);
 
       // Phase 3: Swallow
       } else if (elapsed < approachDuration + chewTotalDuration + swallowDuration) {
@@ -1264,7 +1229,7 @@ export const eatenPlugin = {
         if (shakeEnabled) app.style.transform = '';
 
         const gulpBounce = Math.sin(t * Math.PI * 2) * 3 * (1 - t);
-        drawTeeth(cy - 4 + gulpBounce, cy + 4 - gulpBounce, 8, 0.85 - t * 0.3);
+        drawTeeth(fxCtx, cy - 4 + gulpBounce, cy + 4 - gulpBounce, 8, 0.85 - t * 0.3);
 
         stuckLetters.forEach(function(s) {
           fxCtx.font = 'bold ' + ((s.size + 3) * (1 - t)) + 'px monospace';
@@ -1273,8 +1238,7 @@ export const eatenPlugin = {
           fxCtx.fillText(s.char, s.x, cy + s.offsetY * (1 - t));
         });
 
-        drawCrumbs(dt);
-        requestAnimationFrame(frame);
+        drawCrumbs(fxCtx, dt);
 
       // Phase 4: Burp + retreat
       } else {
@@ -1283,7 +1247,7 @@ export const eatenPlugin = {
         const retreatY = t * t * 90;
         const alpha = Math.max(1 - t * 1.5, 0);
         if (alpha > 0.01) {
-          drawTeeth(cy - 4 - retreatY, cy + 4 + retreatY, 8 + retreatY * 2, alpha * 0.7);
+          drawTeeth(fxCtx, cy - 4 - retreatY, cy + 4 + retreatY, 8 + retreatY * 2, alpha * 0.7);
         }
 
         // Burp cloud
@@ -1304,19 +1268,16 @@ export const eatenPlugin = {
           }
         }
 
-        drawCrumbs(dt * 0.3);
+        drawCrumbs(fxCtx, dt * 0.3);
 
         if (t >= 1) {
-          fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
+          FX.deregisterFxDraw(_drawId);
           el.style.clipPath = '';
           if (shakeEnabled) app.style.transform = '';
           FX.finalize(el, { intensity: ctx.intensity, speed: ctx.speed, fx: ctx.fx, onDone: ctx.onDone, params: ctx.params });
-        } else {
-          requestAnimationFrame(frame);
         }
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     el.style.clipPath = '';
@@ -1326,7 +1287,7 @@ export const eatenPlugin = {
 };
 
 // ═══════════════════════════════════════════════════════════════
-//  LIGHTNING -- Van Gogh-style thick ASCII bolt + swirling energy
+//  LIGHTNING — Van Gogh–style thick ASCII bolt + swirling energy
 // ═══════════════════════════════════════════════════════════════
 export const lightningPlugin = {
   name: 'lightning',
@@ -1345,9 +1306,8 @@ export const lightningPlugin = {
     const pos = FX.prepareCard(el);
     const rect = pos.rect;
     const cx = pos.cx, cy = pos.cy;
-    const fxCtx = FX.getFxCtx();
+    const _drawId = FX.nextFxDrawId('death-lightning');
     const startTime = performance.now();
-    const W = fxCtx.canvas.width, H = fxCtx.canvas.height;
 
     const buildupDuration = p.buildupDuration;
     const crackDuration = p.crackDuration;
@@ -1369,8 +1329,8 @@ export const lightningPlugin = {
 
     // Generate main bolt path
     const mainBolt = [];
-    let bx = cx + (Math.random() - 0.5) * 60;
-    let by = -20;
+    const bx = cx + (Math.random() - 0.5) * 60;
+    const by = -20;
     while (by < cy + 5) {
       const jag = (Math.random() - 0.5) * 70;
       const stepY = 10 + Math.random() * 18;
@@ -1387,7 +1347,7 @@ export const lightningPlugin = {
       const forkPt = mainBolt[forkIdx];
       const dir = Math.random() > 0.5 ? 1 : -1;
       const branch = [{ x: forkPt.x, y: forkPt.y }];
-      let bbx = forkPt.x, bby = forkPt.y;
+      const bbx = forkPt.x, bby = forkPt.y;
       const branchLen = 3 + Math.floor(Math.random() * 5);
       for (let s = 0; s < branchLen; s++) {
         bbx += dir * (15 + Math.random() * 25);
@@ -1397,7 +1357,7 @@ export const lightningPlugin = {
       branches.push({ points: branch, forkIdx: forkIdx });
     }
 
-    function drawBoltSegment(x1, y1, x2, y2, alpha, widthScale) {
+    function drawBoltSegment(fxCtx, x1, y1, x2, y2, alpha, widthScale) {
       const dx = x2 - x1, dy = y2 - y1;
       const len = Math.sqrt(dx * dx + dy * dy);
       const steps = Math.max(Math.ceil(len / (isMobile ? 12 : 8)), 2);
@@ -1433,32 +1393,34 @@ export const lightningPlugin = {
       }
     }
 
-    function drawFullBolt(progress, alpha, widthScale) {
+    function drawFullBolt(fxCtx, progress, alpha, widthScale) {
       fxCtx.textAlign = 'center';
       fxCtx.textBaseline = 'middle';
       const mainShow = Math.floor(progress * mainBolt.length);
       for (let i = 0; i < mainShow - 1; i++) {
-        drawBoltSegment(mainBolt[i].x, mainBolt[i].y, mainBolt[i + 1].x, mainBolt[i + 1].y, alpha, widthScale);
+        drawBoltSegment(fxCtx, mainBolt[i].x, mainBolt[i].y, mainBolt[i + 1].x, mainBolt[i + 1].y, alpha, widthScale);
       }
       branches.forEach(function(br) {
         if (mainShow > br.forkIdx + 2) {
           const brProgress = Math.min((mainShow - br.forkIdx) / br.points.length, 1);
           const brShow = Math.floor(brProgress * br.points.length);
           for (let i = 0; i < brShow - 1; i++) {
-            drawBoltSegment(br.points[i].x, br.points[i].y, br.points[i + 1].x, br.points[i + 1].y, alpha * 0.7, widthScale * 0.6);
+            drawBoltSegment(fxCtx, br.points[i].x, br.points[i].y, br.points[i + 1].x, br.points[i + 1].y, alpha * 0.7, widthScale * 0.6);
           }
         }
       });
     }
 
-    // Van Gogh swirls
+    // Van Gogh swirls — use initial canvas size for positioning (captured at play time)
+    const initFxCtx = FX.getFxCtx();
+    const initW = initFxCtx.canvas.width, initH = initFxCtx.canvas.height;
     const swirls = [];
     const SWIRL_CHARS = ['@', 'O', 'o', 'S', '~', '\u2248', '*', '.', ';'];
     const swirlCount = isMobile ? 30 : 60;
     for (let i = 0; i < swirlCount; i++) {
       swirls.push({
-        cx: cx + (Math.random() - 0.5) * W * 0.8,
-        cy: cy * 0.5 + (Math.random() - 0.5) * H * 0.4,
+        cx: cx + (Math.random() - 0.5) * initW * 0.8,
+        cy: cy * 0.5 + (Math.random() - 0.5) * initH * 0.4,
         angle: Math.random() * Math.PI * 2,
         dist: 10 + Math.random() * 30,
         speed: 2 + Math.random() * 4,
@@ -1485,12 +1447,12 @@ export const lightningPlugin = {
       });
     }
 
-    let struck = false;
+    const struck = false;
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
       const elapsed = now - startTime;
-      fxCtx.clearRect(0, 0, W, H);
+      const W = fxCtx.canvas.width, H = fxCtx.canvas.height;
 
       // Phase 1: Buildup
       if (elapsed < buildupDuration) {
@@ -1515,7 +1477,6 @@ export const lightningPlugin = {
 
         if (Math.random() > 0.6) el.style.opacity = String(0.5 + Math.random() * 0.5);
         if (t > 0.85 && Math.random() > 0.6) FX.flashColor('rgba(255, 255, 255, 0.15)', 40);
-        requestAnimationFrame(frame);
 
       // Phase 2: Crack
       } else if (elapsed < buildupDuration + crackDuration) {
@@ -1536,8 +1497,7 @@ export const lightningPlugin = {
         });
 
         const ease = t * t * (3 - 2 * t);
-        drawFullBolt(ease, 1.0, 1.0);
-        requestAnimationFrame(frame);
+        drawFullBolt(fxCtx, ease, 1.0, 1.0);
 
       // Phase 3: Impact
       } else if (elapsed < buildupDuration + crackDuration + impactDuration) {
@@ -1560,16 +1520,14 @@ export const lightningPlugin = {
             });
           }
         }
-        drawFullBolt(1.0, 1.0, 1.2);
-        requestAnimationFrame(frame);
+        drawFullBolt(fxCtx, 1.0, 1.0, 1.2);
 
       // Phase 4: Afterimage
       } else if (elapsed < buildupDuration + crackDuration + impactDuration + afterimageDuration) {
         const phaseStart = buildupDuration + crackDuration + impactDuration;
         const t = (elapsed - phaseStart) / afterimageDuration;
         const flickerOn = Math.sin(t * Math.PI * 6) > 0;
-        if (flickerOn) drawFullBolt(1.0, (1 - t) * 0.7, 0.8 - t * 0.3);
-        requestAnimationFrame(frame);
+        if (flickerOn) drawFullBolt(fxCtx, 1.0, (1 - t) * 0.7, 0.8 - t * 0.3);
 
       // Phase 5: Scatter
       } else {
@@ -1609,14 +1567,11 @@ export const lightningPlugin = {
         });
 
         if (t >= 1) {
-          fxCtx.clearRect(0, 0, W, H);
+          FX.deregisterFxDraw(_drawId);
           FX.finalize(el, { intensity: ctx.intensity, speed: ctx.speed, fx: ctx.fx, onDone: ctx.onDone, params: ctx.params });
-        } else {
-          requestAnimationFrame(frame);
         }
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     el.style.opacity = '';
@@ -1624,7 +1579,7 @@ export const lightningPlugin = {
 };
 
 // ═══════════════════════════════════════════════════════════════
-//  STEAMROLLER -- ASCII roller crushes card flat
+//  STEAMROLLER — ASCII roller crushes card flat
 // ═══════════════════════════════════════════════════════════════
 export const steamrollerPlugin = {
   name: 'steamroller',
@@ -1637,7 +1592,7 @@ export const steamrollerPlugin = {
     dustSpawnRate: { label: 'Dust Spawn Rate', type: 'range', min: 3, max: 20, default: 8, step: 1, unit: 'px', group: 'particles' },
     crackSpawnRate: { label: 'Crack Spawn Rate', type: 'range', min: 10, max: 60, default: 25, step: 5, unit: 'px', group: 'particles' },
     particleSize: { label: 'Particle Size', type: 'range', min: 2, max: 20, default: 8, step: 1, unit: '', group: 'particles' },
-    dustGravity: { label: 'Dust Gravity', type: 'range', min: 20, max: 200, default: 60, step: 10, unit: 'px/s\u00B2', group: 'physics' },
+    dustGravity: { label: 'Dust Gravity', type: 'range', min: 20, max: 200, default: 60, step: 10, unit: 'px/s²', group: 'physics' },
     shakeIntensity: { label: 'Shake Intensity', type: 'range', min: 0.5, max: 5, default: 1.5, step: 0.25, unit: 'px', group: 'motion' },
   },
   requires: ['FX'],
@@ -1647,7 +1602,7 @@ export const steamrollerPlugin = {
     const pos = FX.prepareCard(el);
     const rect = pos.rect;
     const cx = pos.cx, cy = pos.cy;
-    const fxCtx = FX.getFxCtx();
+    const _drawId = FX.nextFxDrawId('death-steamroller');
     const app = getApp();
     const startTime = performance.now();
     const goRight = Math.random() > 0.5;
@@ -1657,7 +1612,7 @@ export const steamrollerPlugin = {
     const DUST_CHARS = ['.', ':', ';', "'", ',', '`', '*', '+', '~', '%'];
     const CRACK_CHARS = ['/', '\\', '|', '-', '=', '#', 'x', 'X'];
     const cracks = [];
-    let dustAccum = 0, crackAccum = 0, prevRollerX = null;
+    const dustAccum = 0, crackAccum = 0, prevRollerX = null;
 
     function spawnDust(x, y, count) {
       for (let i = 0; i < count; i++) {
@@ -1677,7 +1632,7 @@ export const steamrollerPlugin = {
     const ROLLER_CAB_L = ['.---.', '|___|', '|   |__'];
     const exhaustPuffs = [];
     const PUFF_CHARS = ['"', '~', '*', '`', '.', ':'];
-    let exhaustAccum = 0;
+    const exhaustAccum = 0;
 
     const edgeStart = goRight ? rect.left : rect.right;
     const offscreenStart = goRight ? rect.left - 180 : rect.right + 180;
@@ -1707,16 +1662,14 @@ export const steamrollerPlugin = {
     }
 
     const crushedTopPct = 100 - (6 / rect.height) * 100;
-    let lastNow = startTime, flashFired = false, totalPixelsTraveled = 0;
+    const lastNow = startTime, flashFired = false, totalPixelsTraveled = 0;
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
       const elapsed = now - startTime;
       const dt = Math.min((now - lastNow) / 1000, 0.05);
       lastNow = now;
       const t = Math.min(elapsed / totalDuration, 1);
-
-      fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
 
       const rollerX = getRollerX(t);
       if (prevRollerX !== null) totalPixelsTraveled += Math.abs(rollerX - prevRollerX);
@@ -1778,7 +1731,7 @@ export const steamrollerPlugin = {
       prevRollerX = rollerX;
 
       if (t >= 1) {
-        fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
+        FX.deregisterFxDraw(_drawId);
         if (FX.fxEnabled('shake')) app.style.transform = '';
         el.style.clipPath = '';
         el.style.transform = '';
@@ -1868,10 +1821,7 @@ export const steamrollerPlugin = {
           fxCtx.fillText(dp.char, dp.x, dp.y);
         }
       });
-
-      requestAnimationFrame(frame);
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     el.style.clipPath = '';
@@ -1883,7 +1833,7 @@ export const steamrollerPlugin = {
 };
 
 // ═══════════════════════════════════════════════════════════════
-//  PIRANHAS -- ASCII fish swarm, bite card edges, blood splatter
+//  PIRANHAS — ASCII fish swarm, bite card edges, blood splatter
 // ═══════════════════════════════════════════════════════════════
 export const piranhasPlugin = {
   name: 'piranhas',
@@ -1907,7 +1857,7 @@ export const piranhasPlugin = {
     const pos = FX.prepareCard(el);
     const rect = pos.rect;
     const cx = pos.cx, cy = pos.cy;
-    const fxCtx = FX.getFxCtx();
+    const _drawId = FX.nextFxDrawId('death-piranhas');
     const app = getApp();
     const startTime = performance.now();
 
@@ -1949,8 +1899,8 @@ export const piranhasPlugin = {
 
     const bloodDrops = [];
     const debris = [];
-    let piranhasDotgridTimer = 0;
-    let piranhasDotgridCount = 0;
+    const piranhasDotgridTimer = 0;
+    const piranhasDotgridCount = 0;
 
     function buildClipPath() {
       const pts = [];
@@ -2000,15 +1950,13 @@ export const piranhasPlugin = {
       }
     }
 
-    let lastNow = startTime;
+    const lastNow = startTime;
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
       const elapsed = now - startTime;
       const dt = Math.min((now - lastNow) / 1000, 0.05);
       lastNow = now;
-
-      fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
 
       // Phase 1: Swarm in
       if (elapsed < swarmInDuration) {
@@ -2031,7 +1979,6 @@ export const piranhasPlugin = {
           fxCtx.fillStyle = 'rgba(255, 140, 40, ' + (f.alpha * ease) + ')';
           fxCtx.fillText(charSet[Math.floor(Math.random() * charSet.length)], f.x + wobX, f.y + wobY);
         });
-        requestAnimationFrame(frame);
 
       // Phase 2: Feeding frenzy
       } else if (elapsed < swarmInDuration + frenzyDuration) {
@@ -2115,7 +2062,6 @@ export const piranhasPlugin = {
 
         if (t > 0.3 && t < 0.35) FX.flashColor('rgba(180, 0, 20, 0.15)', 200);
         if (t > 0.6 && t < 0.65) FX.flashColor('rgba(180, 0, 20, 0.1)', 150);
-        requestAnimationFrame(frame);
 
       // Phase 3: Disperse
       } else if (elapsed < totalDuration) {
@@ -2151,15 +2097,13 @@ export const piranhasPlugin = {
           }
         });
 
-        requestAnimationFrame(frame);
       } else {
-        fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
+        FX.deregisterFxDraw(_drawId);
         if (FX.fxEnabled('shake')) app.style.transform = '';
         el.style.clipPath = '';
         FX.finalize(el, { intensity: ctx.intensity, speed: ctx.speed, fx: ctx.fx, onDone: ctx.onDone, params: ctx.params });
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     el.style.clipPath = '';
@@ -2170,7 +2114,7 @@ export const piranhasPlugin = {
 };
 
 // ═══════════════════════════════════════════════════════════════
-//  WOODCHIPPER -- card feeds to edge, ASCII chunks spray out
+//  WOODCHIPPER — card feeds to edge, ASCII chunks spray out
 // ═══════════════════════════════════════════════════════════════
 export const woodchipperPlugin = {
   name: 'woodchipper',
@@ -2183,7 +2127,7 @@ export const woodchipperPlugin = {
     sprayCount: { label: 'Spray Count', type: 'range', min: 1, max: 8, default: 3, step: 1, unit: '', group: 'particles' },
     chunkSize: { label: 'Chunk Size', type: 'range', min: 4, max: 20, default: 9, step: 1, unit: 'px', group: 'visual' },
     spraySpeed: { label: 'Spray Speed', type: 'range', min: 50, max: 600, default: 250, step: 10, unit: 'px/s', group: 'physics' },
-    gravity: { label: 'Gravity', type: 'range', min: 100, max: 800, default: 400, step: 10, unit: 'px/s\u00B2', group: 'physics' },
+    gravity: { label: 'Gravity', type: 'range', min: 100, max: 800, default: 400, step: 10, unit: 'px/s²', group: 'physics' },
   },
   requires: ['FX'],
   play: function(el, ctx) {
@@ -2192,7 +2136,7 @@ export const woodchipperPlugin = {
     const pos = FX.prepareCard(el);
     const rect = pos.rect;
     const cy = pos.cy;
-    const fxCtx = FX.getFxCtx();
+    const _drawId = FX.nextFxDrawId('death-woodchipper');
     const app = getApp();
     const startTime = performance.now();
     const feedDuration = p.feedDuration;
@@ -2201,7 +2145,7 @@ export const woodchipperPlugin = {
 
     // Dotgrid: scorch trail from card to chipper + crater at feed point
     const intensity = ctx.intensity / 10;
-    const chipperX = (typeof window !== 'undefined' ? window.innerWidth : 1920) - 10;
+    const chipperX = window.innerWidth - 10;
     if (FX.doDotgridScorch) {
       FX.doDotgridScorch(rect.right, cy, chipperX, cy, lerp(30, 70, intensity));
     }
@@ -2214,24 +2158,21 @@ export const woodchipperPlugin = {
     const chunks = [];
     const CHUNK_CHARS = ['#', '@', '%', '*', '&', 'X', 'W', '\u2588', '\u2593', '\u2592', '\u2591'];
 
-    function frame(now) {
+    FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
       const elapsed = now - startTime;
-      fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
-      const viewW = (typeof window !== 'undefined' ? window.innerWidth : 1920);
-      const viewH = (typeof window !== 'undefined' ? window.innerHeight : 1080);
 
       if (elapsed < feedDuration) {
         const t = elapsed / feedDuration;
 
         // Slide card to right edge
-        const slideX = t * (viewW - rect.left + 50);
+        const slideX = t * (window.innerWidth - rect.left + 50);
         el.style.transform = 'translateX(' + slideX + 'px)';
         const clipRight = Math.max(0, t * 120 - 20);
         el.style.clipPath = 'inset(0 ' + clipRight + '% 0 0)';
 
         // Chipper machine
-        const chipperX = viewW - 10;
+        const chipperX = window.innerWidth - 10;
         fxCtx.font = 'bold 20px monospace';
         fxCtx.textAlign = 'right';
         fxCtx.textBaseline = 'middle';
@@ -2246,7 +2187,7 @@ export const woodchipperPlugin = {
           const sprayCount = isMobile ? Math.max(1, p.sprayCount - 1) : p.sprayCount;
           for (let i = 0; i < sprayCount; i++) {
             chunks.push({
-              x: viewW - 80, y: cy + (Math.random() - 0.5) * 20,
+              x: window.innerWidth - 80, y: cy + (Math.random() - 0.5) * 20,
               vx: -(p.spraySpeed * 0.8) - Math.random() * (p.spraySpeed * 1.2), vy: -(p.spraySpeed * 0.6) - Math.random() * (p.spraySpeed * 0.8),
               char: CHUNK_CHARS[Math.floor(Math.random() * CHUNK_CHARS.length)],
               size: p.chunkSize - 3 + Math.random() * (p.chunkSize + 3), alpha: 0.7 + Math.random() * 0.3,
@@ -2277,7 +2218,7 @@ export const woodchipperPlugin = {
         c.y += c.vy * dt;
         c.rotation += c.rotSpeed * dt;
         c.alpha *= 0.995;
-        if (c.alpha < 0.01 || c.y > viewH + 50) return;
+        if (c.alpha < 0.01 || c.y > window.innerHeight + 50) return;
         fxCtx.save();
         fxCtx.translate(c.x, c.y);
         fxCtx.rotate(c.rotation);
@@ -2287,17 +2228,14 @@ export const woodchipperPlugin = {
         fxCtx.restore();
       });
 
-      if (elapsed < totalDuration) {
-        requestAnimationFrame(frame);
-      } else {
-        fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
+      if (elapsed >= totalDuration) {
+        FX.deregisterFxDraw(_drawId);
         el.style.transform = '';
         el.style.clipPath = '';
         if (FX.fxEnabled('shake')) app.style.transform = '';
         FX.finalize(el, { intensity: ctx.intensity, speed: ctx.speed, fx: ctx.fx, onDone: ctx.onDone, params: ctx.params });
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function(el) {
     el.style.transform = '';
@@ -2306,6 +2244,7 @@ export const woodchipperPlugin = {
     app.style.transform = '';
   },
 };
+
 
 // ═══════════════════════════════════════════════════════════════
 //  Plugin registration

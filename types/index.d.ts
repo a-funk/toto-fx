@@ -264,6 +264,9 @@ export declare const FX: {
   configure(opts: any): void;
   getFxCanvas(): HTMLCanvasElement | null;
   getFxCtx(): CanvasRenderingContext2D | null;
+  registerFxDraw(id: string, drawFn: (ctx: CanvasRenderingContext2D, now: number) => void): void;
+  deregisterFxDraw(id: string): void;
+  nextFxDrawId(prefix?: string): string;
   drawAsciiChar(ctx: CanvasRenderingContext2D, ch: string, x: number, y: number, color: string, size: number, alpha: number, rotation?: number): void;
   drawChar(ctx: CanvasRenderingContext2D, ch: string, x: number, y: number, color: string, size: number, alpha: number, rotation?: number): void;
   tickFrame(): void;
