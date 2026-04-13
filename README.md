@@ -24,6 +24,7 @@ TotoFX solves this. You declare that a key should be animating — the engine fi
 - **Layout animation**: smooth container resize on element add/remove
 - **Phase continuity**: persistent animations survive DOM replacement with seamless visual continuity
 - **Refresh coordination**: debounced, animation-aware refresh with transaction support
+- **Canvas compositor**: concurrent canvas animations render without interference — one clear per frame, all draw callbacks composite in sequence
 
 
 ## Install
