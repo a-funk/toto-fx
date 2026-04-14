@@ -5,9 +5,9 @@
  * A preset is a portable, shareable snapshot of animation + dotgrid + theme configuration.
  * Presets unify sandbox snapshots, AnimationSettings, and FX panel pills into one format.
  *
- * Category names use the toto-fx open-source vocabulary:
- *   action (completion), destroy (deletion), enter (creation),
- *   persist (inProgress), container (list), containerExit (listExit)
+ * Settings keys use the toto-fx open-source vocabulary:
+ *   action (completion), destroy (deletion — routed as action/destroy style),
+ *   enter (creation), persist (inProgress), container (list), containerExit (listExit)
  *
  * Minimal valid preset:
  *   `{ "$schema": "toto-preset-v1", "id": "x", "name": "X", "action": { "style": "thud" } }`

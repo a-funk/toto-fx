@@ -1,6 +1,6 @@
 {
   "name": "toto-fx",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "State-Driven Rendering Architecture (SDRA) animation engine with fluid-simulation dotgrid, 59+ animation variants, plugin system, and theme engine. Inspired by pretext.",
   "author": "Alex Funk <alex@toto.tech>",
   "homepage": "https://github.com/a-funk/toto-fx",
@@ -57,7 +57,7 @@
   "scripts": {
     "build": "node build.js",
     "build:watch": "node build.js --watch",
-    "test": "node --experimental-vm-modules --test tests/core.test.js"
+    "test": "node --experimental-vm-modules --test tests/core.test.js tests/v1.1.test.js"
   },
   "keywords": [
     "animation",

@@ -10,7 +10,10 @@ Most animation libraries assume you control the DOM. You create an element, anim
 
 TotoFX solves this. You declare that a key should be animating — the engine finds the element, starts the animation, and watches for DOM changes. When the DOM gets replaced, the engine detects the mutation, resolves the new element, and resumes at the correct phase. No flicker, no restart, no manual bookkeeping. The same mental model as React's reconciler, but for animations and framework-agnostic.
 
-**[Try it in the playground](https://toto.tech/playground)** — create a random animation, build your own, or explore the Advanced tab for near-infinite flexibility.
+
+**[Try it in the playground](https://toto.tech/playground)** — create a random animation, build your own, or explore the 'Advanced' tab for near-infinite flexibility.
+
+[Deeper Reading](https://github.com/a-funk/toto-fx/blob/v1.1-improvements/docs/fx-api.md)
 
 ## Animation Persistence Across DOM Replacement
 
@@ -53,6 +56,27 @@ morphdom(container, updatedHTML)
 // ✨ Animation continues seamlessly
 ```
 
+```
+engine.set("persist", "card-42")     // bind animation to a semantic key
+        │
+        ▼
+   ┌──────────┐
+   │ Registry │  category → style → variant lookup
+   └────┬─────┘
+        ▼
+   ┌───────────┐
+   │ Resolver  │  key → DOM element
+   └────┬──────┘
+        ▼
+   ┌──────────────────────┐
+   │ Element swap detected│  MutationObserver sees DOM change
+   └────┬─────────────────┘
+        ▼
+   ┌──────────────────┐
+   │ Animation resumed│  phase-correct, no restart
+   └──────────────────┘
+```
+
 ### Roadmap
 Apply TotoFX to video editing tools.
 
@@ -62,7 +86,7 @@ Graph-based views.
 
 - **State-driven**: set animation state, engine handles rendering
 - **Fluid simulation**: dotgrid background with Semi-Lagrangian advection and Laplacian diffusion
-- **59+ animations**: action, destroy, enter, and persist categories with tunable physics parameters
+- **59+ animations**: action (including destroy), enter, and persist categories with tunable physics parameters
 - **DOM-agnostic**: works with any framework or no framework
 - **Morph-aware**: integrates with idiomorph/morphdom to preserve animations across DOM replacement
 - **Plugin system**: add custom animation categories and FX layers
@@ -81,82 +105,157 @@ npm install toto-fx
 
 ## Getting Started
 
-A complete working page. Copy this into an HTML file and open it in a browser:
+A complete working page. Copy this into an HTML file and open it in a browser. Clicking a card plays an anime-slam with particles, screen shake, and a dotgrid ripple across the fluid simulation background:
 
 ```html
 <!DOCTYPE html>
 <html>
 <head>
   <style>
-    .item { padding: 16px; margin: 8px; border: 1px solid #ccc; }
-    .highlight-active { background: #ffffcc; transition: background 0.3s; }
+    body { background: #1a1a2e; margin: 0; font-family: system-ui, sans-serif; }
+    #bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+    .cards { position: relative; z-index: 1; display: flex; gap: 12px; padding: 40px; flex-wrap: wrap; }
+    .card {
+      padding: 20px 24px;
+      border: 1px solid #3a3a5a;
+      border-radius: 10px;
+      background: rgba(30, 30, 55, 0.9);
+      color: #e0e0e0;
+      cursor: pointer;
+      width: 200px;
+    }
   </style>
 </head>
 <body>
-  <div class="item" data-id="task-1">Buy milk</div>
-  <div class="item" data-id="task-2">Write tests</div>
-  <button onclick="highlight('task-1')">Highlight first</button>
-  <button onclick="highlight('task-2')">Highlight second</button>
+  <div id="bg"></div>
+  <div class="cards">
+    <div class="card" data-id="task-1">
+      Buy milk
+      <div class="fx-shadow"></div>
+      <div class="fx-burst"></div>
+      <div class="fx-badge"></div>
+      <div class="fx-strike"></div>
+    </div>
+    <div class="card" data-id="task-2">
+      Write tests
+      <div class="fx-shadow"></div>
+      <div class="fx-burst"></div>
+      <div class="fx-badge"></div>
+      <div class="fx-strike"></div>
+    </div>
+    <div class="card" data-id="task-3">
+      Ship feature
+      <div class="fx-shadow"></div>
+      <div class="fx-burst"></div>
+      <div class="fx-badge"></div>
+      <div class="fx-strike"></div>
+    </div>
+  </div>
 
   <script src="dist/toto-fx.min.js"></script>
+  <script src="dist/plugins/thud.min.js"></script>
   <script>
+    // 1. Create the engine
     var engine = TotoFX.createEngine({
       resolveElement: function (key) {
         return document.querySelector('[data-id="' + key + '"]');
       },
+      debug: true, // recommended during development — logs warnings for common mistakes
     });
 
-    engine.registerCategory('highlight', {
-      play: function (el, params) {
-        el.classList.add('highlight-active');
-        setTimeout(function () {
-          el.classList.remove('highlight-active');
-          params.onDone();  // REQUIRED: tells engine the animation finished
-        }, 1000);
-      },
-    });
+    // 2. Install the thud plugin
+    engine.use(TotoFXThud);
 
+    // 3. Set up the dotgrid fluid simulation background
+    var grid = TotoFX.createDotgrid({
+      container: '#bg',
+      baseOpacity: 0.15,
+      baseColor: [100, 100, 160],
+    });
+    grid.init();
+
+    // 4. Wire FX to dotgrid (without this, FX.doDotgridRipple etc. silently do nothing)
+    TotoFX.FX.setDotgrid(grid);
+
+    // 5. Start the engine
     engine.init();
 
-    function highlight(key) {
-      engine.play('highlight', engine.resolveElement(key));
-    }
+    // 6. Play anime-slam on click, with a dotgrid ripple at the card's position
+    document.querySelectorAll('.card').forEach(function (card) {
+      card.addEventListener('click', function () {
+        engine.play('action', card, {
+          params: { style: 'thud', variant: 'anime-slam' },
+        });
+
+        var rect = card.getBoundingClientRect();
+        var cx = rect.left + rect.width / 2;
+        var cy = rect.top + rect.height / 2;
+        TotoFX.FX.doDotgridRipple(cx, cy, { radius: 200, push: 10, density: 0.6 });
+      });
+    });
   </script>
 </body>
 </html>
 ```
 
+> **Tip:** Always enable `debug: true` during development. Without it, mistakes like misspelled variants, missing plugins, or wrong argument types fail silently. Debug mode logs warnings to the console so you can catch issues immediately.
+
+> **Sub-elements:** Many animations look for child elements inside each card to render shadows, impact bursts, done badges, and strikethrough effects. Add these four divs inside each card element:
+>
+> | Class | Used by | Purpose |
+> |-------|---------|---------|
+> | `.fx-shadow` | Thud lift/fall animations | Drop shadow that scales during lift and spreads on impact |
+> | `.fx-burst` | Impact animations | Radial glow burst on landing |
+> | `.fx-badge` | Completion animations | "Done" badge popup |
+> | `.fx-strike` | Completion animations | Strikethrough line across the card |
+>
+> These are **optional** — animations still play without them, but the visual effects will be incomplete (no shadow during lifts, no burst on impact, etc.). The selectors are configurable via `FX.configure({ selectors: { shadow: '.my-shadow', ... } })`.
+
 ### ESM equivalent
 
 ```javascript
-import { createEngine } from 'toto-fx';
+import { createEngine, createDotgrid, FX } from 'toto-fx';
+import { thudPlugin } from 'toto-fx/plugins/thud';
 
 const engine = createEngine({
   resolveElement: (key) => document.querySelector(`[data-id="${key}"]`),
 });
 
-engine.registerCategory('highlight', {
-  play: (el, params) => {
-    el.classList.add('highlight-active');
-    setTimeout(() => {
-      el.classList.remove('highlight-active');
-      params.onDone();  // REQUIRED: tells engine the animation finished
-    }, 1000);
-  },
-});
+engine.use(thudPlugin);
+
+const grid = createDotgrid({ container: '#bg', baseOpacity: 0.15 });
+grid.init();
+FX.setDotgrid(grid);
 
 engine.init();
 
-// Persistent animation (survives DOM mutations)
-engine.set('highlight', 'task-1');
+// One-shot animation (takes a DOM element)
+const card = document.querySelector('[data-id="task-1"]');
+engine.play('action', card, {
+  params: { style: 'thud', variant: 'anime-slam' },
+});
 
-// One-shot animation
-engine.play('highlight', document.querySelector('[data-id="task-2"]'));
+// Persistent animation (takes a key string — engine resolves the element)
+engine.set('persist', 'task-1', { style: 'ambient', variant: 'glow' });
+
+// Clear it later
+engine.clear('persist', 'task-1');
 ```
 
 ## Core Concepts
 
 ### State Store
+
+Each engine instance has its own isolated state store. Multiple engines on the same page (e.g., a main content area and a modal) won't collide — each gets independent state, observers, and reconciliation:
+
+```javascript
+var mainEngine = TotoFX.createEngine({ root: document.getElementById('main') });
+var modalEngine = TotoFX.createEngine({ root: document.getElementById('modal') });
+
+// Same key, different engines — no collision
+mainEngine.set('persist', 'item-1', { style: 'ambient', variant: 'glow' });
+modalEngine.set('persist', 'item-1', { style: 'rich', variant: 'snake-border' });
+```
 
 The engine maintains two types of animation state:
 
@@ -199,6 +298,103 @@ When the DOM changes (detected via MutationObserver), the reconciler:
 2. Diffs state vs. reality (what's running, what needs starting/stopping)
 3. Applies changes with phase offset for visual continuity
 4. Periodically garbage-collects orphaned state
+
+The reconciler has error boundaries: if a plugin's `play()` function throws, the error is logged (in debug mode) and reconciliation continues for the remaining entries. One broken plugin won't kill all animations.
+
+The DOM observer also watches for `data-anim-id` attribute changes, catching morph engines that patch elements in-place (e.g., idiomorph) rather than replacing them entirely.
+
+### Animation Handle (`ANIM_KEY`)
+
+When the reconciler starts a persistent animation, it stores a tracking handle on the element using a Symbol key (`ANIM_KEY`). This handle contains:
+
+- `_fxVersion` — the state version when this animation was applied
+- `_fxCategory` — which category owns this animation
+- `_fxStyle` — the style name
+
+The reconciler uses `_fxVersion` to avoid re-applying animations unnecessarily. On each reconciliation pass, it compares the handle's version to the state's version — if they match, the element is skipped. If they differ (or no handle exists), the reconciler calls `stop()` on the old animation then `play()` for the new state.
+
+**For category authors:** If your `play()` function sets `el[ANIM_KEY]`, the reconciler will track versions automatically. If you don't set it, `play()` will be called on every DOM mutation (harmless for idempotent CSS class operations, but wasteful). For persistent animations, setting the handle is recommended:
+
+```javascript
+import { ANIM_KEY } from 'toto-fx';
+
+engine.registerCategory('glow', {
+  play: (el, params) => {
+    el.classList.add('glowing');
+    el[ANIM_KEY] = { type: 'css', category: 'glow' };
+  },
+  stop: (el) => {
+    el.classList.remove('glowing');
+  },
+});
+```
+
+The reconciler augments your handle with `_fxVersion`, `_fxCategory`, and `_fxStyle` after `play()` returns — you don't need to set those yourself.
+
+### When `play()` Is Called
+
+Your `play()` function is called in these situations:
+
+1. **`engine.set(category, key)`** — immediate reconciliation for that key
+2. **DOM mutation** — when `MutationObserver` detects structural changes, the reconciler runs a full pass over all persistent state and calls `play()` on any element that needs it
+3. **`engine.reconcile()`** — manual reconciliation trigger
+4. **Tab becomes visible** — re-reconciles on `visibilitychange`
+
+The `params.elapsed` value tells you how many milliseconds have passed since the animation state was first set. On the initial `set()` call, `elapsed` will be near zero. On subsequent calls (after DOM mutations), `elapsed` will be the time since the original `set()`. Use this for **phase continuity** — setting a negative `animation-delay` on CSS animations so they resume at the right point rather than restarting from the beginning.
+
+### When `stop()` Is Called
+
+Your `stop()` function is called in these situations:
+
+1. **`engine.clear(category, key)`** — user explicitly clears the animation state
+2. **Reconciler re-application** — before calling `play()` with updated state (e.g., version changed)
+3. **DOM element removed** — cleanup via `MutationObserver` (category stop fires if the animation handle was set)
+
+The `stop` callback should be the inverse of `play` — remove classes, clear inline styles, cancel timers. Without `stop`, `engine.clear()` removes internal state but leaves the visual effect on the element.
+
+### Engine Events
+
+The engine emits lifecycle events you can subscribe to for debugging, progress tracking, or coordinating with external systems:
+
+```javascript
+engine.on('animationStart', function (e) {
+  console.log(e.type + ' ' + e.category + '/' + e.key + ' started');
+});
+
+engine.on('animationEnd', function (e) {
+  console.log(e.category + '/' + e.key + ' ended');
+});
+
+engine.on('reconcile', function (e) {
+  console.log(e.persistentCount + ' persistent, ' + e.transientCount + ' transient');
+});
+```
+
+Three events are available:
+
+| Event | Data | Fires when |
+|-------|------|------------|
+| `animationStart` | `{ type, category, key, element }` | `set()` or `play()` starts an animation |
+| `animationEnd` | `{ type, category, key, element }` | `clear()` or `onDone()` ends an animation |
+| `reconcile` | `{ persistentCount, transientCount }` | A reconciliation pass completes |
+
+Listener errors are caught internally and never break the engine. Unsubscribe with `engine.off(event, fn)`.
+
+For full documentation with use cases, see [docs/engine-events.md](docs/engine-events.md).
+
+### Accessibility
+
+The engine supports `prefers-reduced-motion` via the `reducedMotion` config option:
+
+```javascript
+var engine = TotoFX.createEngine({
+  reducedMotion: 'respect', // default: 'ignore'
+});
+```
+
+When set to `'respect'`, the engine checks the user's system preference and passes `reducedMotion: true` to every plugin `play()` call. Plugins should skip particles, screen shake, and flashes when this flag is set, falling back to simpler alternatives like opacity fades.
+
+For plugin author guidelines and implementation details, see [docs/accessibility.md](docs/accessibility.md).
 
 ### Categories
 
@@ -246,12 +442,28 @@ engine.registerCategory('pulse', {
 | `key` | `string` | Element key |
 | `groupId` | `string` | Group ID for coordinated refresh |
 | `styleOverride` | `Object` | Style/variant override from play() caller |
+| `reducedMotion` | `boolean` | `true` when the user prefers reduced motion and the engine is configured with `reducedMotion: 'respect'`. Plugins should skip particles, shake, and flash when this is `true`. |
 
 ### register() vs registerCategory()
 
-These serve different purposes:
+**`engine.register(category, style, variants)`** is the standard way to add animations. It stores a map of variant plugin objects and auto-creates the dispatch logic so `engine.play()`, `engine.set()`, and `engine.clear()` all work immediately. All built-in plugins use this.
 
-**`engine.registerCategory(name, descriptor)`** registers a top-level animation category (like `action`, `destroy`, `enter`, `persist`). You provide a `play` function directly. Use this for custom one-off animations.
+```javascript
+// Register variants under a category and style
+engine.register('action', 'thud', {
+  'anime-slam': { name: 'anime-slam', play: (el, ctx) => { ... }, cleanup: (el) => { ... } },
+  'meteor':     { name: 'meteor',     play: (el, ctx) => { ... }, cleanup: (el) => { ... } },
+});
+
+// Now these just work:
+engine.play('action', el, { params: { style: 'thud', variant: 'anime-slam' } });
+engine.set('persist', 'item-1', { style: 'ambient', variant: 'glow' });
+engine.clear('persist', 'item-1');
+```
+
+Multiple `register()` calls for the same category are fine -- for example, the thud and cute plugins both register under `'action'`. The engine dispatches by looking up `category → style → variant` at call time.
+
+**`engine.registerCategory(name, descriptor)`** is for custom one-off categories where you write your own `play` function directly. You don't need this for built-in plugins.
 
 ```javascript
 // Custom category with a play function
@@ -263,16 +475,6 @@ engine.registerCategory('flash', {
       params.onDone();
     }, 200);
   },
-});
-```
-
-**`engine.register(category, style, variants)`** registers variant functions within an existing category. A style groups related variants under a category -- for example, `'thud'` style with `'anime-slam'` and `'meteor'` variants under the `'action'` category. The built-in plugins use `register()`.
-
-```javascript
-// Register variants under a category and style
-engine.register('action', 'thud', {
-  'anime-slam': { name: 'anime-slam', play: (el, params) => { ... } },
-  'meteor':     { name: 'meteor',     play: (el, params) => { ... } },
 });
 ```
 
@@ -328,7 +530,7 @@ engine.use(inProgressPlugin);
 
 ### IIFE / script tags
 
-Each plugin exposes a global with an `install` function. Load the core first, then plugins:
+Each plugin exposes a global. Load the core first, then plugins, then install them with `engine.use()`:
 
 ```html
 <script src="dist/toto-fx.min.js"></script>
@@ -340,12 +542,11 @@ Each plugin exposes a global with an `install` function. Load the core first, th
 <script>
   var engine = TotoFX.createEngine({ ... });
 
-  // Install plugins via their globals
-  TotoFXThud.install(engine);
-  TotoFXCute.install(engine);
-  TotoFXDeath.install(engine);
-  TotoFXCreation.install(engine);
-  TotoFXInProgress.install(engine);
+  engine.use(TotoFXThud);
+  engine.use(TotoFXCute);
+  engine.use(TotoFXDeath);
+  engine.use(TotoFXCreation);
+  engine.use(TotoFXInProgress);
 
   engine.init();
 </script>
@@ -357,17 +558,18 @@ Plugin globals reference:
 |--------|----------------|-------------|
 | Thud (action) | `toto-fx/plugins/thud` | `TotoFXThud` |
 | Cute (action) | `toto-fx/plugins/cute` | `TotoFXCute` |
-| Death (destroy) | `toto-fx/plugins/death` | `TotoFXDeath` |
+| Destroy (action) | `toto-fx/plugins/death` | `TotoFXDeath` |
 | Creation (enter) | `toto-fx/plugins/creation` | `TotoFXCreation` |
 | In-Progress (persist) | `toto-fx/plugins/in-progress` | `TotoFXInProgress` |
 
 ### Quickstart with built-in plugins
 
-The most common use case: load everything, play an anime-slam on click.
+Load a plugin, install it, play animations. `engine.use()` calls `engine.register()` internally, which wires up the category, style, and variant dispatch automatically.
 
 ```html
 <script src="dist/toto-fx.min.js"></script>
 <script src="dist/plugins/thud.min.js"></script>
+<script src="dist/plugins/in-progress.min.js"></script>
 <script>
   var engine = TotoFX.createEngine({
     resolveElement: function (key) {
@@ -375,11 +577,11 @@ The most common use case: load everything, play an anime-slam on click.
     },
   });
 
-  // Install the thud plugin (adds 'action' category with 10 slam variants)
-  TotoFXThud.install(engine);
+  engine.use(TotoFXThud);
+  engine.use(TotoFXInProgress);
   engine.init();
 
-  // Play anime-slam on any element
+  // One-shot animation (takes an element)
   document.querySelectorAll('.card').forEach(function (card) {
     card.addEventListener('click', function () {
       engine.play('action', card, {
@@ -387,6 +589,12 @@ The most common use case: load everything, play an anime-slam on click.
       });
     });
   });
+
+  // Persistent animation (takes a key string — engine resolves the element)
+  engine.set('persist', 'task-1', { style: 'ambient', variant: 'glow' });
+
+  // Clear it later
+  engine.clear('persist', 'task-1');
 </script>
 ```
 ### Write your own plugin in 60s
@@ -421,17 +629,33 @@ The most common use case: load everything, play an anime-slam on click.
 ```
 ## Built-in Animation Variants
 
-59 animations across 4 categories:
+59 animations across 3 categories. The **category**, **style**, and **variant** are the three values you pass to `play()` or `set()`:
 
-### Action (completion)
+```javascript
+engine.play(category, el, { params: { style: style, variant: variant } });
+engine.set(category, key, { style: style, variant: variant });
+```
+
+### Quick reference
+
+| Category | Style | Variants |
+|----------|-------|----------|
+| `action` | `thud` | `anime-slam`, `low-bounce`, `stratosphere`, `orbit-slam`, `crater`, `deep-crater`, `meteor`, `detonation`, `nuclear`, `shatter` |
+| `action` | `cute` | `confetti`, `flowers`, `sparkle`, `shooting-star`, `butterflies`, `rainbow`, `fireworks`, `hearts`, `cat`, `dog`, `snowfall`, `ocean`, `fireflies` |
+| `action` | `destroy` | `explode`, `incinerate`, `shredder`, `guillotine`, `heartbeat`, `sniper`, `eaten`, `lightning`, `steamroller`, `piranhas`, `woodchipper` |
+| `enter` | `subtle` | `fade-in`, `slide-in`, `unfold`, `typewriter`, `rise` |
+| `enter` | `dramatic` | `slam-down`, `scale-bounce`, `materialize`, `portal`, `glitch-in` |
+| `enter` | `fun` | `confetti-drop`, `sparkle-trail`, `butterfly-carry`, `bounce-in`, `grow` |
+| `persist` | `ambient` | `glow`, `pulse`, `colored-border`, `shimmer`, `breathing` |
+| `persist` | `rich` | `snake-border`, `particle-orbit`, `corner-accents`, `heartbeat`, `progress-bar` |
+
+### Action (completion and destruction)
 
 **Thud** (10 variants): anime-slam, low-bounce, stratosphere, orbit-slam, crater, deep-crater, meteor, detonation, nuclear, shatter
 
 **Cute** (13 variants): confetti, flowers, sparkle, shooting-star, butterflies, rainbow, fireworks, hearts, cat, dog, snowfall, ocean, fireflies
 
-### Destroy (deletion)
-
-**Death** (11 variants): explode, incinerate, shredder, guillotine, heartbeat, sniper, eaten, lightning, steamroller, piranhas, woodchipper
+**Destroy** (11 variants): explode, incinerate, shredder, guillotine, heartbeat, sniper, eaten, lightning, steamroller, piranhas, woodchipper
 
 ### Enter (creation)
 
@@ -472,10 +696,10 @@ engine.play('action', el, {
 All variants define their params with `{ min, max, default, step, unit, group }`. You can inspect them at runtime:
 
 ```javascript
-import { AnimationRegistry } from 'toto-fx';
-
-// Get param descriptors for anime-slam
-const params = AnimationRegistry.getParams('action', 'thud', 'anime-slam');
+// Works in both ESM and IIFE — query the engine directly
+const styles = engine.getStyles('action');                       // ['thud', 'cute', 'destroy']
+const variants = engine.getVariants('action', 'thud');           // ['anime-slam', 'low-bounce', ...]
+const params = engine.getParams('action', 'thud', 'anime-slam');
 // → { peakZ: { min: 100, max: 1000, default: 450, ... }, liftDur: { ... }, ... }
 ```
 
@@ -609,6 +833,7 @@ FX.doDotgridRipple(cx, cy, { radius: 200, push: 10, density: 0.6 });
 FX.doDotgridCrater(cx, cy, 100, 1, { cracks: 6 });
 FX.doDotgridNuclear(cx, cy, { blastRadius: 250 });
 FX.doDotgridScorch(x1, y1, x2, y2, 40);
+FX.resetDotgrid();                          // clear all fluid sim state
 
 // Card animation helpers (physics-based)
 FX.liftCard(el, shadow, cx, cy, peakZ, duration, rotX, rotY, onDone);
@@ -654,8 +879,10 @@ Create a new engine instance.
 | `onRefresh` | `(groupId: string) => void\|Promise` | `null` | Refresh callback for animation-aware updates |
 | `containerResolver` | `(groupId: string) => HTMLElement\|null` | `getElementById('item-list-...')` | Container resolver for layout animation |
 | `layoutDuration` | `number` | `300` | Layout animation duration (ms) |
-| `debug` | `boolean` | `false` | Enable console warnings for common mistakes (wrong arg types, unregistered categories, detached elements) |
+| `debug` | `boolean` | `true` | Enable console warnings for common mistakes (wrong arg types, unregistered categories, detached elements). Pass `false` to silence in production. |
 | `layoutEasing` | `string` | `'ease-out'` | Layout animation CSS easing |
+| `debounceMs` | `number` | `100` | Refresh coordinator debounce window (ms). Lower = more responsive, higher = fewer DOM swaps during rapid state changes. |
+| `reducedMotion` | `'respect' \| 'ignore'` | `'ignore'` | When `'respect'`, checks `prefers-reduced-motion` media query and passes `reducedMotion: true` to all `play()` contexts. Plugins can use this to skip particles, screen shake, and other non-essential effects. |
 
 ### Engine Methods
 
@@ -664,7 +891,9 @@ Create a new engine instance.
 | Method | Description |
 |--------|-------------|
 | `engine.set(category, key, params?)` | Set persistent animation state |
-| `engine.clear(category, key)` | Clear persistent animation state |
+| `engine.clear(category, key?)` | Clear persistent animation state. Omit `key` to clear all active animations in the category. |
+| `engine.clearAll()` | Clear everything — all persistent animations, all transient state, and reset the dotgrid (requires `engine.setDotgrid(grid)`). |
+| `engine.setDotgrid(grid)` | Set the dotgrid instance so `clearAll()` can reset it. |
 | `engine.isActive(category, key)` | Check if key has active persistent animation |
 | `engine.getActiveKeys(category)` | Get all active keys for a category |
 | `engine.play(category, el, opts?)` | Play a one-shot animation (takes a DOM element) |
@@ -693,11 +922,45 @@ Create a new engine instance.
 | `engine.registerFX(name, layer)` | Register an FX layer |
 | `engine.getFX(name)` | Get a registered FX layer |
 
+#### Events
+
+| Method | Description |
+|--------|-------------|
+| `engine.on(event, fn)` | Subscribe to a lifecycle event. Events: `'animationStart'`, `'animationEnd'`, `'reconcile'`. |
+| `engine.off(event, fn)` | Unsubscribe from a lifecycle event. |
+
+Event data shapes:
+
+- **`animationStart`** / **`animationEnd`**: `{ type: 'persistent'|'transient', category, key, element }`
+- **`reconcile`**: `{ persistentCount, transientCount }`
+
+Listener errors are caught internally and never break the engine.
+
+```javascript
+engine.on('animationStart', (e) => {
+  console.log(`${e.type} animation started: ${e.category}/${e.key}`);
+});
+
+engine.on('reconcile', (e) => {
+  console.log(`Reconciled: ${e.persistentCount} persistent, ${e.transientCount} transient`);
+});
+```
+
 #### Queries
 
 | Method | Description |
 |--------|-------------|
 | `engine.isAnimating(groupId?)` | Check if transient animations are in flight |
+| `engine.getStyles(category)` | List registered style names for a category |
+| `engine.getVariants(category, style)` | List registered variant names for a category and style |
+| `engine.getParams(category, style, variant)` | Get tunable parameter descriptors for a variant |
+
+```javascript
+// Discover what's available at runtime (works in both ESM and IIFE):
+engine.getStyles('action');                        // ['thud', 'cute', 'destroy']
+engine.getVariants('action', 'thud');              // ['anime-slam', 'low-bounce', ...]
+engine.getParams('action', 'thud', 'anime-slam');  // { peakZ: { min: 100, max: 1000, ... }, ... }
+```
 
 #### Layout Animation
 
@@ -739,8 +1002,9 @@ The build produces multiple bundles for different use cases:
 For advanced use via ESM:
 
 ```javascript
-import { StateStore } from 'toto-fx';
-import { DOMObserver } from 'toto-fx';
+import { createStateStore } from 'toto-fx';  // isolated state store factory
+import { createDOMObserver } from 'toto-fx'; // isolated DOM observer factory
+import { ANIM_KEY } from 'toto-fx';          // Symbol key for animation handles on elements
 import { createReconciler } from 'toto-fx';
 import { createRefreshCoordinator } from 'toto-fx';
 import { createLayoutAnimator } from 'toto-fx';
@@ -749,6 +1013,10 @@ import { createDotgrid } from 'toto-fx';     // fluid simulation
 import { AnimationRegistry } from 'toto-fx'; // variant store
 import { AnimationSettings } from 'toto-fx'; // localStorage persistence
 import { PresetSchema } from 'toto-fx';      // preset validation
+
+// Backwards-compatible singletons (deprecated -- prefer factory functions)
+import { StateStore } from 'toto-fx';
+import { DOMObserver } from 'toto-fx';
 ```
 
 ## TypeScript
@@ -757,9 +1025,13 @@ Type definitions ship at `types/index.d.ts` and are referenced in `package.json`
 
 ## Further Reading
 
+- [docs/variant-cheatsheet.md](docs/variant-cheatsheet.md) -- All 59 animation variants with descriptions
 - [docs/fx-api.md](docs/fx-api.md) -- FX utilities API reference (all 50+ exports)
 - [docs/dotgrid.md](docs/dotgrid.md) -- Dotgrid fluid simulation deep dive
 - [docs/plugin-guide.md](docs/plugin-guide.md) -- Writing custom plugins
+- [docs/engine-events.md](docs/engine-events.md) -- Engine lifecycle events (on/off API)
+- [docs/accessibility.md](docs/accessibility.md) -- Reduced motion support and plugin guidelines
+- [docs/migration-v1.1.md](docs/migration-v1.1.md) -- Migrating from v1.0 to v1.1
 
 ## Browser Support
 

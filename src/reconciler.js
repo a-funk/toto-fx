@@ -13,7 +13,8 @@
  * continuity is preserved.
  */
 
-import { StateStore } from './state-store.js';
+/** @type {symbol} Key used to store animation handles on DOM elements. */
+export const ANIM_KEY = Symbol('totoAnimation');
 
 /**
  * Apply phase offset to maintain visual continuity after element replacement.
@@ -45,6 +46,7 @@ function applyPhaseOffset(el, handle, elapsed, tickerRef) {
 /**
  * Create a Reconciler bound to a configuration object and category registry.
  *
+ * @param {Object} store - StateStore instance
  * @param {Object} config - Engine configuration
  * @param {Function} config.resolveElement - Default element resolver
  * @param {Object} categories - Category registry (name -> descriptor)
@@ -54,7 +56,7 @@ function applyPhaseOffset(el, handle, elapsed, tickerRef) {
  * @param {Object} [opts.tickerRef] - Reference to InProgressTicker for phase offset
  * @returns {Object} Reconciler instance
  */
-export function createReconciler(config, categories, opts) {
+export function createReconciler(store, config, categories, opts) {
   opts = opts || {};
 
   const Reconciler = {
@@ -68,7 +70,7 @@ export function createReconciler(config, categories, opts) {
     reconcile: function () {
       const defaultResolver = config.resolveElement;
       const entries = [];
-      StateStore._persistent.forEach(function (state, key) {
+      store._persistent.forEach(function (state, key) {
         entries.push({ key: key, state: state });
       });
 
@@ -80,29 +82,36 @@ export function createReconciler(config, categories, opts) {
         // Use category-specific resolver if registered, else default
         const catDescriptor = categories[state.category];
         const resolver = (catDescriptor && catDescriptor.resolve) || defaultResolver;
-        const el = StateStore.resolveElement(key, resolver);
+        const el = store.resolveElement(key, resolver);
 
         if (!el || !el.isConnected) continue;
 
         // Check if handle exists and matches current state version
-        if (el.__totoAnimation && el.__totoAnimation._fxVersion === state.version) {
+        if (el[ANIM_KEY] && el[ANIM_KEY]._fxVersion === state.version) {
           continue;
         }
 
         // Element needs animation -- either new element or version changed
-        if (el.__totoAnimation) {
+        if (el[ANIM_KEY]) {
           this._stopElement(el);
         }
 
-        // Start animation with phase offset
-        this._startElement(key, el, state);
+        // Start animation with phase offset -- wrapped in try/catch so one
+        // broken plugin doesn't kill reconciliation for remaining entries.
+        try {
+          this._startElement(key, el, state);
+        } catch (err) {
+          if (config.debug && typeof console !== 'undefined') {
+            console.error('[TotoFX] _startElement failed for key "' + key + '":', err);
+          }
+        }
       }
 
       // Run GC periodically (not every reconciliation)
       this._gcCounter = (this._gcCounter || 0) + 1;
       if (this._gcCounter >= 30) {
         this._gcCounter = 0;
-        StateStore.gc(defaultResolver);
+        store.gc(defaultResolver);
       }
     },
 
@@ -125,48 +134,73 @@ export function createReconciler(config, categories, opts) {
           variant: state.variant,
           params: state.params,
           key: key,
+          reducedMotion: opts.isReducedMotion ? opts.isReducedMotion() : false,
         });
 
         // Augment the handle with engine metadata for version tracking
-        if (el.__totoAnimation) {
-          el.__totoAnimation._fxVersion = state.version;
-          el.__totoAnimation._fxCategory = state.category;
-          el.__totoAnimation._fxStyle = state.style;
+        if (el[ANIM_KEY]) {
+          el[ANIM_KEY]._fxVersion = state.version;
+          el[ANIM_KEY]._fxCategory = state.category;
+          el[ANIM_KEY]._fxStyle = state.style;
         }
         return;
       }
 
-      // Fallback: use variant lookup for categories with start/stop objects
+      // Fallback: use variant lookup for categories without a category descriptor
       if (!opts.lookupVariant) return;
       const variant = opts.lookupVariant(state.category, state.style, state.variant);
-      if (!variant || !variant.start) return;
+      if (!variant) return;
 
-      const handle = variant.start(el, state.params);
-
-      // Apply phase offset if element was replaced
-      if (elapsed > 0 && handle) {
-        applyPhaseOffset(el, handle, elapsed, opts.tickerRef || null);
+      if (typeof variant.play === 'function') {
+        variant.play(el, {
+          elapsed: elapsed,
+          style: state.style,
+          variant: state.variant,
+          params: state.params,
+          key: key,
+          reducedMotion: opts.isReducedMotion ? opts.isReducedMotion() : false,
+        });
+      } else if (typeof variant.start === 'function') {
+        // Legacy compat: some third-party variants may use start()
+        const handle = variant.start(el, state.params);
+        if (elapsed > 0 && handle) {
+          applyPhaseOffset(el, handle, elapsed, opts.tickerRef || null);
+        }
       }
 
-      // Store unified handle
-      el.__totoAnimation = {
-        handle: handle,
-        variant: state.variant,
-        _fxVersion: state.version,
-        _fxCategory: state.category,
-        _fxStyle: state.style,
-      };
+      // Store unified handle (may already have been set by variant.play())
+      if (!el[ANIM_KEY]) {
+        el[ANIM_KEY] = {};
+      }
+      el[ANIM_KEY]._fxVersion = state.version;
+      el[ANIM_KEY]._fxCategory = state.category;
+      el[ANIM_KEY]._fxStyle = state.style;
+      el[ANIM_KEY]._fxVariant = state.variant;
     },
 
     /**
-     * Stop animation on an element.
+     * Stop animation on an element. Calls the category's stop() callback
+     * if one is registered, then the global stop handler, then cleans up
+     * the animation handle.
      * @param {HTMLElement} el
      * @private
      */
     _stopElement: function (el) {
+      // Call category-specific stop to undo visual effects
+      if (el[ANIM_KEY] && el[ANIM_KEY]._fxCategory) {
+        var cat = categories[el[ANIM_KEY]._fxCategory];
+        if (cat && cat.stop) {
+          cat.stop(el);
+        }
+      }
+
+      // Call global stop handler (for app-level cleanup like ticker removal)
       if (opts.stopElement) {
         opts.stopElement(el);
       }
+
+      // Clean up the animation handle
+      delete el[ANIM_KEY];
     },
   };
 

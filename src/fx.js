@@ -3,7 +3,7 @@
  * @description FX — animation effects toolkit for TotoFX.
  *
  * Particles, screen effects, physics-based card animations, and canvas
- * rendering helpers. Used by all built-in plugins (thud, death, cute,
+ * rendering helpers. Used by all built-in plugins (thud, destroy, cute,
  * creation) and available for custom animations.
  *
  * ## Setup
@@ -945,28 +945,31 @@ function _fireDotgridOverride(cx, cy) {
   _dotgridOverrideFired = true;
   if (!_hasDotgrid()) return;
   const ov = _ctx.dotgridOverride;
-  if (!ov || !ov.effect) return;
+  if (!ov || !ov.effect || ov.effect === 'none') return;
   const p = ov.params || {};
-  switch (ov.effect) {
-    case 'ripple':
-      _Dotgrid.ripple(cx, cy, p);
-      break;
-    case 'vortex':
-      _Dotgrid.vortex(cx, cy, p);
-      break;
-    case 'crater':
-      _Dotgrid.crater(cx, cy, p.radius || 160, p.depth || 1.0, p);
-      break;
-    case 'nuclear':
-      _Dotgrid.nuclear(cx, cy, p);
-      break;
-    case 'scorch': {
-      const halfLen = (p.length || 300) / 2;
-      _Dotgrid.scorch(cx - halfLen, cy, cx + halfLen, cy, p);
-      break;
-    }
-    case 'none':
-      break;
+  // Generic dispatch — no switch needed, works for built-in + plugin effects
+  if (typeof _Dotgrid.runEffect === 'function') {
+    _Dotgrid.runEffect(ov.effect, { cx: cx, cy: cy, opts: p });
+  }
+}
+
+/**
+ * Generic dotgrid effect dispatcher. Works for any effect name —
+ * built-in or plugin-registered. New dotgrid effects don't need
+ * dedicated FX wrapper functions; call this instead.
+ *
+ * @param {string} name - Effect name (e.g., 'ripple', 'heart', 'shockwave')
+ * @param {Object} args - Arguments object (e.g., { cx, cy, opts })
+ */
+export function doDotgridEffect(name, args) {
+  if (!fxEnabled('dotgrid')) return;
+  if (_ctx.dotgridOverride) {
+    _fireDotgridOverride(args.cx || ((args.x1 + args.x2) / 2),
+                          args.cy || ((args.y1 + args.y2) / 2));
+    return;
+  }
+  if (_hasDotgrid() && typeof _Dotgrid.runEffect === 'function') {
+    _Dotgrid.runEffect(name, args);
   }
 }
 
@@ -979,68 +982,55 @@ function _fireDotgridOverride(cx, cy) {
  * @param {Object} [opts] - Options passed through to Dotgrid.ripple.
  */
 export function doDotgridRipple(cx, cy, opts) {
-  if (!fxEnabled('dotgrid')) return;
-  if (_ctx.dotgridOverride) {
-    _fireDotgridOverride(cx, cy);
-    return;
-  }
-  if (_hasDotgrid()) _Dotgrid.ripple(cx, cy, opts);
+  doDotgridEffect('ripple', { cx: cx, cy: cy, opts: opts });
 }
 
 /**
  * Trigger a dotgrid crater effect.
- *
- * @param {number} cx - Center x coordinate in viewport pixels.
- * @param {number} cy - Center y coordinate in viewport pixels.
- * @param {number} radius - Crater radius in pixels.
- * @param {number} depth - Crater depth multiplier.
- * @param {Object} [opts] - Options passed through to Dotgrid.crater.
+ * @param {number} cx @param {number} cy @param {number} radius @param {number} depth @param {Object} [opts]
  */
 export function doDotgridCrater(cx, cy, radius, depth, opts) {
-  if (!fxEnabled('dotgrid')) return;
-  if (_ctx.dotgridOverride) {
-    _fireDotgridOverride(cx, cy);
-    return;
-  }
-  if (_hasDotgrid()) _Dotgrid.crater(cx, cy, radius, depth, opts);
+  doDotgridEffect('crater', { cx: cx, cy: cy, opts: Object.assign({ radius: radius, depth: depth }, opts || {}) });
 }
 
 /**
  * Trigger a dotgrid nuclear mushroom cloud effect.
- *
- * @param {number} cx - Center x coordinate in viewport pixels.
- * @param {number} cy - Center y coordinate in viewport pixels.
- * @param {Object} [opts] - Options passed through to Dotgrid.nuclear.
- * @param {number} [opts.blastRadius=280] - Overall blast radius in pixels.
- * @param {string} [opts.color='#C45A3C'] - CSS color for the shockwave ring.
+ * @param {number} cx @param {number} cy @param {Object} [opts]
  */
 export function doDotgridNuclear(cx, cy, opts) {
-  if (!fxEnabled('dotgrid')) return;
-  if (_ctx.dotgridOverride) {
-    _fireDotgridOverride(cx, cy);
-    return;
-  }
-  if (_hasDotgrid()) _Dotgrid.nuclear(cx, cy, opts);
+  doDotgridEffect('nuclear', { cx: cx, cy: cy, opts: opts });
 }
 
 /**
  * Trigger a dotgrid scorch trail effect.
- *
- * @param {number} x1 - Start x coordinate in viewport pixels.
- * @param {number} y1 - Start y coordinate in viewport pixels.
- * @param {number} x2 - End x coordinate in viewport pixels.
- * @param {number} y2 - End y coordinate in viewport pixels.
- * @param {number} width - Trail width in pixels.
+ * @param {number} x1 @param {number} y1 @param {number} x2 @param {number} y2 @param {number} width
  */
 export function doDotgridScorch(x1, y1, x2, y2, width) {
-  if (!fxEnabled('dotgrid')) return;
-  if (_ctx.dotgridOverride) {
-    const midX = (x1 + x2) / 2;
-    const midY = (y1 + y2) / 2;
-    _fireDotgridOverride(midX, midY);
-    return;
-  }
-  if (_hasDotgrid()) _Dotgrid.scorch(x1, y1, x2, y2, width);
+  var o = typeof width === 'number' ? { width: width } : width || {};
+  doDotgridEffect('scorch', { x1: x1, y1: y1, x2: x2, y2: y2, opts: o });
+}
+
+/**
+ * Trigger a dotgrid heart effect — heart-shaped density injection with
+ * pulsing velocity beats that create a throbbing fluid simulation.
+ *
+ * @param {number} cx - Center x coordinate in viewport pixels.
+ * @param {number} cy - Center y coordinate in viewport pixels.
+ * @param {Object} [opts] - Options passed through to Dotgrid.heart.
+ * @param {number} [opts.radius=200] - Heart radius in pixels.
+ * @param {number} [opts.pulses=3] - Number of heartbeat pulses.
+ * @param {string} [opts.color='#E8456B'] - CSS color for the heart edge.
+ */
+export function doDotgridHeart(cx, cy, opts) {
+  doDotgridEffect('heart', { cx: cx, cy: cy, opts: opts });
+}
+
+/**
+ * Reset the dotgrid fluid simulation — clears all density, velocity, and color
+ * fields and redraws the base grid.
+ */
+export function resetDotgrid() {
+  if (_hasDotgrid() && _Dotgrid.reset) _Dotgrid.reset();
 }
 
 // ── Card Helpers ─────────────────────────────────────────────────
@@ -1695,7 +1685,7 @@ export function finalize(el, opts) {
 }
 
 /**
- * Hide a card instantly for death/destruction animations. Adds the
+ * Hide a card instantly for destroy animations. Adds the
  * destroyed class and sets opacity/visibility to hidden.
  *
  * @param {HTMLElement} el - The card element to destroy visually.
@@ -2061,10 +2051,13 @@ export const FX = {
   doScreenShake,
 
   // Dotgrid effects
+  doDotgridEffect,
   doDotgridRipple,
   doDotgridCrater,
   doDotgridNuclear,
   doDotgridScorch,
+  doDotgridHeart,
+  resetDotgrid,
 
   // Card helpers
   getSubElements,

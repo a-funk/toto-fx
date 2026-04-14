@@ -8,9 +8,9 @@
  * window.TotoFX. In ESM builds it's the default export.
  */
 
-import { StateStore } from './state-store.js';
-import { DOMObserver } from './dom-observer.js';
-import { createReconciler } from './reconciler.js';
+import { createStateStore } from './state-store.js';
+import { createDOMObserver } from './dom-observer.js';
+import { createReconciler, ANIM_KEY } from './reconciler.js';
 import { createRefreshCoordinator } from './refresh-coordinator.js';
 import { createLayoutAnimator } from './layout-animator.js';
 
@@ -23,7 +23,13 @@ import { createLayoutAnimator } from './layout-animator.js';
 export function createEngine(userConfig) {
   userConfig = userConfig || {};
 
+  // ── Per-engine state and observer ───────────────────────────
+  const _store = createStateStore();
+  const _domObserver = createDOMObserver(_store);
+
   // ── Configuration ──────────────────────────────────────────
+
+  var _dotgrid = null;
 
   const _config = {
     root: userConfig.root || (typeof document !== 'undefined' ? document.body : null),
@@ -31,12 +37,33 @@ export function createEngine(userConfig) {
       return document.querySelector('[data-anim-id="' + key + '"]');
     },
     onRefresh: userConfig.onRefresh || null,
-    debug: userConfig.debug || false,
+    debug: userConfig.debug !== undefined ? userConfig.debug : true,
+    reducedMotion: userConfig.reducedMotion || 'ignore', // 'respect' | 'ignore'
   };
+
+  // ── Reduced Motion ────────────────────────────────────────
+  const _reducedMotionQuery = (typeof window !== 'undefined' && window.matchMedia)
+    ? window.matchMedia('(prefers-reduced-motion: reduce)')
+    : null;
+
+  function _isReducedMotion() {
+    return _config.reducedMotion === 'respect' && _reducedMotionQuery && _reducedMotionQuery.matches;
+  }
 
   function _warn(msg) {
     if (_config.debug && typeof console !== 'undefined') {
       console.warn('[TotoFX] ' + msg);
+    }
+  }
+
+  // ── Event Emitter ─────────────────────────────────────────
+  const _listeners = {};
+
+  function _emit(event, data) {
+    const fns = _listeners[event];
+    if (!fns) return;
+    for (let i = 0; i < fns.length; i++) {
+      try { fns[i](data); } catch (e) { /* listener errors should not break the engine */ }
     }
   }
 
@@ -58,7 +85,7 @@ export function createEngine(userConfig) {
     easing: userConfig.layoutEasing || 'ease-out',
   });
 
-  const _reconciler = createReconciler(_config, _categories, {
+  const _reconciler = createReconciler(_store, _config, _categories, {
     lookupVariant: function (category, style, variant) {
       // Delegate to a user-provided variant registry if available
       if (engine._variantLookup) {
@@ -71,12 +98,14 @@ export function createEngine(userConfig) {
         engine._stopHandler(el);
       }
     },
+    isReducedMotion: _isReducedMotion,
     tickerRef: null,
   });
 
-  const _refreshCoordinator = createRefreshCoordinator({
+  const _refreshCoordinator = createRefreshCoordinator(_store, {
     layoutAnimator: _layoutAnimator,
     reconciler: _reconciler,
+    debounceMs: userConfig.debounceMs,
   });
 
   if (_config.onRefresh) {
@@ -161,6 +190,31 @@ export function createEngine(userConfig) {
       if (opts.fxContextManager) this._fxContextManager = opts.fxContextManager;
     },
 
+    // ── Events ───────────────────────────────────────────────
+
+    /**
+     * Subscribe to an engine lifecycle event.
+     * Events: 'animationStart', 'animationEnd', 'reconcile'.
+     * @param {string} event
+     * @param {Function} fn
+     */
+    on: function (event, fn) {
+      if (!_listeners[event]) _listeners[event] = [];
+      _listeners[event].push(fn);
+    },
+
+    /**
+     * Unsubscribe from an engine lifecycle event.
+     * @param {string} event
+     * @param {Function} fn
+     */
+    off: function (event, fn) {
+      const fns = _listeners[event];
+      if (!fns) return;
+      const idx = fns.indexOf(fn);
+      if (idx !== -1) fns.splice(idx, 1);
+    },
+
     /**
      * Initialize the engine. Call after configuration and plugin registration.
      * Idempotent -- safe to call multiple times.
@@ -171,7 +225,7 @@ export function createEngine(userConfig) {
       this._initialized = true;
 
       // Start DOM observation
-      DOMObserver.init(_config.root, function () {
+      _domObserver.init(_config.root, function () {
         _reconciler.reconcile();
       }, {
         cleanupHandler: this._stopHandler || null,
@@ -180,13 +234,13 @@ export function createEngine(userConfig) {
       // Start GC interval (60s) + visibilitychange
       const self = this;
       this._gcInterval = setInterval(function () {
-        StateStore.gc(_config.resolveElement);
+        _store.gc(_config.resolveElement);
       }, 60000);
 
       if (typeof document !== 'undefined') {
         document.addEventListener('visibilitychange', function () {
           if (document.visibilityState === 'visible') {
-            StateStore.invalidateCache();
+            _store.invalidateCache();
             _reconciler.reconcile();
           }
         });
@@ -197,7 +251,7 @@ export function createEngine(userConfig) {
      * Destroy the engine: disconnect observers, clear intervals.
      */
     destroy: function () {
-      DOMObserver.destroy();
+      _domObserver.destroy();
       if (this._gcInterval) {
         clearInterval(this._gcInterval);
         this._gcInterval = null;
@@ -218,7 +272,7 @@ export function createEngine(userConfig) {
     set: function (category, key, params) {
       if (_config.debug) {
         if (typeof key !== 'string') _warn('set() expects a string key, got ' + typeof key + '. Did you mean play()?');
-        if (!_categories[category] && !StateStore._persistent.has(key)) _warn('Category "' + category + '" is not registered. Call registerCategory() first.');
+        if (!_categories[category] && !_store._persistent.has(key)) _warn('Category "' + category + '" is not registered. Call register() or registerCategory() first.');
       }
       params = params || {};
 
@@ -229,36 +283,95 @@ export function createEngine(userConfig) {
         groupId: params.groupId || '',
       };
 
-      StateStore.set(category, key, state);
+      _store.set(category, key, state);
 
       // Trigger immediate reconciliation for this key
       const catDescriptor = _categories[category];
       const resolver = (catDescriptor && catDescriptor.resolve) || _config.resolveElement;
-      const el = StateStore.resolveElement(key, resolver);
+      const el = _store.resolveElement(key, resolver);
       if (el && el.isConnected) {
-        const entry = StateStore.getPersistent(key);
+        const entry = _store.getPersistent(key);
         if (entry) {
           _reconciler._startElement(key, el, entry);
         }
       }
+      _emit('animationStart', { type: 'persistent', category: category, key: key, element: el });
     },
 
     /**
-     * Clear persistent animation state for a key.
-     * Stops the animation on the element.
+     * Clear persistent animation state. Pass a key to clear one animation,
+     * or omit it to clear all active animations in the category.
      *
      * @param {string} category
-     * @param {string} key
+     * @param {string} [key]
      */
     clear: function (category, key) {
-      StateStore.clear(category, key);
+      if (!key) {
+        var keys = this.getActiveKeys(category);
+        var self = this;
+        keys.forEach(function (k) { self.clear(category, k); });
+        return;
+      }
+      _store.clear(category, key);
 
       const catDescriptor = _categories[category];
       const resolver = (catDescriptor && catDescriptor.resolve) || _config.resolveElement;
-      const el = StateStore.resolveElement(key, resolver);
-      if (el && el.__totoAnimation) {
-        _reconciler._stopElement(el);
+      const el = _store.resolveElement(key, resolver);
+      if (el) {
+        if (el[ANIM_KEY]) {
+          // Full stop: category stop + global handler + handle cleanup
+          _reconciler._stopElement(el);
+        } else if (catDescriptor && catDescriptor.stop) {
+          // No animation handle (play didn't set one), but still
+          // call category stop to undo visual effects
+          catDescriptor.stop(el);
+        }
       }
+      _emit('animationEnd', { type: 'persistent', category: category, key: key, element: el });
+    },
+
+    /**
+     * Clear everything — all persistent animations, all transient state,
+     * and reset the dotgrid fluid simulation (if set via engine.setDotgrid()).
+     */
+    clearAll: function () {
+      var self = this;
+      // Stop all persistent animations
+      this.getCategoryNames().forEach(function (cat) {
+        self.clear(cat);
+      });
+      // Stop all in-flight transient animations
+      _store._transient.forEach(function (entry) {
+        if (entry.element && entry.element[ANIM_KEY]) {
+          _reconciler._stopElement(entry.element);
+        }
+      });
+      _store._transient.clear();
+      if (_dotgrid && _dotgrid.reset) _dotgrid.reset();
+    },
+
+    /**
+     * Set the dotgrid instance for clearAll() integration.
+     * @param {Object} grid - A dotgrid instance with a reset() method.
+     */
+    setDotgrid: function (grid) {
+      _dotgrid = grid;
+    },
+
+    /**
+     * Dispatch a named dotgrid effect through the engine's dotgrid instance.
+     * This is the IIFE-safe way for animation plugins to trigger dotgrid effects —
+     * the engine holds the real dotgrid reference, avoiding the bundled-FX problem.
+     *
+     * @param {string} name - Effect name (e.g., 'heart', 'ripple')
+     * @param {Object} args - Arguments object (e.g., { cx, cy, opts })
+     * @returns {boolean} true if the effect was dispatched
+     */
+    dotgridEffect: function (name, args) {
+      if (_dotgrid && typeof _dotgrid.runEffect === 'function') {
+        return _dotgrid.runEffect(name, args);
+      }
+      return false;
     },
 
     /**
@@ -268,7 +381,7 @@ export function createEngine(userConfig) {
      * @returns {boolean}
      */
     isActive: function (category, key) {
-      return StateStore.isActive(category, key);
+      return _store.isActive(category, key);
     },
 
     /**
@@ -277,7 +390,7 @@ export function createEngine(userConfig) {
      * @returns {Set<string>}
      */
     getActiveKeys: function (category) {
-      return StateStore.getActiveKeys(category);
+      return _store.getActiveKeys(category);
     },
 
     // ── One-Shot Animations ──────────────────────────────────
@@ -293,7 +406,7 @@ export function createEngine(userConfig) {
       if (_config.debug) {
         if (!el || typeof el.nodeType === 'undefined') _warn('play() expects a DOM element, got ' + typeof el + '. Did you mean set()?');
         else if (!el.isConnected) _warn('play() called on a detached element. Animation will not be visible.');
-        if (!_categories[category]) _warn('Category "' + category + '" is not registered. Call registerCategory() first.');
+        if (!_categories[category]) _warn('Category "' + category + '" is not registered. Call register() or registerCategory() first.');
       }
       opts = opts || {};
       const key = el && el.dataset ? (el.dataset.animId || el.id || '') : '';
@@ -301,16 +414,19 @@ export function createEngine(userConfig) {
 
       // Register transient state
       if (key) {
-        StateStore.setTransient(category, key, {
+        _store.setTransient(category, key, {
           groupId: groupId,
           element: el,
           onDone: opts.onDone,
         });
       }
 
+      _emit('animationStart', { type: 'transient', category: category, key: key, element: el });
+
       const wrappedDone = function () {
-        if (key) StateStore.clearTransient(key);
+        if (key) _store.clearTransient(key);
         if (groupId) _refreshCoordinator.flushDeferred(groupId);
+        _emit('animationEnd', { type: 'transient', category: category, key: key, element: el });
         if (opts.onDone) opts.onDone();
       };
 
@@ -323,6 +439,7 @@ export function createEngine(userConfig) {
           params: opts.params || {},
           key: key,
           groupId: groupId,
+          reducedMotion: _isReducedMotion(),
         });
         return;
       }
@@ -337,16 +454,16 @@ export function createEngine(userConfig) {
      */
     transition: function (key, toCategory, opts) {
       opts = opts || {};
-      const el = StateStore.resolveElement(key, _config.resolveElement);
+      const el = _store.resolveElement(key, _config.resolveElement);
       if (!el) return;
 
       // Clear any persistent state for this key
-      const entry = StateStore.getPersistent(key);
+      const entry = _store.getPersistent(key);
       if (entry) {
-        StateStore.clear(entry.category, key);
+        _store.clear(entry.category, key);
       }
 
-      if (el.__totoAnimation) {
+      if (el[ANIM_KEY]) {
         _reconciler._stopElement(el);
       }
       this.play(toCategory, el, opts);
@@ -360,8 +477,8 @@ export function createEngine(userConfig) {
      * @returns {boolean}
      */
     isAnimating: function (groupId) {
-      if (groupId) return StateStore.isGroupAnimating(groupId);
-      return StateStore.hasAnyTransient();
+      if (groupId) return _store.isGroupAnimating(groupId);
+      return _store.hasAnyTransient();
     },
 
     // ── Reconciliation ───────────────────────────────────────
@@ -370,8 +487,9 @@ export function createEngine(userConfig) {
      * Trigger manual reconciliation.
      */
     reconcile: function () {
-      StateStore.invalidateCache();
+      _store.invalidateCache();
       _reconciler.reconcile();
+      _emit('reconcile', { persistentCount: _store._persistent.size, transientCount: _store._transient.size });
     },
 
     // ── Layout Animation ─────────────────────────────────────
@@ -391,7 +509,7 @@ export function createEngine(userConfig) {
       const self = this;
       const afterSwap = function () {
         requestAnimationFrame(function () {
-          StateStore.invalidateCache();
+          _store.invalidateCache();
           _reconciler.reconcile();
           if (snapshot) {
             _layoutAnimator.animateToNewHeight(groupId, snapshot);
@@ -422,7 +540,7 @@ export function createEngine(userConfig) {
      */
     animateAfterSwap: function (groupId, snapshot) {
       if (!snapshot) return;
-      StateStore.invalidateCache();
+      _store.invalidateCache();
       _reconciler.reconcile();
       _layoutAnimator.animateToNewHeight(groupId, snapshot);
     },
@@ -434,21 +552,21 @@ export function createEngine(userConfig) {
      */
     refreshSettings: function () {
       // Bump version on all persistent entries to force restart
-      StateStore._persistent.forEach(function (state) {
-        StateStore._version++;
-        state.version = StateStore._version;
+      _store._persistent.forEach(function (state) {
+        _store._version++;
+        state.version = _store._version;
       });
 
       // Stop all current animations and reconcile
       const resolver = _config.resolveElement;
-      StateStore._persistent.forEach(function (state, key) {
-        const el = StateStore.resolveElement(key, resolver);
+      _store._persistent.forEach(function (state, key) {
+        const el = _store.resolveElement(key, resolver);
         if (el) {
           _reconciler._stopElement(el);
         }
       });
 
-      StateStore.invalidateCache();
+      _store.invalidateCache();
       _reconciler.reconcile();
     },
 
@@ -514,6 +632,42 @@ export function createEngine(userConfig) {
       return Object.keys(_categories);
     },
 
+    /**
+     * List registered styles for a category.
+     * @param {string} category
+     * @returns {string[]}
+     */
+    getStyles: function (category) {
+      var reg = this._variantRegistry;
+      return reg && reg[category] ? Object.keys(reg[category]) : [];
+    },
+
+    /**
+     * List registered variant names for a category and style.
+     * @param {string} category
+     * @param {string} style
+     * @returns {string[]}
+     */
+    getVariants: function (category, style) {
+      var reg = this._variantRegistry;
+      var s = reg && reg[category] && reg[category][style];
+      return s ? Object.keys(s) : [];
+    },
+
+    /**
+     * Get tunable parameter descriptors for a specific variant.
+     * @param {string} category
+     * @param {string} style
+     * @param {string} variant
+     * @returns {Object}
+     */
+    getParams: function (category, style, variant) {
+      var reg = this._variantRegistry;
+      var s = reg && reg[category] && reg[category][style];
+      var v = s && s[variant];
+      return v ? (v.params || {}) : {};
+    },
+
     // ── Plugin System ────────────────────────────────────────
 
     /**
@@ -556,15 +710,67 @@ export function createEngine(userConfig) {
 
     /**
      * Register animation variants under a category and style.
-     * @param {string} category
-     * @param {string} style
-     * @param {Object} variants
+     *
+     * Stores variants in the internal registry and auto-creates a category
+     * dispatcher if one doesn't exist yet. The dispatcher reads the registry
+     * dynamically, so multiple register() calls for the same category
+     * (e.g. thud + cute both under 'action') work without merge logic.
+     *
+     * @param {string} category - e.g. 'action', 'enter', 'persist'
+     * @param {string} style - e.g. 'thud', 'cute', 'destroy', 'dramatic'
+     * @param {Object} variants - Map of variant name to plugin object with play() and cleanup()
      */
     register: function (category, style, variants) {
-      // Store in internal registry for standalone use
       if (!this._variantRegistry) this._variantRegistry = {};
       if (!this._variantRegistry[category]) this._variantRegistry[category] = {};
       this._variantRegistry[category][style] = variants;
+
+      // Auto-create a category dispatcher if one doesn't exist yet.
+      // The dispatcher looks up variants from _variantRegistry at call time,
+      // so styles added by later register() calls are picked up automatically.
+      if (!_categories[category]) {
+        var self = this;
+        _categories[category] = {
+          play: function (el, ctx) {
+            var s = (ctx.params && ctx.params.style) || ctx.style || '';
+            var v = (ctx.params && ctx.params.variant) || ctx.variant || '';
+            var reg = self._variantRegistry;
+            var styleMap = reg && reg[category] && reg[category][s];
+            var variantObj = styleMap && styleMap[v];
+            if (!variantObj || typeof variantObj.play !== 'function') {
+              if (_config.debug) {
+                _warn('No variant "' + v + '" in ' + category + '/' + s +
+                  '. Available styles: ' + (reg && reg[category] ? Object.keys(reg[category]).join(', ') : 'none'));
+              }
+              if (ctx.onDone) ctx.onDone();
+              return;
+            }
+            // Inject dotgrid effect dispatcher so plugins can trigger
+            // dotgrid effects without bundling their own FX copy
+            ctx.dotgridEffect = function (name, args) {
+              if (_dotgrid && typeof _dotgrid.runEffect === 'function') {
+                _dotgrid.runEffect(name, args);
+              }
+            };
+            variantObj.play(el, ctx);
+            el[ANIM_KEY] = {
+              _fxCategory: category,
+              _fxStyle: s,
+              _fxVariant: v,
+            };
+          },
+          stop: function (el) {
+            var handle = el[ANIM_KEY];
+            if (!handle) return;
+            var reg = self._variantRegistry;
+            var styleMap = reg && reg[category] && reg[category][handle._fxStyle];
+            var variantObj = styleMap && styleMap[handle._fxVariant];
+            if (variantObj && typeof variantObj.cleanup === 'function') {
+              variantObj.cleanup(el);
+            }
+          },
+        };
+      }
     },
 
     /**
@@ -600,9 +806,9 @@ export function createEngine(userConfig) {
     // ── Internals (exposed for advanced use / testing) ───────
 
     /** @internal */
-    _state: StateStore,
+    _state: _store,
     /** @internal */
-    _observer: DOMObserver,
+    _observer: _domObserver,
     /** @internal */
     _reconciler: _reconciler,
     /** @internal */

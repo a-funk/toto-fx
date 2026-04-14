@@ -11,22 +11,21 @@
  * WHEN the refresh fires, not WHAT it does.
  */
 
-import { StateStore } from './state-store.js';
-
 /**
  * Create a RefreshCoordinator bound to a LayoutAnimator and Reconciler.
  *
+ * @param {Object} store - StateStore instance
  * @param {Object} deps - Dependencies
  * @param {Object} deps.layoutAnimator - LayoutAnimator instance for height animation
  * @param {Object} deps.reconciler - Reconciler instance for post-swap reconciliation
  * @returns {Object} RefreshCoordinator instance
  */
-export function createRefreshCoordinator(deps) {
+export function createRefreshCoordinator(store, deps) {
   const RefreshCoordinator = {
     /** @type {Map<string, number>} groupId -> setTimeout handle */
     _pending: new Map(),
     /** @type {number} Debounce window in ms */
-    _DEBOUNCE_MS: 100,
+    _DEBOUNCE_MS: (deps && deps.debounceMs) || 100,
     /** @type {Map<string, Function>} groupId -> deferred refresh callback */
     _deferred: new Map(),
     /** @type {Function|null} The refresh callback (provided by consuming app) */
@@ -64,7 +63,7 @@ export function createRefreshCoordinator(deps) {
         self._pending.delete(groupId);
 
         // Defer if transient animation is in flight
-        if (StateStore.isGroupAnimating(groupId)) {
+        if (store.isGroupAnimating(groupId)) {
           self._deferred.set(groupId, function () {
             self.scheduleImmediate(groupId);
           });
@@ -152,7 +151,7 @@ export function createRefreshCoordinator(deps) {
 
       // After swap: reconcile + animate height
       const afterSwap = function () {
-        StateStore.invalidateCache();
+        store.invalidateCache();
         if (reconciler) reconciler.reconcile();
 
         if (snapshot && layoutAnimator) {
