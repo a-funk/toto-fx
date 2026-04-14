@@ -965,6 +965,9 @@ function _fireDotgridOverride(cx, cy) {
       _Dotgrid.scorch(cx - halfLen, cy, cx + halfLen, cy, p);
       break;
     }
+    case 'heart':
+      _Dotgrid.heart(cx, cy, p);
+      break;
     case 'none':
       break;
   }
@@ -1041,6 +1044,34 @@ export function doDotgridScorch(x1, y1, x2, y2, width) {
     return;
   }
   if (_hasDotgrid()) _Dotgrid.scorch(x1, y1, x2, y2, width);
+}
+
+/**
+ * Trigger a dotgrid heart effect — heart-shaped density injection with
+ * pulsing velocity beats that create a throbbing fluid simulation.
+ *
+ * @param {number} cx - Center x coordinate in viewport pixels.
+ * @param {number} cy - Center y coordinate in viewport pixels.
+ * @param {Object} [opts] - Options passed through to Dotgrid.heart.
+ * @param {number} [opts.radius=200] - Heart radius in pixels.
+ * @param {number} [opts.pulses=3] - Number of heartbeat pulses.
+ * @param {string} [opts.color='#E8456B'] - CSS color for the heart edge.
+ */
+export function doDotgridHeart(cx, cy, opts) {
+  if (!fxEnabled('dotgrid')) return;
+  if (_ctx.dotgridOverride) {
+    _fireDotgridOverride(cx, cy);
+    return;
+  }
+  if (_hasDotgrid()) _Dotgrid.heart(cx, cy, opts);
+}
+
+/**
+ * Reset the dotgrid fluid simulation — clears all density, velocity, and color
+ * fields and redraws the base grid.
+ */
+export function resetDotgrid() {
+  if (_hasDotgrid() && _Dotgrid.reset) _Dotgrid.reset();
 }
 
 // ── Card Helpers ─────────────────────────────────────────────────
@@ -2065,6 +2096,8 @@ export const FX = {
   doDotgridCrater,
   doDotgridNuclear,
   doDotgridScorch,
+  doDotgridHeart,
+  resetDotgrid,
 
   // Card helpers
   getSubElements,

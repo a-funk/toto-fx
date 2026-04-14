@@ -16,6 +16,7 @@ const plugins = [
   { name: 'cute', entry: 'src/plugins/cute.js', global: 'TotoFXCute' },
   { name: 'creation', entry: 'src/plugins/creation.js', global: 'TotoFXCreation' },
   { name: 'in-progress', entry: 'src/plugins/in-progress.js', global: 'TotoFXInProgress' },
+  { name: 'heart-pulse', entry: 'src/plugins/heart-pulse.js', global: 'TotoFXHeartPulse' },
 ];
 
 // Sub-module entry points

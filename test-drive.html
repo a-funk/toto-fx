@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>TotoFX Test Drive</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #1a1a2e;
+      font-family: system-ui, -apple-system, sans-serif;
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+    #bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .controls {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      gap: 12px;
+      padding: 24px 40px 0;
+      flex-wrap: wrap;
+    }
+    .controls button {
+      padding: 10px 20px;
+      border: 1px solid #5a5a8a;
+      border-radius: 8px;
+      background: rgba(60, 60, 100, 0.8);
+      color: #e0e0e0;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    .controls button:hover {
+      background: rgba(80, 80, 130, 0.9);
+    }
+    .cards {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      padding: 24px 40px 40px;
+      max-width: 900px;
+    }
+    .card {
+      padding: 20px 24px;
+      border: 1px solid #3a3a5a;
+      border-radius: 10px;
+      background: rgba(30, 30, 55, 0.9);
+      color: #e0e0e0;
+      cursor: pointer;
+      min-height: 80px;
+      position: relative;
+      user-select: none;
+    }
+    .card .label {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #8888bb;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .card .title {
+      font-size: 15px;
+    }
+    .card .hint {
+      font-size: 11px;
+      color: #6a6a9a;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="bg"></div>
+
+  <div class="controls">
+    <button id="btn-rise">Rise All</button>
+    <button id="btn-fall">Fall All</button>
+  </div>
+
+  <div class="cards" id="card-container">
+    <!-- Card 1: anime-slam (action/thud) -->
+    <div class="card" data-id="task-1">
+      <div class="label">Action / Thud</div>
+      <div class="title">Anime Slam</div>
+      <div class="hint">Click to trigger</div>
+      <div class="fx-shadow"></div>
+      <div class="fx-burst"></div>
+      <div class="fx-badge"></div>
+      <div class="fx-strike"></div>
+    </div>
+
+    <!-- Card 2: meteor (action/thud) -->
+    <div class="card" data-id="task-2">
+      <div class="label">Action / Thud</div>
+      <div class="title">Meteor</div>
+      <div class="hint">Click to trigger</div>
+      <div class="fx-shadow"></div>
+      <div class="fx-burst"></div>
+      <div class="fx-badge"></div>
+      <div class="fx-strike"></div>
+    </div>
+
+    <!-- Card 3: confetti (action/cute) -->
+    <div class="card" data-id="task-3">
+      <div class="label">Action / Cute</div>
+      <div class="title">Confetti</div>
+      <div class="hint">Click to trigger</div>
+      <div class="fx-shadow"></div>
+      <div class="fx-burst"></div>
+      <div class="fx-badge"></div>
+      <div class="fx-strike"></div>
+    </div>
+
+    <!-- Card 4: sparkle (action/cute) -->
+    <div class="card" data-id="task-4">
+      <div class="label">Action / Cute</div>
+      <div class="title">Sparkle</div>
+      <div class="hint">Click to trigger</div>
+      <div class="fx-shadow"></div>
+      <div class="fx-burst"></div>
+      <div class="fx-badge"></div>
+      <div class="fx-strike"></div>
+    </div>
+
+    <!-- Card 5: explode (action/destroy) -->
+    <div class="card" data-id="task-5">
+      <div class="label">Destroy / Death</div>
+      <div class="title">Explode</div>
+      <div class="hint">Click to trigger</div>
+      <div class="fx-shadow"></div>
+      <div class="fx-burst"></div>
+      <div class="fx-badge"></div>
+      <div class="fx-strike"></div>
+    </div>
+
+    <!-- Card 6: lightning (action/destroy) -->
+    <div class="card" data-id="task-6">
+      <div class="label">Destroy / Death</div>
+      <div class="title">Lightning</div>
+      <div class="hint">Click to trigger</div>
+      <div class="fx-shadow"></div>
+      <div class="fx-burst"></div>
+      <div class="fx-badge"></div>
+      <div class="fx-strike"></div>
+    </div>
+
+    <!-- Card 7: slam-down (enter/dramatic) -->
+    <div class="card" data-id="task-7">
+      <div class="label">Enter / Creation</div>
+      <div class="title">Slam Down</div>
+      <div class="hint">Click to trigger</div>
+      <div class="fx-shadow"></div>
+      <div class="fx-burst"></div>
+      <div class="fx-badge"></div>
+      <div class="fx-strike"></div>
+    </div>
+
+    <!-- Card 8: portal (enter/dramatic) -->
+    <div class="card" data-id="task-8">
+      <div class="label">Enter / Creation</div>
+      <div class="title">Portal</div>
+      <div class="hint">Click to trigger</div>
+      <div class="fx-shadow"></div>
+      <div class="fx-burst"></div>
+      <div class="fx-badge"></div>
+      <div class="fx-strike"></div>
+    </div>
+
+    <!-- Card 9: glow (persist/ambient) - toggle -->
+    <div class="card" data-id="task-9">
+      <div class="label">Persist / Ambient</div>
+      <div class="title">Glow (toggle)</div>
+      <div class="hint">Click to toggle</div>
+      <div class="fx-shadow"></div>
+      <div class="fx-burst"></div>
+      <div class="fx-badge"></div>
+      <div class="fx-strike"></div>
+    </div>
+
+    <!-- Card 10: particle-orbit (persist/rich) - toggle -->
+    <div class="card" data-id="task-10">
+      <div class="label">Persist / Rich</div>
+      <div class="title">Particle Orbit (toggle)</div>
+      <div class="hint">Click to toggle</div>
+      <div class="fx-shadow"></div>
+      <div class="fx-burst"></div>
+      <div class="fx-badge"></div>
+      <div class="fx-strike"></div>
+    </div>
+
+    <!-- Card 11: heart-pulse (action/love) -->
+    <div class="card" data-id="task-11">
+      <div class="label">Action / Love</div>
+      <div class="title">Heart Pulse</div>
+      <div class="hint">Click to trigger</div>
+      <div class="fx-shadow"></div>
+      <div class="fx-burst"></div>
+      <div class="fx-badge"></div>
+      <div class="fx-strike"></div>
+    </div>
+  </div>
+
+  <!-- Load TotoFX core + all plugins -->
+  <script src="dist/toto-fx.min.js"></script>
+  <script src="dist/plugins/thud.min.js"></script>
+  <script src="dist/plugins/cute.min.js"></script>
+  <script src="dist/plugins/death.min.js"></script>
+  <script src="dist/plugins/creation.min.js"></script>
+  <script src="dist/plugins/in-progress.min.js"></script>
+  <script src="dist/plugins/heart-pulse.min.js"></script>
+
+  <script>
+    // =========================================================
+    // 1. Create the engine
+    // =========================================================
+    var engine = TotoFX.createEngine({
+      resolveElement: function (key) {
+        return document.querySelector('[data-id="' + key + '"]');
+      },
+      debug: true,
+    });
+
+    // =========================================================
+    // 2. Install all plugins
+    // =========================================================
+    engine.use(TotoFXThud);
+    engine.use(TotoFXCute);
+    engine.use(TotoFXDeath);
+    engine.use(TotoFXCreation);
+    engine.use(TotoFXInProgress);
+    engine.use(TotoFXHeartPulse);
+
+    // =========================================================
+    // 3. Set up dotgrid fluid simulation background
+    // =========================================================
+    var grid = TotoFX.createDotgrid({
+      container: '#bg',
+      baseOpacity: 0.15,
+      baseColor: [100, 100, 160],
+    });
+    grid.init();
+
+    // =========================================================
+    // 4. Wire FX to dotgrid
+    // =========================================================
+    TotoFX.FX.setDotgrid(grid);
+    engine.setDotgrid(grid);
+
+    // =========================================================
+    // 5. Start the engine
+    // =========================================================
+    engine.init();
+
+    // =========================================================
+    // Helper: get center of an element
+    // =========================================================
+    function getCenter(el) {
+      var rect = el.getBoundingClientRect();
+      return { cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2 };
+    }
+
+    // =========================================================
+    // Track toggle state for persist animations
+    // =========================================================
+    var persistState = {};
+
+    // =========================================================
+    // 6. Wire up click handlers per card
+    // =========================================================
+
+    // Card 1: anime-slam (action/thud)
+    document.querySelector('[data-id="task-1"]').addEventListener('click', function () {
+      var pos = getCenter(this);
+      engine.play('action', this, {
+        params: { style: 'thud', variant: 'anime-slam' },
+      });
+      TotoFX.FX.doDotgridRipple(pos.cx, pos.cy, { radius: 200, push: 10, density: 0.6 });
+    });
+
+    // Card 2: meteor (action/thud)
+    document.querySelector('[data-id="task-2"]').addEventListener('click', function () {
+      var pos = getCenter(this);
+      engine.play('action', this, {
+        params: { style: 'thud', variant: 'meteor' },
+      });
+      TotoFX.FX.doDotgridCrater(pos.cx, pos.cy, 100, 1, { cracks: 6 });
+    });
+
+    // Card 3: confetti (action/cute)
+    document.querySelector('[data-id="task-3"]').addEventListener('click', function () {
+      var pos = getCenter(this);
+      engine.play('action', this, {
+        params: { style: 'cute', variant: 'confetti' },
+      });
+      TotoFX.FX.doDotgridRipple(pos.cx, pos.cy, { radius: 150, push: 6, density: 0.4 });
+    });
+
+    // Card 4: sparkle (action/cute)
+    document.querySelector('[data-id="task-4"]').addEventListener('click', function () {
+      var pos = getCenter(this);
+      engine.play('action', this, {
+        params: { style: 'cute', variant: 'sparkle' },
+      });
+      TotoFX.FX.doDotgridRipple(pos.cx, pos.cy, { radius: 120, push: 4, density: 0.3 });
+    });
+
+    // Card 5: explode (action/destroy)
+    document.querySelector('[data-id="task-5"]').addEventListener('click', function () {
+      var pos = getCenter(this);
+      engine.play('action', this, {
+        params: { style: 'destroy', variant: 'explode' },
+      });
+      TotoFX.FX.doDotgridNuclear(pos.cx, pos.cy, { blastRadius: 250 });
+    });
+
+    // Card 6: lightning (action/destroy)
+    document.querySelector('[data-id="task-6"]').addEventListener('click', function () {
+      var pos = getCenter(this);
+      engine.play('action', this, {
+        params: { style: 'destroy', variant: 'lightning' },
+      });
+      TotoFX.FX.doDotgridCrater(pos.cx, pos.cy, 80, 1, { cracks: 8, crackLength: 250 });
+    });
+
+    // Card 7: slam-down (enter/dramatic)
+    document.querySelector('[data-id="task-7"]').addEventListener('click', function () {
+      var pos = getCenter(this);
+      engine.play('enter', this, {
+        params: { style: 'dramatic', variant: 'slam-down' },
+      });
+      TotoFX.FX.doDotgridRipple(pos.cx, pos.cy, { radius: 180, push: 8, density: 0.5 });
+    });
+
+    // Card 8: portal (enter/dramatic)
+    document.querySelector('[data-id="task-8"]').addEventListener('click', function () {
+      var pos = getCenter(this);
+      engine.play('enter', this, {
+        params: { style: 'dramatic', variant: 'portal' },
+      });
+      TotoFX.FX.doDotgridRipple(pos.cx, pos.cy, { radius: 160, push: 7, density: 0.5 });
+    });
+
+    // Card 9: glow (persist/ambient) — toggle
+    document.querySelector('[data-id="task-9"]').addEventListener('click', function () {
+      var key = 'task-9';
+      var pos = getCenter(this);
+      if (persistState[key]) {
+        engine.clear('persist', key);
+        persistState[key] = false;
+        this.querySelector('.hint').textContent = 'Click to toggle ON';
+      } else {
+        engine.set('persist', key, { style: 'ambient', variant: 'glow' });
+        persistState[key] = true;
+        this.querySelector('.hint').textContent = 'Click to toggle OFF';
+        TotoFX.FX.doDotgridRipple(pos.cx, pos.cy, { radius: 100, push: 3, density: 0.2 });
+      }
+    });
+
+    // Card 10: particle-orbit (persist/rich) — toggle
+    document.querySelector('[data-id="task-10"]').addEventListener('click', function () {
+      var key = 'task-10';
+      var pos = getCenter(this);
+      if (persistState[key]) {
+        engine.clear('persist', key);
+        persistState[key] = false;
+        this.querySelector('.hint').textContent = 'Click to toggle ON';
+      } else {
+        engine.set('persist', key, { style: 'rich', variant: 'particle-orbit' });
+        persistState[key] = true;
+        this.querySelector('.hint').textContent = 'Click to toggle OFF';
+        TotoFX.FX.doDotgridRipple(pos.cx, pos.cy, { radius: 100, push: 3, density: 0.2 });
+      }
+    });
+
+    // Card 11: heart-pulse (action/love)
+    document.querySelector('[data-id="task-11"]').addEventListener('click', function () {
+      var pos = getCenter(this);
+      engine.play('action', this, {
+        params: { style: 'love', variant: 'heart-pulse' },
+      });
+      TotoFX.FX.doDotgridHeart(pos.cx, pos.cy, { radius: 200, pulses: 3, pulseInterval: 450 });
+    });
+
+    // =========================================================
+    // 7. "Rise All" — remove and re-create cards with enter animations
+    // =========================================================
+    document.getElementById('btn-rise').addEventListener('click', function () {
+      var container = document.getElementById('card-container');
+      var cards = container.querySelectorAll('.card');
+
+      // Clear any persist state
+      persistState = {};
+
+      // Save card HTML
+      var cardHTML = [];
+      cards.forEach(function (card) { cardHTML.push(card.outerHTML); });
+
+      // Remove all cards
+      container.innerHTML = '';
+
+      // Re-create cards with staggered enter animations
+      var enterVariants = [
+        { style: 'dramatic', variant: 'slam-down' },
+        { style: 'dramatic', variant: 'portal' },
+        { style: 'dramatic', variant: 'scale-bounce' },
+        { style: 'subtle', variant: 'fade-in' },
+        { style: 'subtle', variant: 'slide-in' },
+        { style: 'fun', variant: 'confetti-drop' },
+        { style: 'fun', variant: 'bounce-in' },
+        { style: 'dramatic', variant: 'materialize' },
+        { style: 'subtle', variant: 'rise' },
+        { style: 'fun', variant: 'sparkle-trail' },
+        { style: 'dramatic', variant: 'glitch-in' },
+      ];
+
+      cardHTML.forEach(function (html, i) {
+        setTimeout(function () {
+          var temp = document.createElement('div');
+          temp.innerHTML = html;
+          var card = temp.firstElementChild;
+          // Reset any inline styles from previous animations
+          card.style.cssText = '';
+          card.style.display = '';
+          card.style.opacity = '';
+          container.appendChild(card);
+
+          var variant = enterVariants[i % enterVariants.length];
+          engine.play('enter', card, {
+            params: { style: variant.style, variant: variant.variant },
+          });
+
+          var pos = getCenter(card);
+          TotoFX.FX.doDotgridRipple(pos.cx, pos.cy, { radius: 120, push: 5, density: 0.3 });
+
+          // Re-bind click handler
+          rebindClickHandler(card);
+        }, i * 150);
+      });
+    });
+
+    // =========================================================
+    // 8. "Fall All" — destroy all cards with death animations
+    // =========================================================
+    document.getElementById('btn-fall').addEventListener('click', function () {
+      var cards = document.querySelectorAll('.card');
+      var destroyVariants = [
+        { style: 'destroy', variant: 'explode' },
+        { style: 'destroy', variant: 'lightning' },
+        { style: 'destroy', variant: 'incinerate' },
+        { style: 'destroy', variant: 'shredder' },
+        { style: 'destroy', variant: 'guillotine' },
+        { style: 'destroy', variant: 'eaten' },
+        { style: 'destroy', variant: 'piranhas' },
+        { style: 'destroy', variant: 'sniper' },
+        { style: 'destroy', variant: 'steamroller' },
+        { style: 'destroy', variant: 'woodchipper' },
+        { style: 'destroy', variant: 'explode' },
+      ];
+
+      // Clear all persist animations in one call
+      engine.clear('persist');
+      persistState = {};
+
+      cards.forEach(function (card, i) {
+        setTimeout(function () {
+          var variant = destroyVariants[i % destroyVariants.length];
+          var pos = getCenter(card);
+          engine.play('action', card, {
+            params: { style: variant.style, variant: variant.variant },
+          });
+          TotoFX.FX.doDotgridNuclear(pos.cx, pos.cy, { blastRadius: 200 });
+        }, i * 200);
+      });
+    });
+
+    // =========================================================
+    // Helper: rebind click handlers after Rise All recreates cards
+    // =========================================================
+    function rebindClickHandler(card) {
+      var id = card.getAttribute('data-id');
+      var handlers = {
+        'task-1': function () {
+          var p = getCenter(card);
+          engine.play('action', card, { params: { style: 'thud', variant: 'anime-slam' } });
+          TotoFX.FX.doDotgridRipple(p.cx, p.cy, { radius: 200, push: 10, density: 0.6 });
+        },
+        'task-2': function () {
+          var p = getCenter(card);
+          engine.play('action', card, { params: { style: 'thud', variant: 'meteor' } });
+          TotoFX.FX.doDotgridCrater(p.cx, p.cy, 100, 1, { cracks: 6 });
+        },
+        'task-3': function () {
+          var p = getCenter(card);
+          engine.play('action', card, { params: { style: 'cute', variant: 'confetti' } });
+          TotoFX.FX.doDotgridRipple(p.cx, p.cy, { radius: 150, push: 6, density: 0.4 });
+        },
+        'task-4': function () {
+          var p = getCenter(card);
+          engine.play('action', card, { params: { style: 'cute', variant: 'sparkle' } });
+          TotoFX.FX.doDotgridRipple(p.cx, p.cy, { radius: 120, push: 4, density: 0.3 });
+        },
+        'task-5': function () {
+          var p = getCenter(card);
+          engine.play('action', card, { params: { style: 'destroy', variant: 'explode' } });
+          TotoFX.FX.doDotgridNuclear(p.cx, p.cy, { blastRadius: 250 });
+        },
+        'task-6': function () {
+          var p = getCenter(card);
+          engine.play('action', card, { params: { style: 'destroy', variant: 'lightning' } });
+          TotoFX.FX.doDotgridCrater(p.cx, p.cy, 80, 1, { cracks: 8, crackLength: 250 });
+        },
+        'task-7': function () {
+          var p = getCenter(card);
+          engine.play('enter', card, { params: { style: 'dramatic', variant: 'slam-down' } });
+          TotoFX.FX.doDotgridRipple(p.cx, p.cy, { radius: 180, push: 8, density: 0.5 });
+        },
+        'task-8': function () {
+          var p = getCenter(card);
+          engine.play('enter', card, { params: { style: 'dramatic', variant: 'portal' } });
+          TotoFX.FX.doDotgridRipple(p.cx, p.cy, { radius: 160, push: 7, density: 0.5 });
+        },
+        'task-9': function () {
+          var key = 'task-9';
+          var p = getCenter(card);
+          if (persistState[key]) {
+            engine.clear('persist', key);
+            persistState[key] = false;
+            card.querySelector('.hint').textContent = 'Click to toggle ON';
+          } else {
+            engine.set('persist', key, { style: 'ambient', variant: 'glow' });
+            persistState[key] = true;
+            card.querySelector('.hint').textContent = 'Click to toggle OFF';
+            TotoFX.FX.doDotgridRipple(p.cx, p.cy, { radius: 100, push: 3, density: 0.2 });
+          }
+        },
+        'task-10': function () {
+          var key = 'task-10';
+          var p = getCenter(card);
+          if (persistState[key]) {
+            engine.clear('persist', key);
+            persistState[key] = false;
+            card.querySelector('.hint').textContent = 'Click to toggle ON';
+          } else {
+            engine.set('persist', key, { style: 'rich', variant: 'particle-orbit' });
+            persistState[key] = true;
+            card.querySelector('.hint').textContent = 'Click to toggle OFF';
+            TotoFX.FX.doDotgridRipple(p.cx, p.cy, { radius: 100, push: 3, density: 0.2 });
+          }
+        },
+        'task-11': function () {
+          var p = getCenter(card);
+          engine.play('action', card, {
+            params: { style: 'love', variant: 'heart-pulse' },
+          });
+          TotoFX.FX.doDotgridHeart(p.cx, p.cy, { radius: 200, pulses: 3, pulseInterval: 450 });
+        },
+      };
+      if (handlers[id]) {
+        card.addEventListener('click', handlers[id]);
+      }
+    }
+  </script>
+</body>
+</html>

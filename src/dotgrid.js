@@ -1405,6 +1405,104 @@ export function createDotgrid(userConfig) {
     startSim();
   }
 
+  /**
+   * Heart effect — heart-shaped density injection with pulsing velocity.
+   * Uses the implicit heart equation (x²+y²-1)³ - x²y³ = 0 to define the shape,
+   * then injects repeated beats with outward velocity to create a pulsing/throbbing
+   * fluid simulation within the heart outline.
+   *
+   * @param {number} cx - Center x coordinate in viewport pixels.
+   * @param {number} cy - Center y coordinate in viewport pixels.
+   * @param {Object} [opts] - Effect options.
+   * @param {number} [opts.radius=200] - Heart radius in pixels (center to widest edge).
+   * @param {number} [opts.density=0.8] - Density injection strength (0-1).
+   * @param {number} [opts.push=8] - Outward velocity push per beat.
+   * @param {number} [opts.pulses=3] - Number of heartbeat pulses.
+   * @param {number} [opts.pulseInterval=450] - Milliseconds between beats.
+   * @param {string} [opts.color='#E8456B'] - CSS color for the heart edge.
+   * @param {string} [opts.coreColor='#FF8DA1'] - CSS color for the heart core.
+   */
+  function heart(cx, cy, opts) {
+    if (!built || !canvasEl) return;
+    var dotSz = config.dotSize;
+    var dm = config.densityMultiplier;
+    var radius = (opts && opts.radius) || 200;
+    if (_isMobile) radius = Math.min(radius, window.innerWidth * mobileConfig.maxRadiusFraction);
+    else if (_isTablet) radius = Math.min(radius, window.innerWidth * tabletConfig.maxRadiusFraction);
+    var densStr = (opts && opts.density) || 0.8;
+    var pushStr = (opts && opts.push) || 8;
+    var pulses = (opts && opts.pulses !== undefined) ? opts.pulses : 3;
+    var pulseInterval = (opts && opts.pulseInterval) || 450;
+    var edgeColor = parseColor((opts && opts.color) || '#E8456B');
+    var coreCol = parseColor((opts && opts.coreColor) || '#FF8DA1');
+
+    var g = v2g(cx, cy);
+    // Implicit heart fits in ~[-1.2, 1.2] x [-1, 1.2]
+    // Scale so the heart fills the given radius (center to widest edge)
+    var hs = (radius / 1.2) / dotSz;  // grid cells per heart-unit
+
+    var c0 = Math.max(0, Math.floor(g.col - 1.3 * hs - 1));
+    var c1 = Math.min(gridCols - 1, Math.ceil(g.col + 1.3 * hs + 1));
+    var r0 = Math.max(0, Math.floor(g.row - 1.3 * hs - 1));
+    var r1 = Math.min(gridRows - 1, Math.ceil(g.row + 1.3 * hs + 1));
+
+    function injectBeat(strength) {
+      expandBbox(c0, c1, r0, r1);
+      for (var rr = r0; rr <= r1; rr++) {
+        for (var cc = c0; cc <= c1; cc++) {
+          var hx = (cc - g.col) / hs;
+          var hy = (g.row - rr) / hs;  // flip y for screen coords (point at bottom)
+
+          // Implicit heart: (x² + y² - 1)³ - x² · y³ < 0 means inside
+          var x2 = hx * hx;
+          var y2 = hy * hy;
+          var y3 = y2 * hy;
+          var sum = x2 + y2 - 1;
+          var f = sum * sum * sum - x2 * y3;
+
+          if (f > 0.15) continue;  // well outside
+
+          var idx = rr * gridCols + cc;
+          var dist = Math.sqrt(x2 + y2);
+
+          if (f <= 0) {
+            // Inside the heart
+            var depth = Math.min(1, Math.pow(Math.abs(f), 0.3));
+
+            density[idx] = Math.min(1, density[idx] + depth * densStr * strength * dm);
+
+            // Outward pulse velocity from center
+            if (dist > 0.1) {
+              var nx = hx / dist, ny = -hy / dist;  // flip ny back to screen space
+              velX[idx] += nx * depth * pushStr * strength / dotSz;
+              velY[idx] += ny * depth * pushStr * strength / dotSz;
+            }
+
+            // Color: brighter core, deeper edge
+            var col = depth > 0.6 ? coreCol : edgeColor;
+            colorR[idx] = col[0]; colorG[idx] = col[1]; colorB[idx] = col[2];
+          } else {
+            // Soft glow beyond edge (0 < f <= 0.15)
+            var edge = 1 - f / 0.15;
+            density[idx] = Math.min(1, density[idx] + edge * 0.3 * strength * dm);
+            colorR[idx] = edgeColor[0]; colorG[idx] = edgeColor[1]; colorB[idx] = edgeColor[2];
+          }
+        }
+      }
+      startSim();
+    }
+
+    // First beat
+    injectBeat(1.0);
+
+    // Subsequent beats with decreasing intensity
+    for (var p = 1; p < pulses; p++) {
+      (function (str, delay) {
+        setTimeout(function () { injectBeat(str); }, delay);
+      })(1.0 - p * 0.15, p * pulseInterval);
+    }
+  }
+
   // ── Configuration API ────────────────────────────────────────
 
   /**
@@ -1551,6 +1649,7 @@ export function createDotgrid(userConfig) {
     nuclear: nuclear,
     scorch: scorch,
     vortex: vortex,
+    heart: heart,
     configure: configure,
     getConfig: getConfig,
     reset: reset,

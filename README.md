@@ -696,10 +696,10 @@ engine.play('action', el, {
 All variants define their params with `{ min, max, default, step, unit, group }`. You can inspect them at runtime:
 
 ```javascript
-import { AnimationRegistry } from 'toto-fx';
-
-// Get param descriptors for anime-slam
-const params = AnimationRegistry.getParams('action', 'thud', 'anime-slam');
+// Works in both ESM and IIFE — query the engine directly
+const styles = engine.getStyles('action');                       // ['thud', 'cute', 'destroy']
+const variants = engine.getVariants('action', 'thud');           // ['anime-slam', 'low-bounce', ...]
+const params = engine.getParams('action', 'thud', 'anime-slam');
 // → { peakZ: { min: 100, max: 1000, default: 450, ... }, liftDur: { ... }, ... }
 ```
 
@@ -833,6 +833,7 @@ FX.doDotgridRipple(cx, cy, { radius: 200, push: 10, density: 0.6 });
 FX.doDotgridCrater(cx, cy, 100, 1, { cracks: 6 });
 FX.doDotgridNuclear(cx, cy, { blastRadius: 250 });
 FX.doDotgridScorch(x1, y1, x2, y2, 40);
+FX.resetDotgrid();                          // clear all fluid sim state
 
 // Card animation helpers (physics-based)
 FX.liftCard(el, shadow, cx, cy, peakZ, duration, rotX, rotY, onDone);
@@ -878,7 +879,7 @@ Create a new engine instance.
 | `onRefresh` | `(groupId: string) => void\|Promise` | `null` | Refresh callback for animation-aware updates |
 | `containerResolver` | `(groupId: string) => HTMLElement\|null` | `getElementById('item-list-...')` | Container resolver for layout animation |
 | `layoutDuration` | `number` | `300` | Layout animation duration (ms) |
-| `debug` | `boolean` | `false` | Enable console warnings for common mistakes (wrong arg types, unregistered categories, detached elements) |
+| `debug` | `boolean` | `true` | Enable console warnings for common mistakes (wrong arg types, unregistered categories, detached elements). Pass `false` to silence in production. |
 | `layoutEasing` | `string` | `'ease-out'` | Layout animation CSS easing |
 | `debounceMs` | `number` | `100` | Refresh coordinator debounce window (ms). Lower = more responsive, higher = fewer DOM swaps during rapid state changes. |
 | `reducedMotion` | `'respect' \| 'ignore'` | `'ignore'` | When `'respect'`, checks `prefers-reduced-motion` media query and passes `reducedMotion: true` to all `play()` contexts. Plugins can use this to skip particles, screen shake, and other non-essential effects. |
@@ -890,7 +891,9 @@ Create a new engine instance.
 | Method | Description |
 |--------|-------------|
 | `engine.set(category, key, params?)` | Set persistent animation state |
-| `engine.clear(category, key)` | Clear persistent animation state |
+| `engine.clear(category, key?)` | Clear persistent animation state. Omit `key` to clear all active animations in the category. |
+| `engine.clearAll()` | Clear everything — all persistent animations, all transient state, and reset the dotgrid (requires `engine.setDotgrid(grid)`). |
+| `engine.setDotgrid(grid)` | Set the dotgrid instance so `clearAll()` can reset it. |
 | `engine.isActive(category, key)` | Check if key has active persistent animation |
 | `engine.getActiveKeys(category)` | Get all active keys for a category |
 | `engine.play(category, el, opts?)` | Play a one-shot animation (takes a DOM element) |
@@ -948,6 +951,16 @@ engine.on('reconcile', (e) => {
 | Method | Description |
 |--------|-------------|
 | `engine.isAnimating(groupId?)` | Check if transient animations are in flight |
+| `engine.getStyles(category)` | List registered style names for a category |
+| `engine.getVariants(category, style)` | List registered variant names for a category and style |
+| `engine.getParams(category, style, variant)` | Get tunable parameter descriptors for a variant |
+
+```javascript
+// Discover what's available at runtime (works in both ESM and IIFE):
+engine.getStyles('action');                        // ['thud', 'cute', 'destroy']
+engine.getVariants('action', 'thud');              // ['anime-slam', 'low-bounce', ...]
+engine.getParams('action', 'thud', 'anime-slam');  // { peakZ: { min: 100, max: 1000, ... }, ... }
+```
 
 #### Layout Animation
 

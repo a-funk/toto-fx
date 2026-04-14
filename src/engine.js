@@ -29,13 +29,15 @@ export function createEngine(userConfig) {
 
   // ── Configuration ──────────────────────────────────────────
 
+  var _dotgrid = null;
+
   const _config = {
     root: userConfig.root || (typeof document !== 'undefined' ? document.body : null),
     resolveElement: userConfig.resolveElement || function (key) {
       return document.querySelector('[data-anim-id="' + key + '"]');
     },
     onRefresh: userConfig.onRefresh || null,
-    debug: userConfig.debug || false,
+    debug: userConfig.debug !== undefined ? userConfig.debug : true,
     reducedMotion: userConfig.reducedMotion || 'ignore', // 'respect' | 'ignore'
   };
 
@@ -297,14 +299,19 @@ export function createEngine(userConfig) {
     },
 
     /**
-     * Clear persistent animation state for a key.
-     * Calls the category's stop() callback to undo visual effects,
-     * then cleans up internal animation tracking.
+     * Clear persistent animation state. Pass a key to clear one animation,
+     * or omit it to clear all active animations in the category.
      *
      * @param {string} category
-     * @param {string} key
+     * @param {string} [key]
      */
     clear: function (category, key) {
+      if (!key) {
+        var keys = this.getActiveKeys(category);
+        var self = this;
+        keys.forEach(function (k) { self.clear(category, k); });
+        return;
+      }
       _store.clear(category, key);
 
       const catDescriptor = _categories[category];
@@ -321,6 +328,34 @@ export function createEngine(userConfig) {
         }
       }
       _emit('animationEnd', { type: 'persistent', category: category, key: key, element: el });
+    },
+
+    /**
+     * Clear everything — all persistent animations, all transient state,
+     * and reset the dotgrid fluid simulation (if set via engine.setDotgrid()).
+     */
+    clearAll: function () {
+      var self = this;
+      // Stop all persistent animations
+      this.getCategoryNames().forEach(function (cat) {
+        self.clear(cat);
+      });
+      // Stop all in-flight transient animations
+      _store._transient.forEach(function (entry) {
+        if (entry.element && entry.element[ANIM_KEY]) {
+          _reconciler._stopElement(entry.element);
+        }
+      });
+      _store._transient.clear();
+      if (_dotgrid && _dotgrid.reset) _dotgrid.reset();
+    },
+
+    /**
+     * Set the dotgrid instance for clearAll() integration.
+     * @param {Object} grid - A dotgrid instance with a reset() method.
+     */
+    setDotgrid: function (grid) {
+      _dotgrid = grid;
     },
 
     /**
@@ -579,6 +614,42 @@ export function createEngine(userConfig) {
      */
     getCategoryNames: function () {
       return Object.keys(_categories);
+    },
+
+    /**
+     * List registered styles for a category.
+     * @param {string} category
+     * @returns {string[]}
+     */
+    getStyles: function (category) {
+      var reg = this._variantRegistry;
+      return reg && reg[category] ? Object.keys(reg[category]) : [];
+    },
+
+    /**
+     * List registered variant names for a category and style.
+     * @param {string} category
+     * @param {string} style
+     * @returns {string[]}
+     */
+    getVariants: function (category, style) {
+      var reg = this._variantRegistry;
+      var s = reg && reg[category] && reg[category][style];
+      return s ? Object.keys(s) : [];
+    },
+
+    /**
+     * Get tunable parameter descriptors for a specific variant.
+     * @param {string} category
+     * @param {string} style
+     * @param {string} variant
+     * @returns {Object}
+     */
+    getParams: function (category, style, variant) {
+      var reg = this._variantRegistry;
+      var s = reg && reg[category] && reg[category][style];
+      var v = s && s[variant];
+      return v ? (v.params || {}) : {};
     },
 
     // ── Plugin System ────────────────────────────────────────
