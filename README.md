@@ -275,7 +275,7 @@ engine.register('action', 'thud', {
 });
 ```
 
-### Plugins
+### [Plugins](https://github.com/a-funk/toto-fx/blob/main/docs/plugin-guide.md)
 
 Plugins bundle categories, variants, and FX layers for reuse. Two patterns:
 
@@ -388,7 +388,36 @@ The most common use case: load everything, play an anime-slam on click.
   });
 </script>
 ```
+### Write your own plugin in 60s
+```javascript
+  const myPlugin = {
+    name: 'pulse',
+    category: 'persist',
+    style: 'custom',
 
+    params: {
+      scale: { type: 'range', min: 1.0, max: 1.5, default: 1.1, step: 0.05 },
+    },
+
+    play(el, ctx) {
+      const p = FX.resolveParams(this.params, ctx.params);
+      el.style.animation = `pulse ${400 / ctx.speed}ms ease-in-out infinite`;
+      el.__pulseStyle = document.createElement('style');
+      el.__pulseStyle.textContent = `
+        @keyframes pulse { 0%,100% { transform: scale(1) } 50% { transform: scale(${p.scale}) } }
+      `;
+      document.head.appendChild(el.__pulseStyle);
+      // persistent animations don't call onDone
+    },
+
+    cleanup(el) {
+      el.style.animation = '';
+      if (el.__pulseStyle) { el.__pulseStyle.remove(); el.__pulseStyle = null; }
+    },
+  };
+
+  engine.use({ categories: { persist: { play: myPlugin.play } } });
+```
 ## Built-in Animation Variants
 
 59 animations across 4 categories:
