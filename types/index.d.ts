@@ -17,7 +17,7 @@ export interface TotoFXConfig {
   containerResolver?: (groupId: string) => HTMLElement | null;
   /** Layout animation duration in ms. Default: 300 */
   layoutDuration?: number;
-  /** Enable debug mode with console warnings. Default: false */
+  /** Enable debug mode with console warnings. Default: true */
   debug?: boolean;
   /** Layout animation CSS easing. Default: 'ease-out' */
   layoutEasing?: string;
