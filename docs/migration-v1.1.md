@@ -1,4 +1,4 @@
-# Migrating from v1.0 to v1.1
+# Migrating from v0.1.x to v0.2.0
 
 This guide covers the breaking and notable changes in TotoFX v1.1. Most code will work without changes, but the destroy category rename requires updating `play()` calls.
 
@@ -117,15 +117,47 @@ engine.registerCategory('highlight', {
 
 Plugin `play()` errors no longer crash the engine. If a plugin throws during reconciliation, the error is logged (when `debug: true`) and reconciliation continues for remaining entries.
 
-### Debug mode
+### Debug default changed to `true`
 
-New `debug: true` config option that enables console warnings for common mistakes — wrong argument types to `play()`/`set()`, unregistered categories, detached elements, and plugin errors.
+`debug` now defaults to `true` instead of `false`. Console warnings for common mistakes (wrong argument types, unregistered categories, detached elements) are on by default. Pass `debug: false` to silence them in production.
 
 ```javascript
 var engine = TotoFX.createEngine({
-  debug: true,
+  debug: false, // explicitly disable for production
 });
 ```
+
+### Dotgrid plugin system
+
+Dotgrid effects can now be registered as plugins via `grid.use(plugin)`, mirroring the animation plugin architecture. All built-in effects (ripple, vortex, crater, nuclear, scorch) are also available as standalone plugin files under `dotgrid-plugins/`. See the README for full documentation.
+
+```javascript
+import dotgridHeart from 'toto-fx/dotgrid-plugins/heart';
+
+grid.use(dotgridHeart);
+grid.runEffect('heart', { cx: 500, cy: 300, opts: { radius: 200 } });
+```
+
+### New engine APIs
+
+- `engine.clear(category)` — omit key to clear all animations in a category
+- `engine.clearAll()` — clears persistent, transient, and dotgrid in one call
+- `engine.setDotgrid(grid)` — wire dotgrid for clearAll integration
+- `engine.dotgridEffect(name, args)` — trigger dotgrid effects through the engine (IIFE-safe)
+- `engine.getStyles(category)` / `engine.getVariants(category, style)` / `engine.getParams(category, style, variant)` — runtime variant discovery
+- `ctx.dotgridEffect` — injected into animation plugin play context, solving the IIFE bundling problem
+
+### Dotgrid `step()` API
+
+`grid.step()` runs one physics tick + draw without starting the RAF loop. Useful for frame-by-frame rendering in Remotion, testing, or any external frame driver.
+
+### Framework integrations (Community Preview)
+
+Thin wrapper packages for React, Vue, and Svelte are included under `integrations/`. These are untested and uncompiled — treat as community preview.
+
+- `toto-fx-react` — Provider, hooks (usePlay, usePersist, useAnimationRef, etc.)
+- `toto-fx-vue` — Plugin, composables, directives (v-toto-action, v-toto-persist)
+- `toto-fx-svelte` — Context, actions (use:totoAction, use:totoPersist), stores
 
 ## Deprecated Exports
 
