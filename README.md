@@ -144,7 +144,7 @@ A complete working page. Copy this into an HTML file and open it in a browser. C
       },
     });
 
-    // 2. Install a plugin (registers the 'action' category with thud variants)
+    // 2. Install the thud plugin into the engine
     TotoFXThud.install(engine);
 
     // 3. Set up the dotgrid fluid simulation background
