@@ -208,8 +208,9 @@ export function createDotgrid(userConfig) {
   /** @type {number} Current bleed value (updated in build()) */
   var bleed = DESKTOP_BLEED;
 
-  // ── Pause state ──────────────────────────────────────────────
+  // ── Pause / step state ───────────────────────────────────────
   var _paused = false;
+  var _noRAF = false;  // When true, render() skips RAF scheduling (for frame-by-frame step mode)
   var _pauseResumeTimer = null;
 
   // ── Effect plugin registry ───────────────────────────────────
@@ -892,7 +893,7 @@ export function createDotgrid(userConfig) {
     // When paused (during completion animations), skip sim + render
     // but keep the RAF loop alive so we resume seamlessly
     if (_paused) {
-      rafId = requestAnimationFrame(render);
+      if (!_noRAF) rafId = requestAnimationFrame(render);
       return;
     }
 
@@ -1060,7 +1061,7 @@ export function createDotgrid(userConfig) {
     if (hasEnergy) {
       // Shrink bbox to fit actual active area
       shrinkBbox();
-      rafId = requestAnimationFrame(render);
+      if (!_noRAF) rafId = requestAnimationFrame(render);
     } else {
       // Simulation exhausted — full cleanup
       simRunning = false;
@@ -1323,6 +1324,25 @@ export function createDotgrid(userConfig) {
     resume: resume,
     isIdle: isIdle,
     destroy: destroy,
+
+    /**
+     * Step the simulation forward by one tick and redraw.
+     * Use this for frame-by-frame rendering (e.g., Remotion, tests)
+     * instead of the RAF-based sim loop. Calls render() with RAF
+     * suppressed so no animation loop is started.
+     */
+    step: function () {
+      if (!built || !canvasEl) return;
+      // Cancel any running RAF loop to prevent double-rendering
+      if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+      simRunning = false;
+      // Run one full physics + draw cycle without scheduling RAF
+      _noRAF = true;
+      render();
+      _noRAF = false;
+      simRunning = false;
+      rafId = null;
+    },
 
     // Effect plugin system
     registerEffect: registerEffect,
