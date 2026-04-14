@@ -11,7 +11,9 @@ Most animation libraries assume you control the DOM. You create an element, anim
 TotoFX solves this. You declare that a key should be animating — the engine finds the element, starts the animation, and watches for DOM changes. When the DOM gets replaced, the engine detects the mutation, resolves the new element, and resumes at the correct phase. No flicker, no restart, no manual bookkeeping. The same mental model as React's reconciler, but for animations and framework-agnostic.
 
 
-**[Try it in the playground](https://toto.tech/playground)** — create a random animation, build your own, or explore the Advanced tab for near-infinite flexibility.
+**[Try it in the playground](https://toto.tech/playground)** — create a random animation, build your own, or explore the 'Advanced' tab for near-infinite flexibility.
+
+[Deeper Reading](https://github.com/a-funk/toto-fx/blob/v1.1-improvements/docs/fx-api.md)
 
 ## Animation Persistence Across DOM Replacement
 
