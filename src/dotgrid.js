@@ -212,6 +212,9 @@ export function createDotgrid(userConfig) {
   var _paused = false;
   var _pauseResumeTimer = null;
 
+  // ── Effect plugin registry ───────────────────────────────────
+  var _effectRegistry = {};
+
   // ── Grid state ───────────────────────────────────────────────
   var gridCols = 0, gridRows = 0;
   var containerEl = null;
@@ -672,7 +675,49 @@ export function createDotgrid(userConfig) {
     drawBaseGrid(dotSz);
 
     built = true;
+
+    // Update grid context for effect plugins (getters stay fresh across rebuilds)
+    _gridCtx = _createGridCtx();
   }
+
+  /**
+   * Create the grid context object that effect plugins receive.
+   * Uses getters so references stay valid across grid rebuilds.
+   * @returns {Object}
+   * @private
+   */
+  function _createGridCtx() {
+    return {
+      // Fluid field arrays (getters return current references after rebuild)
+      get density() { return density; },
+      get velX() { return velX; },
+      get velY() { return velY; },
+      get colorR() { return colorR; },
+      get colorG() { return colorG; },
+      get colorB() { return colorB; },
+
+      // Grid dimensions
+      get gridCols() { return gridCols; },
+      get gridRows() { return gridRows; },
+
+      // Config
+      get dotSize() { return config.dotSize; },
+      get densityMultiplier() { return config.densityMultiplier; },
+      get isMobile() { return _isMobile; },
+      get isTablet() { return _isTablet; },
+      get mobileMaxRadiusFraction() { return mobileConfig.maxRadiusFraction; },
+      get tabletMaxRadiusFraction() { return tabletConfig.maxRadiusFraction; },
+
+      // Helpers
+      v2g: v2g,
+      expandBbox: expandBbox,
+      startSim: startSim,
+      parseColor: parseColor,
+    };
+  }
+
+  /** @type {Object|null} Grid context for effect plugins */
+  var _gridCtx = null;
 
   // ── Base grid rendering ──────────────────────────────────────
 
@@ -1405,104 +1450,6 @@ export function createDotgrid(userConfig) {
     startSim();
   }
 
-  /**
-   * Heart effect — heart-shaped density injection with pulsing velocity.
-   * Uses the implicit heart equation (x²+y²-1)³ - x²y³ = 0 to define the shape,
-   * then injects repeated beats with outward velocity to create a pulsing/throbbing
-   * fluid simulation within the heart outline.
-   *
-   * @param {number} cx - Center x coordinate in viewport pixels.
-   * @param {number} cy - Center y coordinate in viewport pixels.
-   * @param {Object} [opts] - Effect options.
-   * @param {number} [opts.radius=200] - Heart radius in pixels (center to widest edge).
-   * @param {number} [opts.density=0.8] - Density injection strength (0-1).
-   * @param {number} [opts.push=8] - Outward velocity push per beat.
-   * @param {number} [opts.pulses=3] - Number of heartbeat pulses.
-   * @param {number} [opts.pulseInterval=450] - Milliseconds between beats.
-   * @param {string} [opts.color='#E8456B'] - CSS color for the heart edge.
-   * @param {string} [opts.coreColor='#FF8DA1'] - CSS color for the heart core.
-   */
-  function heart(cx, cy, opts) {
-    if (!built || !canvasEl) return;
-    var dotSz = config.dotSize;
-    var dm = config.densityMultiplier;
-    var radius = (opts && opts.radius) || 200;
-    if (_isMobile) radius = Math.min(radius, window.innerWidth * mobileConfig.maxRadiusFraction);
-    else if (_isTablet) radius = Math.min(radius, window.innerWidth * tabletConfig.maxRadiusFraction);
-    var densStr = (opts && opts.density) || 0.8;
-    var pushStr = (opts && opts.push) || 8;
-    var pulses = (opts && opts.pulses !== undefined) ? opts.pulses : 3;
-    var pulseInterval = (opts && opts.pulseInterval) || 450;
-    var edgeColor = parseColor((opts && opts.color) || '#E8456B');
-    var coreCol = parseColor((opts && opts.coreColor) || '#FF8DA1');
-
-    var g = v2g(cx, cy);
-    // Implicit heart fits in ~[-1.2, 1.2] x [-1, 1.2]
-    // Scale so the heart fills the given radius (center to widest edge)
-    var hs = (radius / 1.2) / dotSz;  // grid cells per heart-unit
-
-    var c0 = Math.max(0, Math.floor(g.col - 1.3 * hs - 1));
-    var c1 = Math.min(gridCols - 1, Math.ceil(g.col + 1.3 * hs + 1));
-    var r0 = Math.max(0, Math.floor(g.row - 1.3 * hs - 1));
-    var r1 = Math.min(gridRows - 1, Math.ceil(g.row + 1.3 * hs + 1));
-
-    function injectBeat(strength) {
-      expandBbox(c0, c1, r0, r1);
-      for (var rr = r0; rr <= r1; rr++) {
-        for (var cc = c0; cc <= c1; cc++) {
-          var hx = (cc - g.col) / hs;
-          var hy = (g.row - rr) / hs;  // flip y for screen coords (point at bottom)
-
-          // Implicit heart: (x² + y² - 1)³ - x² · y³ < 0 means inside
-          var x2 = hx * hx;
-          var y2 = hy * hy;
-          var y3 = y2 * hy;
-          var sum = x2 + y2 - 1;
-          var f = sum * sum * sum - x2 * y3;
-
-          if (f > 0.15) continue;  // well outside
-
-          var idx = rr * gridCols + cc;
-          var dist = Math.sqrt(x2 + y2);
-
-          if (f <= 0) {
-            // Inside the heart
-            var depth = Math.min(1, Math.pow(Math.abs(f), 0.3));
-
-            density[idx] = Math.min(1, density[idx] + depth * densStr * strength * dm);
-
-            // Outward pulse velocity from center
-            if (dist > 0.1) {
-              var nx = hx / dist, ny = -hy / dist;  // flip ny back to screen space
-              velX[idx] += nx * depth * pushStr * strength / dotSz;
-              velY[idx] += ny * depth * pushStr * strength / dotSz;
-            }
-
-            // Color: brighter core, deeper edge
-            var col = depth > 0.6 ? coreCol : edgeColor;
-            colorR[idx] = col[0]; colorG[idx] = col[1]; colorB[idx] = col[2];
-          } else {
-            // Soft glow beyond edge (0 < f <= 0.15)
-            var edge = 1 - f / 0.15;
-            density[idx] = Math.min(1, density[idx] + edge * 0.3 * strength * dm);
-            colorR[idx] = edgeColor[0]; colorG[idx] = edgeColor[1]; colorB[idx] = edgeColor[2];
-          }
-        }
-      }
-      startSim();
-    }
-
-    // First beat
-    injectBeat(1.0);
-
-    // Subsequent beats with decreasing intensity
-    for (var p = 1; p < pulses; p++) {
-      (function (str, delay) {
-        setTimeout(function () { injectBeat(str); }, delay);
-      })(1.0 - p * 0.15, p * pulseInterval);
-    }
-  }
-
   // ── Configuration API ────────────────────────────────────────
 
   /**
@@ -1639,9 +1586,83 @@ export function createDotgrid(userConfig) {
     built = false;
   }
 
+  // ── Built-in effect dispatch table ─────────────────────────────
+  // Maps effect names to the existing closure functions.
+  // Used by runEffect() as fallback when no plugin is registered.
+
+  var _builtinEffects = {
+    ripple:  function (a) { ripple(a.cx, a.cy, a.opts); },
+    vortex:  function (a) { vortex(a.cx, a.cy, a.opts); },
+    crater:  function (a) { crater(a.cx, a.cy, (a.opts && a.opts.radius) || 160, (a.opts && a.opts.depth) || 1.0, a.opts); },
+    nuclear: function (a) { nuclear(a.cx, a.cy, a.opts); },
+    scorch:  function (a) { scorch(a.x1, a.y1, a.x2, a.y2, a.opts); },
+  };
+
+  // ── Effect plugin system ────────────────────────────────────────
+
+  /**
+   * Register a named dotgrid effect plugin.
+   * @param {string} name - Effect name (e.g., 'heart', 'shockwave')
+   * @param {Object} effect - Effect object with a `run(gridCtx, args)` method
+   */
+  function registerEffect(name, effect) {
+    _effectRegistry[name] = effect;
+  }
+
+  /**
+   * Install a dotgrid plugin. Mirrors engine.use(plugin).
+   * @param {Object} plugin - Plugin with an install(grid) method
+   */
+  function usePlugin(plugin) {
+    if (!plugin) return;
+    // Support both { install } and { default: { install } } patterns
+    var p = (plugin.install ? plugin : plugin.default) || plugin;
+    if (typeof p.install === 'function') {
+      p.install(publicApi);
+    }
+  }
+
+  /**
+   * Run a named dotgrid effect. Checks the plugin registry first,
+   * then falls back to built-in effects.
+   * @param {string} name - Effect name
+   * @param {Object} args - Arguments object (e.g., { cx, cy, opts })
+   * @returns {boolean} true if the effect was found and executed
+   */
+  function runEffect(name, args) {
+    // Plugin registry takes priority
+    var effect = _effectRegistry[name];
+    if (effect && typeof effect.run === 'function') {
+      if (!_gridCtx) return false;
+      effect.run(_gridCtx, args);
+      return true;
+    }
+    // Fall back to built-in effects
+    var builtin = _builtinEffects[name];
+    if (builtin) {
+      builtin(args);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * List all available effect names (built-in + registered plugins).
+   * @returns {string[]}
+   */
+  function getEffectNames() {
+    var names = Object.keys(_builtinEffects);
+    for (var k in _effectRegistry) {
+      if (_effectRegistry.hasOwnProperty(k) && names.indexOf(k) === -1) {
+        names.push(k);
+      }
+    }
+    return names;
+  }
+
   // ── Public API ───────────────────────────────────────────────
 
-  return {
+  var publicApi = {
     init: init,
     build: build,
     ripple: ripple,
@@ -1649,7 +1670,6 @@ export function createDotgrid(userConfig) {
     nuclear: nuclear,
     scorch: scorch,
     vortex: vortex,
-    heart: heart,
     configure: configure,
     getConfig: getConfig,
     reset: reset,
@@ -1657,7 +1677,15 @@ export function createDotgrid(userConfig) {
     resume: resume,
     isIdle: isIdle,
     destroy: destroy,
+
+    // Effect plugin system
+    registerEffect: registerEffect,
+    use: usePlugin,
+    runEffect: runEffect,
+    getEffectNames: getEffectNames,
   };
+
+  return publicApi;
 }
 
 // ── Singleton convenience ──────────────────────────────────────

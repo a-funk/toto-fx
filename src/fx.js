@@ -945,31 +945,31 @@ function _fireDotgridOverride(cx, cy) {
   _dotgridOverrideFired = true;
   if (!_hasDotgrid()) return;
   const ov = _ctx.dotgridOverride;
-  if (!ov || !ov.effect) return;
+  if (!ov || !ov.effect || ov.effect === 'none') return;
   const p = ov.params || {};
-  switch (ov.effect) {
-    case 'ripple':
-      _Dotgrid.ripple(cx, cy, p);
-      break;
-    case 'vortex':
-      _Dotgrid.vortex(cx, cy, p);
-      break;
-    case 'crater':
-      _Dotgrid.crater(cx, cy, p.radius || 160, p.depth || 1.0, p);
-      break;
-    case 'nuclear':
-      _Dotgrid.nuclear(cx, cy, p);
-      break;
-    case 'scorch': {
-      const halfLen = (p.length || 300) / 2;
-      _Dotgrid.scorch(cx - halfLen, cy, cx + halfLen, cy, p);
-      break;
-    }
-    case 'heart':
-      _Dotgrid.heart(cx, cy, p);
-      break;
-    case 'none':
-      break;
+  // Generic dispatch — no switch needed, works for built-in + plugin effects
+  if (typeof _Dotgrid.runEffect === 'function') {
+    _Dotgrid.runEffect(ov.effect, { cx: cx, cy: cy, opts: p });
+  }
+}
+
+/**
+ * Generic dotgrid effect dispatcher. Works for any effect name —
+ * built-in or plugin-registered. New dotgrid effects don't need
+ * dedicated FX wrapper functions; call this instead.
+ *
+ * @param {string} name - Effect name (e.g., 'ripple', 'heart', 'shockwave')
+ * @param {Object} args - Arguments object (e.g., { cx, cy, opts })
+ */
+export function doDotgridEffect(name, args) {
+  if (!fxEnabled('dotgrid')) return;
+  if (_ctx.dotgridOverride) {
+    _fireDotgridOverride(args.cx || ((args.x1 + args.x2) / 2),
+                          args.cy || ((args.y1 + args.y2) / 2));
+    return;
+  }
+  if (_hasDotgrid() && typeof _Dotgrid.runEffect === 'function') {
+    _Dotgrid.runEffect(name, args);
   }
 }
 
@@ -1058,12 +1058,7 @@ export function doDotgridScorch(x1, y1, x2, y2, width) {
  * @param {string} [opts.color='#E8456B'] - CSS color for the heart edge.
  */
 export function doDotgridHeart(cx, cy, opts) {
-  if (!fxEnabled('dotgrid')) return;
-  if (_ctx.dotgridOverride) {
-    _fireDotgridOverride(cx, cy);
-    return;
-  }
-  if (_hasDotgrid()) _Dotgrid.heart(cx, cy, opts);
+  doDotgridEffect('heart', { cx: cx, cy: cy, opts: opts });
 }
 
 /**
@@ -2092,6 +2087,7 @@ export const FX = {
   doScreenShake,
 
   // Dotgrid effects
+  doDotgridEffect,
   doDotgridRipple,
   doDotgridCrater,
   doDotgridNuclear,

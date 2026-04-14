@@ -19,6 +19,11 @@ const plugins = [
   { name: 'heart-pulse', entry: 'src/plugins/heart-pulse.js', global: 'TotoFXHeartPulse' },
 ];
 
+// Dotgrid effect plugin entry points
+const dotgridPlugins = [
+  { name: 'heart', entry: 'src/dotgrid-plugins/heart.js', global: 'TotoFXDotgridHeart' },
+];
+
 // Sub-module entry points
 const modules = [
   { name: 'fx', entry: 'src/fx.js', global: 'TotoFXUtils' },
@@ -93,6 +98,25 @@ async function build() {
     }));
   }
 
+  // ── Dotgrid effect plugin bundles (ESM + IIFE) ───────────
+  for (const dp of dotgridPlugins) {
+    builds.push(esbuild.build({
+      ...commonOpts,
+      entryPoints: [dp.entry],
+      outfile: `dist/dotgrid-plugins/${dp.name}.esm.js`,
+      format: 'esm',
+      minify: true,
+    }));
+    builds.push(esbuild.build({
+      ...commonOpts,
+      entryPoints: [dp.entry],
+      outfile: `dist/dotgrid-plugins/${dp.name}.min.js`,
+      format: 'iife',
+      globalName: dp.global,
+      minify: true,
+    }));
+  }
+
   await Promise.all(builds);
 
   // Report sizes
@@ -110,6 +134,10 @@ async function build() {
   for (const plugin of plugins) {
     const s = fs.statSync(`dist/plugins/${plugin.name}.min.js`).size;
     console.log(`  dist/plugins/${plugin.name}.min.js  ${(s / 1024).toFixed(1)}KB (${plugin.global})`);
+  }
+  for (const dp of dotgridPlugins) {
+    const s = fs.statSync(`dist/dotgrid-plugins/${dp.name}.min.js`).size;
+    console.log(`  dist/dotgrid-plugins/${dp.name}.min.js  ${(s / 1024).toFixed(1)}KB (${dp.global})`);
   }
 }
 

@@ -62,14 +62,19 @@ export const heartPulseVariant = {
     var cx = rect.left + rect.width / 2;
     var cy = rect.top + rect.height / 2;
 
-    // Trigger dotgrid heart effect
-    FX.doDotgridHeart(cx, cy, {
+    // Trigger dotgrid heart effect via engine context (IIFE-safe)
+    var heartOpts = {
       radius: Math.round(radius * scale),
       pulses: pulses,
       pulseInterval: pulseInterval,
       density: p.density || 0.8,
       push: p.push || 8,
-    });
+    };
+    if (ctx.dotgridEffect) {
+      ctx.dotgridEffect('heart', { cx: cx, cy: cy, opts: heartOpts });
+    } else if (FX.doDotgridEffect) {
+      FX.doDotgridEffect('heart', { cx: cx, cy: cy, opts: heartOpts });
+    }
 
     // Card scale throb — subtle pulse matching the heartbeat
     if (cardPulse > 0) {

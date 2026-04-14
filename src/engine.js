@@ -359,6 +359,22 @@ export function createEngine(userConfig) {
     },
 
     /**
+     * Dispatch a named dotgrid effect through the engine's dotgrid instance.
+     * This is the IIFE-safe way for animation plugins to trigger dotgrid effects —
+     * the engine holds the real dotgrid reference, avoiding the bundled-FX problem.
+     *
+     * @param {string} name - Effect name (e.g., 'heart', 'ripple')
+     * @param {Object} args - Arguments object (e.g., { cx, cy, opts })
+     * @returns {boolean} true if the effect was dispatched
+     */
+    dotgridEffect: function (name, args) {
+      if (_dotgrid && typeof _dotgrid.runEffect === 'function') {
+        return _dotgrid.runEffect(name, args);
+      }
+      return false;
+    },
+
+    /**
      * Check if a key has active persistent animation.
      * @param {string} category
      * @param {string} key
@@ -729,6 +745,13 @@ export function createEngine(userConfig) {
               if (ctx.onDone) ctx.onDone();
               return;
             }
+            // Inject dotgrid effect dispatcher so plugins can trigger
+            // dotgrid effects without bundling their own FX copy
+            ctx.dotgridEffect = function (name, args) {
+              if (_dotgrid && typeof _dotgrid.runEffect === 'function') {
+                _dotgrid.runEffect(name, args);
+              }
+            };
             variantObj.play(el, ctx);
             el[ANIM_KEY] = {
               _fxCategory: category,

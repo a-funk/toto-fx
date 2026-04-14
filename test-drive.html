@@ -214,6 +214,7 @@
   <script src="dist/plugins/creation.min.js"></script>
   <script src="dist/plugins/in-progress.min.js"></script>
   <script src="dist/plugins/heart-pulse.min.js"></script>
+  <script src="dist/dotgrid-plugins/heart.min.js"></script>
 
   <script>
     // =========================================================
@@ -245,6 +246,11 @@
       baseColor: [100, 100, 160],
     });
     grid.init();
+
+    // =========================================================
+    // 3b. Register dotgrid effect plugins
+    // =========================================================
+    grid.use(TotoFXDotgridHeart);
 
     // =========================================================
     // 4. Wire FX to dotgrid
@@ -379,12 +385,11 @@
     });
 
     // Card 11: heart-pulse (action/love)
+    // No manual dotgrid call needed — the plugin dispatches via ctx.dotgridEffect
     document.querySelector('[data-id="task-11"]').addEventListener('click', function () {
-      var pos = getCenter(this);
       engine.play('action', this, {
         params: { style: 'love', variant: 'heart-pulse' },
       });
-      TotoFX.FX.doDotgridHeart(pos.cx, pos.cy, { radius: 200, pulses: 3, pulseInterval: 450 });
     });
 
     // =========================================================
@@ -554,11 +559,9 @@
           }
         },
         'task-11': function () {
-          var p = getCenter(card);
           engine.play('action', card, {
             params: { style: 'love', variant: 'heart-pulse' },
           });
-          TotoFX.FX.doDotgridHeart(p.cx, p.cy, { radius: 200, pulses: 3, pulseInterval: 450 });
         },
       };
       if (handlers[id]) {
