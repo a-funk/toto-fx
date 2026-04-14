@@ -206,6 +206,55 @@ The reconciler has error boundaries: if a plugin's `play()` function throws, the
 
 The DOM observer also watches for `data-anim-id` attribute changes, catching morph engines that patch elements in-place (e.g., idiomorph) rather than replacing them entirely.
 
+### Animation Handle (`ANIM_KEY`)
+
+When the reconciler starts a persistent animation, it stores a tracking handle on the element using a Symbol key (`ANIM_KEY`). This handle contains:
+
+- `_fxVersion` — the state version when this animation was applied
+- `_fxCategory` — which category owns this animation
+- `_fxStyle` — the style name
+
+The reconciler uses `_fxVersion` to avoid re-applying animations unnecessarily. On each reconciliation pass, it compares the handle's version to the state's version — if they match, the element is skipped. If they differ (or no handle exists), the reconciler calls `stop()` on the old animation then `play()` for the new state.
+
+**For category authors:** If your `play()` function sets `el[ANIM_KEY]`, the reconciler will track versions automatically. If you don't set it, `play()` will be called on every DOM mutation (harmless for idempotent CSS class operations, but wasteful). For persistent animations, setting the handle is recommended:
+
+```javascript
+import { ANIM_KEY } from 'toto-fx';
+
+engine.registerCategory('glow', {
+  play: (el, params) => {
+    el.classList.add('glowing');
+    el[ANIM_KEY] = { type: 'css', category: 'glow' };
+  },
+  stop: (el) => {
+    el.classList.remove('glowing');
+  },
+});
+```
+
+The reconciler augments your handle with `_fxVersion`, `_fxCategory`, and `_fxStyle` after `play()` returns — you don't need to set those yourself.
+
+### When `play()` Is Called
+
+Your `play()` function is called in these situations:
+
+1. **`engine.set(category, key)`** — immediate reconciliation for that key
+2. **DOM mutation** — when `MutationObserver` detects structural changes, the reconciler runs a full pass over all persistent state and calls `play()` on any element that needs it
+3. **`engine.reconcile()`** — manual reconciliation trigger
+4. **Tab becomes visible** — re-reconciles on `visibilitychange`
+
+The `params.elapsed` value tells you how many milliseconds have passed since the animation state was first set. On the initial `set()` call, `elapsed` will be near zero. On subsequent calls (after DOM mutations), `elapsed` will be the time since the original `set()`. Use this for **phase continuity** — setting a negative `animation-delay` on CSS animations so they resume at the right point rather than restarting from the beginning.
+
+### When `stop()` Is Called
+
+Your `stop()` function is called in these situations:
+
+1. **`engine.clear(category, key)`** — user explicitly clears the animation state
+2. **Reconciler re-application** — before calling `play()` with updated state (e.g., version changed)
+3. **DOM element removed** — cleanup via `MutationObserver` (category stop fires if the animation handle was set)
+
+The `stop` callback should be the inverse of `play` — remove classes, clear inline styles, cancel timers. Without `stop`, `engine.clear()` removes internal state but leaves the visual effect on the element.
+
 ### Categories
 
 Animation categories are the top-level animation types. Register them with a `play` function.

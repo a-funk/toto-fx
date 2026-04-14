@@ -298,7 +298,8 @@ export function createEngine(userConfig) {
 
     /**
      * Clear persistent animation state for a key.
-     * Stops the animation on the element.
+     * Calls the category's stop() callback to undo visual effects,
+     * then cleans up internal animation tracking.
      *
      * @param {string} category
      * @param {string} key
@@ -309,8 +310,15 @@ export function createEngine(userConfig) {
       const catDescriptor = _categories[category];
       const resolver = (catDescriptor && catDescriptor.resolve) || _config.resolveElement;
       const el = _store.resolveElement(key, resolver);
-      if (el && el[ANIM_KEY]) {
-        _reconciler._stopElement(el);
+      if (el) {
+        if (el[ANIM_KEY]) {
+          // Full stop: category stop + global handler + handle cleanup
+          _reconciler._stopElement(el);
+        } else if (catDescriptor && catDescriptor.stop) {
+          // No animation handle (play didn't set one), but still
+          // call category stop to undo visual effects
+          catDescriptor.stop(el);
+        }
       }
       _emit('animationEnd', { type: 'persistent', category: category, key: key, element: el });
     },

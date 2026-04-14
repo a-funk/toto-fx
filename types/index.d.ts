@@ -34,6 +34,8 @@ export interface CategoryDescriptor {
   resolve?: ElementResolver;
   /** How to play the animation on an element */
   play: (el: HTMLElement, params: CategoryPlayParams) => void;
+  /** Optional: undo what play() did. Called by engine.clear() and by the reconciler before re-applying. */
+  stop?: (el: HTMLElement) => void;
 }
 
 export interface CategoryPlayParams {

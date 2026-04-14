@@ -169,14 +169,28 @@ export function createReconciler(store, config, categories, opts) {
     },
 
     /**
-     * Stop animation on an element.
+     * Stop animation on an element. Calls the category's stop() callback
+     * if one is registered, then the global stop handler, then cleans up
+     * the animation handle.
      * @param {HTMLElement} el
      * @private
      */
     _stopElement: function (el) {
+      // Call category-specific stop to undo visual effects
+      if (el[ANIM_KEY] && el[ANIM_KEY]._fxCategory) {
+        var cat = categories[el[ANIM_KEY]._fxCategory];
+        if (cat && cat.stop) {
+          cat.stop(el);
+        }
+      }
+
+      // Call global stop handler (for app-level cleanup like ticker removal)
       if (opts.stopElement) {
         opts.stopElement(el);
       }
+
+      // Clean up the animation handle
+      delete el[ANIM_KEY];
     },
   };
 
