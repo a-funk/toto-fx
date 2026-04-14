@@ -11,9 +11,20 @@
  * unnecessary reconciliation during animation playback.
  */
 
-import { StateStore } from './state-store.js';
+import { ANIM_KEY } from './reconciler.js';
 
-export const DOMObserver = {
+/**
+ * Create an isolated DOMObserver instance.
+ * Each engine gets its own observer -- no cross-engine interference.
+ * @param {Object} [store] - StateStore instance for persistent-size check optimization
+ * @returns {Object} DOMObserver instance
+ */
+export function createDOMObserver(store) {
+  return _createObserver(store);
+}
+
+function _createObserver(store) {
+  return {
   /** @type {MutationObserver|null} */
   _observer: null,
   /** @type {number|null} */
@@ -42,14 +53,22 @@ export const DOMObserver = {
 
     this._observer = new MutationObserver(function (mutations) {
       // Skip if no persistent state -- nothing to reconcile
-      if (StateStore._persistent.size === 0) return;
+      if (store._persistent.size === 0) return;
 
-      // Check if any mutation involves structural changes in RELEVANT containers.
-      // Ignore mutations inside animation infrastructure (canvases, promoted card
-      // wrappers, particle overlays) -- these fire hundreds of times per second
-      // during completion animations and are not relevant to state reconciliation.
+      // Check if any mutation involves structural changes in RELEVANT containers
+      // or attribute changes on tracked elements. Ignore mutations inside animation
+      // infrastructure (canvases, promoted card wrappers, particle overlays) --
+      // these fire hundreds of times per second during completion animations and
+      // are not relevant to state reconciliation.
       let hasRelevant = false;
       for (let i = 0; i < mutations.length; i++) {
+        // Attribute mutations on tracked elements trigger reconciliation.
+        // This catches morph engines that patch in-place (e.g., idiomorph)
+        // rather than replacing nodes entirely.
+        if (mutations[i].type === 'attributes') {
+          hasRelevant = true;
+          break;
+        }
         if (mutations[i].addedNodes.length === 0 && mutations[i].removedNodes.length === 0) continue;
         const target = mutations[i].target;
         // Skip mutations inside animation-stage wrappers (promoted cards)
@@ -88,12 +107,17 @@ export const DOMObserver = {
       self._pendingRAF = requestAnimationFrame(function () {
         self._pendingRAF = null;
         // Invalidate element cache since DOM changed
-        StateStore.invalidateCache();
+        store.invalidateCache();
         if (self._reconcileFn) self._reconcileFn();
       });
     });
 
-    this._observer.observe(root, { childList: true, subtree: true });
+    this._observer.observe(root, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-anim-id'],
+    });
   },
 
   /**
@@ -104,27 +128,27 @@ export const DOMObserver = {
   _cleanupRemovedTree: function (node) {
     if (node.nodeType !== 1) return;
 
-    if (node.__totoAnimation) this._cleanupElement(node);
+    if (node[ANIM_KEY]) this._cleanupElement(node);
 
     const desc = node.querySelectorAll ? node.querySelectorAll('*') : [];
     for (let i = 0; i < desc.length; i++) {
-      if (desc[i].__totoAnimation) this._cleanupElement(desc[i]);
+      if (desc[i][ANIM_KEY]) this._cleanupElement(desc[i]);
     }
   },
 
   /**
-   * Cleanup an element with __totoAnimation handle.
+   * Cleanup an element with an animation handle.
    * @param {HTMLElement} el
    * @private
    */
   _cleanupElement: function (el) {
-    if (!el.__totoAnimation) return;
+    if (!el[ANIM_KEY]) return;
 
     if (this._cleanupHandler) {
       this._cleanupHandler(el);
     }
 
-    delete el.__totoAnimation;
+    delete el[ANIM_KEY];
   },
 
   /**
@@ -141,4 +165,8 @@ export const DOMObserver = {
     }
     this._initialized = false;
   },
-};
+  };
+}
+
+/** @deprecated Use createDOMObserver() for isolated instances. Kept for backwards compatibility. */
+export const DOMObserver = createDOMObserver();

@@ -38,7 +38,7 @@ if (typeof globalThis.document === 'undefined') {
 
 // ── Imports ─────────────────────────────────────────────────────
 
-import { StateStore } from '../src/state-store.js';
+import { createStateStore, StateStore } from '../src/state-store.js';
 import { createEngine } from '../src/engine.js';
 import { AnimationRegistry, createSettings, DEFAULT_SETTINGS } from '../src/registry.js';
 

@@ -500,7 +500,7 @@ export const flowersPlugin = {
             if (st > easeStem) break;
             const sx = f.baseX * (1 - st) * (1 - st) + cpX * 2 * st * (1 - st) + stemTopX * st * st;
             const sy = f.baseY * (1 - st) * (1 - st) + cpY * 2 * st * (1 - st) + stemTopY * st * st;
-            const stemChar = '\u2502';
+            let stemChar = '\u2502';
             if (s > 0) {
               const prevT = (s - 1) / stemSegments;
               const prevX = f.baseX * (1 - prevT) * (1 - prevT) + cpX * 2 * prevT * (1 - prevT) + stemTopX * prevT * prevT;

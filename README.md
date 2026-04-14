@@ -158,6 +158,8 @@ engine.play('highlight', document.querySelector('[data-id="task-2"]'));
 
 ### State Store
 
+Each engine instance has its own isolated state store. Multiple engines on the same page (e.g., a main content area and a modal) won't collide.
+
 The engine maintains two types of animation state:
 
 - **Persistent**: long-running animations (glows, pulses) that survive DOM mutations. Set with `engine.set()`, cleared with `engine.clear()`.
@@ -199,6 +201,10 @@ When the DOM changes (detected via MutationObserver), the reconciler:
 2. Diffs state vs. reality (what's running, what needs starting/stopping)
 3. Applies changes with phase offset for visual continuity
 4. Periodically garbage-collects orphaned state
+
+The reconciler has error boundaries: if a plugin's `play()` function throws, the error is logged (in debug mode) and reconciliation continues for the remaining entries. One broken plugin won't kill all animations.
+
+The DOM observer also watches for `data-anim-id` attribute changes, catching morph engines that patch elements in-place (e.g., idiomorph) rather than replacing them entirely.
 
 ### Categories
 
@@ -246,6 +252,7 @@ engine.registerCategory('pulse', {
 | `key` | `string` | Element key |
 | `groupId` | `string` | Group ID for coordinated refresh |
 | `styleOverride` | `Object` | Style/variant override from play() caller |
+| `reducedMotion` | `boolean` | `true` when the user prefers reduced motion and the engine is configured with `reducedMotion: 'respect'`. Plugins should skip particles, shake, and flash when this is `true`. |
 
 ### register() vs registerCategory()
 
@@ -656,6 +663,8 @@ Create a new engine instance.
 | `layoutDuration` | `number` | `300` | Layout animation duration (ms) |
 | `debug` | `boolean` | `false` | Enable console warnings for common mistakes (wrong arg types, unregistered categories, detached elements) |
 | `layoutEasing` | `string` | `'ease-out'` | Layout animation CSS easing |
+| `debounceMs` | `number` | `100` | Refresh coordinator debounce window (ms). Lower = more responsive, higher = fewer DOM swaps during rapid state changes. |
+| `reducedMotion` | `'respect' \| 'ignore'` | `'ignore'` | When `'respect'`, checks `prefers-reduced-motion` media query and passes `reducedMotion: true` to all `play()` contexts. Plugins can use this to skip particles, screen shake, and other non-essential effects. |
 
 ### Engine Methods
 
@@ -692,6 +701,30 @@ Create a new engine instance.
 | `engine.use(plugin, config?)` | Install a plugin |
 | `engine.registerFX(name, layer)` | Register an FX layer |
 | `engine.getFX(name)` | Get a registered FX layer |
+
+#### Events
+
+| Method | Description |
+|--------|-------------|
+| `engine.on(event, fn)` | Subscribe to a lifecycle event. Events: `'animationStart'`, `'animationEnd'`, `'reconcile'`. |
+| `engine.off(event, fn)` | Unsubscribe from a lifecycle event. |
+
+Event data shapes:
+
+- **`animationStart`** / **`animationEnd`**: `{ type: 'persistent'|'transient', category, key, element }`
+- **`reconcile`**: `{ persistentCount, transientCount }`
+
+Listener errors are caught internally and never break the engine.
+
+```javascript
+engine.on('animationStart', (e) => {
+  console.log(`${e.type} animation started: ${e.category}/${e.key}`);
+});
+
+engine.on('reconcile', (e) => {
+  console.log(`Reconciled: ${e.persistentCount} persistent, ${e.transientCount} transient`);
+});
+```
 
 #### Queries
 
@@ -739,8 +772,9 @@ The build produces multiple bundles for different use cases:
 For advanced use via ESM:
 
 ```javascript
-import { StateStore } from 'toto-fx';
-import { DOMObserver } from 'toto-fx';
+import { createStateStore } from 'toto-fx';  // isolated state store factory
+import { createDOMObserver } from 'toto-fx'; // isolated DOM observer factory
+import { ANIM_KEY } from 'toto-fx';          // Symbol key for animation handles on elements
 import { createReconciler } from 'toto-fx';
 import { createRefreshCoordinator } from 'toto-fx';
 import { createLayoutAnimator } from 'toto-fx';
@@ -749,6 +783,10 @@ import { createDotgrid } from 'toto-fx';     // fluid simulation
 import { AnimationRegistry } from 'toto-fx'; // variant store
 import { AnimationSettings } from 'toto-fx'; // localStorage persistence
 import { PresetSchema } from 'toto-fx';      // preset validation
+
+// Backwards-compatible singletons (deprecated -- prefer factory functions)
+import { StateStore } from 'toto-fx';
+import { DOMObserver } from 'toto-fx';
 ```
 
 ## TypeScript

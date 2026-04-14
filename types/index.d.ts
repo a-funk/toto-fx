@@ -21,6 +21,10 @@ export interface TotoFXConfig {
   debug?: boolean;
   /** Layout animation CSS easing. Default: 'ease-out' */
   layoutEasing?: string;
+  /** Refresh coordinator debounce window in ms. Default: 100 */
+  debounceMs?: number;
+  /** When 'respect', checks prefers-reduced-motion and passes ctx.reducedMotion to plugins. Default: 'ignore' */
+  reducedMotion?: 'respect' | 'ignore';
 }
 
 export type ElementResolver = (key: string) => HTMLElement | null;
@@ -41,6 +45,8 @@ export interface CategoryPlayParams {
   key?: string;
   groupId?: string;
   styleOverride?: { style?: string; variant?: string };
+  /** true when user prefers reduced motion and engine is configured with reducedMotion: 'respect' */
+  reducedMotion?: boolean;
 }
 
 export interface PlayOptions {
@@ -74,6 +80,20 @@ export interface ParamDescriptor {
   options?: Array<{ value: string; label: string }>;
 }
 
+export type EngineEvent = 'animationStart' | 'animationEnd' | 'reconcile';
+
+export interface AnimationEventData {
+  type: 'persistent' | 'transient';
+  category: string;
+  key: string;
+  element: HTMLElement | null;
+}
+
+export interface ReconcileEventData {
+  persistentCount: number;
+  transientCount: number;
+}
+
 export interface TotoFXEngine {
   version: string;
 
@@ -83,6 +103,11 @@ export interface TotoFXEngine {
     stopHandler?: (el: HTMLElement) => void;
     fxContextManager?: { set(ctx: any): void; clear(): void };
   }): void;
+
+  // Events
+  on(event: 'animationStart' | 'animationEnd', fn: (data: AnimationEventData) => void): void;
+  on(event: 'reconcile', fn: (data: ReconcileEventData) => void): void;
+  off(event: EngineEvent, fn: Function): void;
 
   // Lifecycle
   init(): void;
@@ -159,7 +184,7 @@ export interface TransientEntry {
   element: HTMLElement | null;
 }
 
-export declare const StateStore: {
+export interface StateStoreInstance {
   _persistent: Map<string, PersistentEntry>;
   _transient: Map<string, TransientEntry>;
   _version: number;
@@ -176,14 +201,31 @@ export declare const StateStore: {
   invalidateCache(): void;
   getPersistent(key: string): PersistentEntry | undefined;
   gc(resolver: ElementResolver, persistentMaxAge?: number, transientMaxAge?: number): void;
-};
+}
+
+/** Create an isolated StateStore instance. Each engine gets its own. */
+export function createStateStore(): StateStoreInstance;
+
+/** @deprecated Use createStateStore() for isolated instances. */
+export declare const StateStore: StateStoreInstance;
 
 // ── DOM Observer ────────────────────────────────────────────
 
-export declare const DOMObserver: {
+export interface DOMObserverInstance {
   init(root: HTMLElement, onChange: () => void, opts?: { cleanupHandler?: ((el: HTMLElement) => void) | null }): void;
   destroy(): void;
-};
+}
+
+/** Create an isolated DOMObserver instance. */
+export function createDOMObserver(store?: StateStoreInstance): DOMObserverInstance;
+
+/** @deprecated Use createDOMObserver() for isolated instances. */
+export declare const DOMObserver: DOMObserverInstance;
+
+// ── Animation Key ──────────────────────────────────────────
+
+/** Symbol used to store animation handles on DOM elements. Replaces the old __totoAnimation string key. */
+export declare const ANIM_KEY: unique symbol;
 
 // ── Registry & Settings ─────────────────────────────────────
 
@@ -371,6 +413,6 @@ export declare const PluginLoader: {
 
 // ── Sub-modules ─────────────────────────────────────────────
 
-export function createReconciler(config: any, categories: any, opts?: any): any;
-export function createRefreshCoordinator(opts?: any): any;
+export function createReconciler(store: StateStoreInstance, config: any, categories: any, opts?: any): any;
+export function createRefreshCoordinator(store: StateStoreInstance, deps?: any): any;
 export function createLayoutAnimator(opts?: any): any;

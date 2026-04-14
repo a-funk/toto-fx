@@ -392,8 +392,8 @@ export const shredderPlugin = {
       });
     }
 
-    const slashPhaseComplete = false;
-    const container = null;
+    let slashPhaseComplete = false;
+    let container = null;
 
     FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
@@ -550,7 +550,7 @@ export const guillotinePlugin = {
     document.body.appendChild(container);
 
     const bloodChars = [];
-    const impactDone = false;
+    let impactDone = false;
 
     FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
@@ -674,7 +674,7 @@ export const heartbeatPlugin = {
     const _drawId = FX.nextFxDrawId('death-heartbeat');
     const startTime = performance.now();
     const duration = p.duration;
-    const heartbeatDotgridFired = false;
+    let heartbeatDotgridFired = false;
 
     function ecgWave(t) {
       if (t < 0.1) return 0;
@@ -909,9 +909,9 @@ export const sniperPlugin = {
     const totalDuration = lockOnDuration + bangDuration + afterDuration;
 
     // Start crosshair from click position if available, otherwise random offset
-    const crossX = (ctx.clickX != null) ? ctx.clickX : cx + (Math.random() - 0.5) * 100;
-    const crossY = (ctx.clickY != null) ? ctx.clickY : cy + (Math.random() - 0.5) * 60;
-    const bangFired = false;
+    let crossX = (ctx.clickX != null) ? ctx.clickX : cx + (Math.random() - 0.5) * 100;
+    let crossY = (ctx.clickY != null) ? ctx.clickY : cy + (Math.random() - 0.5) * 60;
+    let bangFired = false;
 
     FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
@@ -1045,7 +1045,7 @@ export const eatenPlugin = {
     const burpDuration = p.burpDuration;
     const totalDuration = approachDuration + chewTotalDuration + swallowDuration + burpDuration;
 
-    const eatenDotgridFired = false;
+    let eatenDotgridFired = false;
     const teethCount = Math.ceil(rect.width / 14);
     const taskText = getTaskText(el);
     const taskLetters = taskText.split('').filter(function(c) { return c !== ' '; });
@@ -1120,7 +1120,7 @@ export const eatenPlugin = {
       fxCtx.textAlign = 'center';
       fxCtx.textBaseline = 'middle';
       stuckLetters.forEach(function(s) {
-        const displayChar = s.char;
+        let displayChar = s.char;
         if (s.mangleLevel >= 3) displayChar = CRUMB_CHARS[Math.floor(Math.random() * CRUMB_CHARS.length)];
         else if (s.mangleLevel >= 2) displayChar = Math.random() > 0.5 ? s.char.toLowerCase() : s.char;
         fxCtx.save();
@@ -1148,8 +1148,8 @@ export const eatenPlugin = {
       });
     }
 
-    const lastNow = startTime;
-    const lastChewIdx = -1;
+    let lastNow = startTime;
+    let lastChewIdx = -1;
 
     FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
@@ -1329,8 +1329,8 @@ export const lightningPlugin = {
 
     // Generate main bolt path
     const mainBolt = [];
-    const bx = cx + (Math.random() - 0.5) * 60;
-    const by = -20;
+    let bx = cx + (Math.random() - 0.5) * 60;
+    let by = -20;
     while (by < cy + 5) {
       const jag = (Math.random() - 0.5) * 70;
       const stepY = 10 + Math.random() * 18;
@@ -1347,7 +1347,7 @@ export const lightningPlugin = {
       const forkPt = mainBolt[forkIdx];
       const dir = Math.random() > 0.5 ? 1 : -1;
       const branch = [{ x: forkPt.x, y: forkPt.y }];
-      const bbx = forkPt.x, bby = forkPt.y;
+      let bbx = forkPt.x, bby = forkPt.y;
       const branchLen = 3 + Math.floor(Math.random() * 5);
       for (let s = 0; s < branchLen; s++) {
         bbx += dir * (15 + Math.random() * 25);
@@ -1447,7 +1447,7 @@ export const lightningPlugin = {
       });
     }
 
-    const struck = false;
+    let struck = false;
 
     FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
@@ -1612,7 +1612,7 @@ export const steamrollerPlugin = {
     const DUST_CHARS = ['.', ':', ';', "'", ',', '`', '*', '+', '~', '%'];
     const CRACK_CHARS = ['/', '\\', '|', '-', '=', '#', 'x', 'X'];
     const cracks = [];
-    const dustAccum = 0, crackAccum = 0, prevRollerX = null;
+    let dustAccum = 0, crackAccum = 0, prevRollerX = null;
 
     function spawnDust(x, y, count) {
       for (let i = 0; i < count; i++) {
@@ -1632,7 +1632,7 @@ export const steamrollerPlugin = {
     const ROLLER_CAB_L = ['.---.', '|___|', '|   |__'];
     const exhaustPuffs = [];
     const PUFF_CHARS = ['"', '~', '*', '`', '.', ':'];
-    const exhaustAccum = 0;
+    let exhaustAccum = 0;
 
     const edgeStart = goRight ? rect.left : rect.right;
     const offscreenStart = goRight ? rect.left - 180 : rect.right + 180;
@@ -1662,7 +1662,7 @@ export const steamrollerPlugin = {
     }
 
     const crushedTopPct = 100 - (6 / rect.height) * 100;
-    const lastNow = startTime, flashFired = false, totalPixelsTraveled = 0;
+    let lastNow = startTime, flashFired = false, totalPixelsTraveled = 0;
 
     FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
@@ -1899,8 +1899,8 @@ export const piranhasPlugin = {
 
     const bloodDrops = [];
     const debris = [];
-    const piranhasDotgridTimer = 0;
-    const piranhasDotgridCount = 0;
+    let piranhasDotgridTimer = 0;
+    let piranhasDotgridCount = 0;
 
     function buildClipPath() {
       const pts = [];
@@ -1950,7 +1950,7 @@ export const piranhasPlugin = {
       }
     }
 
-    const lastNow = startTime;
+    let lastNow = startTime;
 
     FX.registerFxDraw(_drawId, function(fxCtx, now) {
       FX.tickFrame();
