@@ -144,8 +144,8 @@ A complete working page. Copy this into an HTML file and open it in a browser. C
       },
     });
 
-    // 2. Install the thud plugin into the engine
-    TotoFXThud.install(engine);
+    // 2. Install the thud plugin
+    engine.use(TotoFXThud);
 
     // 3. Set up the dotgrid fluid simulation background
     var grid = TotoFX.createDotgrid({
@@ -445,7 +445,7 @@ engine.use(inProgressPlugin);
 
 ### IIFE / script tags
 
-Each plugin exposes a global with an `install` function. Load the core first, then plugins:
+Each plugin exposes a global. Load the core first, then plugins, then install them with `engine.use()`:
 
 ```html
 <script src="dist/toto-fx.min.js"></script>
@@ -457,12 +457,11 @@ Each plugin exposes a global with an `install` function. Load the core first, th
 <script>
   var engine = TotoFX.createEngine({ ... });
 
-  // Install plugins via their globals
-  TotoFXThud.install(engine);
-  TotoFXCute.install(engine);
-  TotoFXDeath.install(engine);
-  TotoFXCreation.install(engine);
-  TotoFXInProgress.install(engine);
+  engine.use(TotoFXThud);
+  engine.use(TotoFXCute);
+  engine.use(TotoFXDeath);
+  engine.use(TotoFXCreation);
+  engine.use(TotoFXInProgress);
 
   engine.init();
 </script>
@@ -480,7 +479,7 @@ Plugin globals reference:
 
 ### Quickstart with built-in plugins
 
-Load a plugin, install it, play animations. `install()` calls `engine.register()` which wires up the category, style, and variant dispatch automatically.
+Load a plugin, install it, play animations. `engine.use()` calls `engine.register()` internally, which wires up the category, style, and variant dispatch automatically.
 
 ```html
 <script src="dist/toto-fx.min.js"></script>
@@ -493,8 +492,8 @@ Load a plugin, install it, play animations. `install()` calls `engine.register()
     },
   });
 
-  TotoFXThud.install(engine);
-  TotoFXInProgress.install(engine);
+  engine.use(TotoFXThud);
+  engine.use(TotoFXInProgress);
   engine.init();
 
   // One-shot animation (takes an element)
