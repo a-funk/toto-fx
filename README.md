@@ -10,22 +10,32 @@ Most animation libraries assume you control the DOM. You create an element, anim
 
 TotoFX solves this. You declare that a key should be animating — the engine finds the element, starts the animation, and watches for DOM changes. When the DOM gets replaced, the engine detects the mutation, resolves the new element, and resumes at the correct phase. No flicker, no restart, no manual bookkeeping. The same mental model as React's reconciler, but for animations and framework-agnostic.
 
-## ❌ Before: animations break when the DOM swaps
+**[Try it in the playground](https://toto.tech/playground)** — create a random animation, build your own, or explore the Advanced tab for near-infinite flexibility.
 
-Most animation libraries attach animations to **elements**, not identity.
+## Animation Persistence Across DOM Replacement
 
-When the DOM updates, animations restart or disappear.
+Most animation libraries bind animations to DOM elements. When the DOM is replaced (via htmx, Turbo, morphdom, etc.), animations are lost.
+
+toto-fx binds animations to **identity**, not elements.
+
+---
+
+## ❌ Before: animation breaks on DOM update
 
 ```js
 import { animate } from "motion"
 
-function highlightCard(card) {
-  animate(
-    card,
-    { scale: [1, 1.05, 1] },
-    { duration: 1, repeat: Infinity }
-  )
-}
+const el = document.querySelector("#card-42")
+
+animate(el, {
+  scale: [1, 1.05, 1]
+})
+
+// Later: DOM is replaced
+container.innerHTML = newHTML
+
+// ❌ animation is gone
+```
 
 ## ✅ After: animations survive DOM replacement
 
@@ -41,15 +51,7 @@ engine.set("persist", "card-42")
 morphdom(container, updatedHTML)
 
 // ✨ Animation continues seamlessly
-
-highlightCard(document.querySelector("#card-42"))
-
-// Later...
-morphdom(container, updatedHTML)
-
-// animation is gone 💀
-
-**[Try it in the playground](https://toto.tech/playground)** — create a random animation, build your own, or explore the Advanced tab for near-infinite flexibility.
+```
 
 ### Roadmap
 Apply TotoFXt to video editing tools.
