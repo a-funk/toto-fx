@@ -1,0 +1,24 @@
+{
+  "name": "toto-fx-vue",
+  "version": "0.2.0",
+  "description": "Vue 3 integration for toto-fx animation engine",
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.es.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.es.js",
+      "require": "./dist/index.cjs.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "peerDependencies": {
+    "vue": ">=3.3",
+    "toto-fx": ">=0.2.0"
+  },
+  "license": "MIT"
+}
