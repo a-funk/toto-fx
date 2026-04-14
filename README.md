@@ -86,7 +86,7 @@ Graph-based views.
 
 - **State-driven**: set animation state, engine handles rendering
 - **Fluid simulation**: dotgrid background with Semi-Lagrangian advection and Laplacian diffusion
-- **59+ animations**: action, destroy, enter, and persist categories with tunable physics parameters
+- **59+ animations**: action (including destroy), enter, and persist categories with tunable physics parameters
 - **DOM-agnostic**: works with any framework or no framework
 - **Morph-aware**: integrates with idiomorph/morphdom to preserve animations across DOM replacement
 - **Plugin system**: add custom animation categories and FX layers
@@ -105,46 +105,75 @@ npm install toto-fx
 
 ## Getting Started
 
-A complete working page. Copy this into an HTML file and open it in a browser:
+A complete working page. Copy this into an HTML file and open it in a browser. Clicking a card plays an anime-slam with particles, screen shake, and a dotgrid ripple across the fluid simulation background:
 
 ```html
 <!DOCTYPE html>
 <html>
 <head>
   <style>
-    .item { padding: 16px; margin: 8px; border: 1px solid #ccc; }
-    .highlight-active { background: #ffffcc; transition: background 0.3s; }
+    body { background: #1a1a2e; margin: 0; font-family: system-ui, sans-serif; }
+    #bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+    .cards { position: relative; z-index: 1; display: flex; gap: 12px; padding: 40px; flex-wrap: wrap; }
+    .card {
+      padding: 20px 24px;
+      border: 1px solid #3a3a5a;
+      border-radius: 10px;
+      background: rgba(30, 30, 55, 0.9);
+      color: #e0e0e0;
+      cursor: pointer;
+      width: 200px;
+    }
   </style>
 </head>
 <body>
-  <div class="item" data-id="task-1">Buy milk</div>
-  <div class="item" data-id="task-2">Write tests</div>
-  <button onclick="highlight('task-1')">Highlight first</button>
-  <button onclick="highlight('task-2')">Highlight second</button>
+  <div id="bg"></div>
+  <div class="cards">
+    <div class="card" data-id="task-1">Buy milk</div>
+    <div class="card" data-id="task-2">Write tests</div>
+    <div class="card" data-id="task-3">Ship feature</div>
+  </div>
 
   <script src="dist/toto-fx.min.js"></script>
+  <script src="dist/plugins/thud.min.js"></script>
   <script>
+    // 1. Create the engine
     var engine = TotoFX.createEngine({
       resolveElement: function (key) {
         return document.querySelector('[data-id="' + key + '"]');
       },
     });
 
-    engine.registerCategory('highlight', {
-      play: function (el, params) {
-        el.classList.add('highlight-active');
-        setTimeout(function () {
-          el.classList.remove('highlight-active');
-          params.onDone();  // REQUIRED: tells engine the animation finished
-        }, 1000);
-      },
-    });
+    // 2. Install a plugin (registers the 'action' category with thud variants)
+    TotoFXThud.install(engine);
 
+    // 3. Set up the dotgrid fluid simulation background
+    var grid = TotoFX.createDotgrid({
+      container: '#bg',
+      baseOpacity: 0.15,
+      baseColor: [100, 100, 160],
+    });
+    grid.init();
+
+    // 4. Wire FX to dotgrid (without this, FX.doDotgridRipple etc. silently do nothing)
+    TotoFX.FX.setDotgrid(grid);
+
+    // 5. Start the engine
     engine.init();
 
-    function highlight(key) {
-      engine.play('highlight', engine.resolveElement(key));
-    }
+    // 6. Play anime-slam on click, with a dotgrid ripple at the card's position
+    document.querySelectorAll('.card').forEach(function (card) {
+      card.addEventListener('click', function () {
+        engine.play('action', card, {
+          params: { style: 'thud', variant: 'anime-slam' },
+        });
+
+        var rect = card.getBoundingClientRect();
+        var cx = rect.left + rect.width / 2;
+        var cy = rect.top + rect.height / 2;
+        TotoFX.FX.doDotgridRipple(cx, cy, { radius: 200, push: 10, density: 0.6 });
+      });
+    });
   </script>
 </body>
 </html>
@@ -153,29 +182,32 @@ A complete working page. Copy this into an HTML file and open it in a browser:
 ### ESM equivalent
 
 ```javascript
-import { createEngine } from 'toto-fx';
+import { createEngine, createDotgrid, FX } from 'toto-fx';
+import { thudPlugin } from 'toto-fx/plugins/thud';
 
 const engine = createEngine({
   resolveElement: (key) => document.querySelector(`[data-id="${key}"]`),
 });
 
-engine.registerCategory('highlight', {
-  play: (el, params) => {
-    el.classList.add('highlight-active');
-    setTimeout(() => {
-      el.classList.remove('highlight-active');
-      params.onDone();  // REQUIRED: tells engine the animation finished
-    }, 1000);
-  },
-});
+thudPlugin.install(engine);
+
+const grid = createDotgrid({ container: '#bg', baseOpacity: 0.15 });
+grid.init();
+FX.setDotgrid(grid);
 
 engine.init();
 
-// Persistent animation (survives DOM mutations)
-engine.set('highlight', 'task-1');
+// One-shot animation (takes a DOM element)
+const card = document.querySelector('[data-id="task-1"]');
+engine.play('action', card, {
+  params: { style: 'thud', variant: 'anime-slam' },
+});
 
-// One-shot animation
-engine.play('highlight', document.querySelector('[data-id="task-2"]'));
+// Persistent animation (takes a key string — engine resolves the element)
+engine.set('persist', 'task-1', { style: 'ambient', variant: 'glow' });
+
+// Clear it later
+engine.clear('persist', 'task-1');
 ```
 
 ## Core Concepts
@@ -442,7 +474,7 @@ Plugin globals reference:
 |--------|----------------|-------------|
 | Thud (action) | `toto-fx/plugins/thud` | `TotoFXThud` |
 | Cute (action) | `toto-fx/plugins/cute` | `TotoFXCute` |
-| Death (destroy) | `toto-fx/plugins/death` | `TotoFXDeath` |
+| Destroy (action) | `toto-fx/plugins/death` | `TotoFXDeath` |
 | Creation (enter) | `toto-fx/plugins/creation` | `TotoFXCreation` |
 | In-Progress (persist) | `toto-fx/plugins/in-progress` | `TotoFXInProgress` |
 
@@ -513,7 +545,7 @@ Load a plugin, install it, play animations. `install()` calls `engine.register()
 ```
 ## Built-in Animation Variants
 
-59 animations across 4 categories. The **category**, **style**, and **variant** are the three values you pass to `play()` or `set()`:
+59 animations across 3 categories. The **category**, **style**, and **variant** are the three values you pass to `play()` or `set()`:
 
 ```javascript
 engine.play(category, el, { params: { style: style, variant: variant } });
@@ -526,22 +558,20 @@ engine.set(category, key, { style: style, variant: variant });
 |----------|-------|----------|
 | `action` | `thud` | `anime-slam`, `low-bounce`, `stratosphere`, `orbit-slam`, `crater`, `deep-crater`, `meteor`, `detonation`, `nuclear`, `shatter` |
 | `action` | `cute` | `confetti`, `flowers`, `sparkle`, `shooting-star`, `butterflies`, `rainbow`, `fireworks`, `hearts`, `cat`, `dog`, `snowfall`, `ocean`, `fireflies` |
-| `destroy` | `death` | `explode`, `incinerate`, `shredder`, `guillotine`, `heartbeat`, `sniper`, `eaten`, `lightning`, `steamroller`, `piranhas`, `woodchipper` |
+| `action` | `destroy` | `explode`, `incinerate`, `shredder`, `guillotine`, `heartbeat`, `sniper`, `eaten`, `lightning`, `steamroller`, `piranhas`, `woodchipper` |
 | `enter` | `subtle` | `fade-in`, `slide-in`, `unfold`, `typewriter`, `rise` |
 | `enter` | `dramatic` | `slam-down`, `scale-bounce`, `materialize`, `portal`, `glitch-in` |
 | `enter` | `fun` | `confetti-drop`, `sparkle-trail`, `butterfly-carry`, `bounce-in`, `grow` |
 | `persist` | `ambient` | `glow`, `pulse`, `colored-border`, `shimmer`, `breathing` |
 | `persist` | `rich` | `snake-border`, `particle-orbit`, `corner-accents`, `heartbeat`, `progress-bar` |
 
-### Action (completion)
+### Action (completion and destruction)
 
 **Thud** (10 variants): anime-slam, low-bounce, stratosphere, orbit-slam, crater, deep-crater, meteor, detonation, nuclear, shatter
 
 **Cute** (13 variants): confetti, flowers, sparkle, shooting-star, butterflies, rainbow, fireworks, hearts, cat, dog, snowfall, ocean, fireflies
 
-### Destroy (deletion)
-
-**Death** (11 variants): explode, incinerate, shredder, guillotine, heartbeat, sniper, eaten, lightning, steamroller, piranhas, woodchipper
+**Destroy** (11 variants): explode, incinerate, shredder, guillotine, heartbeat, sniper, eaten, lightning, steamroller, piranhas, woodchipper
 
 ### Enter (creation)
 
@@ -898,6 +928,7 @@ Type definitions ship at `types/index.d.ts` and are referenced in `package.json`
 
 ## Further Reading
 
+- [docs/variant-cheatsheet.md](docs/variant-cheatsheet.md) -- All 59 animation variants with descriptions
 - [docs/fx-api.md](docs/fx-api.md) -- FX utilities API reference (all 50+ exports)
 - [docs/dotgrid.md](docs/dotgrid.md) -- Dotgrid fluid simulation deep dive
 - [docs/plugin-guide.md](docs/plugin-guide.md) -- Writing custom plugins
