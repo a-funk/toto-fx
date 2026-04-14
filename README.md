@@ -54,7 +54,8 @@ morphdom(container, updatedHTML)
 ```
 
 ### Roadmap
-Apply TotoFXt to video editing tools.
+Apply TotoFX to video editing tools.
+
 Graph-based views. 
 
 ## Features
