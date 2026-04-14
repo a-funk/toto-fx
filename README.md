@@ -107,6 +107,9 @@ npm install toto-fx
 
 A complete working page. Copy this into an HTML file and open it in a browser. Clicking a card plays an anime-slam with particles, screen shake, and a dotgrid ripple across the fluid simulation background:
 
+<details>
+<summary>Full working HTML page (click to expand)</summary>
+
 ```html
 <!DOCTYPE html>
 <html>
@@ -198,6 +201,8 @@ A complete working page. Copy this into an HTML file and open it in a browser. C
 </html>
 ```
 
+</details>
+
 > **Tip:** Always enable `debug: true` during development. Without it, mistakes like misspelled variants, missing plugins, or wrong argument types fail silently. Debug mode logs warnings to the console so you can catch issues immediately.
 
 > **Sub-elements:** Many animations look for child elements inside each card to render shadows, impact bursts, done badges, and strikethrough effects. Add these four divs inside each card element:
@@ -211,7 +216,8 @@ A complete working page. Copy this into an HTML file and open it in a browser. C
 >
 > These are **optional** — animations still play without them, but the visual effects will be incomplete (no shadow during lifts, no burst on impact, etc.). The selectors are configurable via `FX.configure({ selectors: { shadow: '.my-shadow', ... } })`.
 
-### ESM equivalent
+<details>
+<summary>ESM equivalent</summary>
 
 ```javascript
 import { createEngine, createDotgrid, FX } from 'toto-fx';
@@ -221,7 +227,7 @@ const engine = createEngine({
   resolveElement: (key) => document.querySelector(`[data-id="${key}"]`),
 });
 
-thudPlugin.install(engine);
+engine.use(thudPlugin);
 
 const grid = createDotgrid({ container: '#bg', baseOpacity: 0.15 });
 grid.init();
@@ -241,6 +247,8 @@ engine.set('persist', 'task-1', { style: 'ambient', variant: 'glow' });
 // Clear it later
 engine.clear('persist', 'task-1');
 ```
+
+</details>
 
 ## Core Concepts
 
@@ -562,7 +570,8 @@ Plugin globals reference:
 | Creation (enter) | `toto-fx/plugins/creation` | `TotoFXCreation` |
 | In-Progress (persist) | `toto-fx/plugins/in-progress` | `TotoFXInProgress` |
 
-### Quickstart with built-in plugins
+<details>
+<summary>Quickstart with built-in plugins</summary>
 
 Load a plugin, install it, play animations. `engine.use()` calls `engine.register()` internally, which wires up the category, style, and variant dispatch automatically.
 
@@ -597,6 +606,8 @@ Load a plugin, install it, play animations. `engine.use()` calls `engine.registe
   engine.clear('persist', 'task-1');
 </script>
 ```
+
+</details>
 ### Write your own plugin in 60s
 ```javascript
   const myPlugin = {
@@ -802,7 +813,8 @@ import { FX } from 'toto-fx';
 FX.configure({ mobile: { particleScale: 0.5 } });
 ```
 
-## FX Quick Reference
+<details>
+<summary>FX Quick Reference</summary>
 
 The FX module provides particles, screen effects, and card animation helpers. Full API docs: [docs/fx-api.md](docs/fx-api.md).
 
@@ -848,6 +860,8 @@ const scale = FX.intensityScale(5);     // 0.3-1.0 from intensity 1-10
 FX.finalize(el, { onDone: callback });  // reset styles + call onDone
 FX.destroyCard(el);                     // hide element permanently
 ```
+
+</details>
 
 ## Themes
 
@@ -984,7 +998,8 @@ The build produces multiple bundles for different use cases:
 - Optimizing bundle size? Use `core.esm.js` + only the plugins you need.
 - Only want the fluid simulation? Use `dotgrid.min.js` standalone.
 
-## Individual Module Exports
+<details>
+<summary>Individual Module Exports</summary>
 
 For advanced use via ESM:
 
@@ -1005,6 +1020,8 @@ import { PresetSchema } from 'toto-fx';      // preset validation
 import { StateStore } from 'toto-fx';
 import { DOMObserver } from 'toto-fx';
 ```
+
+</details>
 
 ## TypeScript
 
@@ -1030,21 +1047,22 @@ Uses `WeakRef`, `MutationObserver`, `requestAnimationFrame`, `Map`, `Set`.
 
 TotoFX's dotgrid fluid simulation is built on rendering techniques from [pretext](https://github.com/chenglou/pretext) by Cheng Lou. The Semi-Lagrangian advection approach to text-based UI rendering was the direct inspiration for the engine's background system.
 
-## Security Model
+<details>
+<summary>Security Model</summary>
 
 TotoFX includes a `PluginLoader` that dynamically loads JavaScript files via `<script>` tag injection. This is by design — it enables runtime plugin discovery for IIFE/CDN deployments. **You should understand the trust implications.**
 
-### What PluginLoader does
+#### What PluginLoader does
 
 `PluginLoader.load(builtins, opts)` creates `<script src="...">` elements for each URL you pass it (via the `builtins` array or a manifest endpoint response). It does **not** validate, sanitize, or restrict these URLs. The caller controls what gets loaded.
 
-### Who controls the inputs
+#### Who controls the inputs
 
 - **`builtins` array**: You, the developer. These are URLs you pass directly in your code.
 - **`opts.manifestUrl` response**: Whatever server responds to that URL. If you point the manifest at your own API, you control it. If the endpoint is compromised or MITM'd, an attacker could inject arbitrary script URLs.
 - **`opts.validateUrl` callback**: Optional — you provide a function that gates each URL before injection.
 
-### Recommendations
+#### Recommendations
 
 1. **Use a Content Security Policy.** CSP `script-src` is the browser-level control for which domains can serve executable scripts. At minimum, restrict to `'self'` and any specific CDN origins you use:
    ```
@@ -1072,9 +1090,11 @@ TotoFX includes a `PluginLoader` that dynamically loads JavaScript files via `<s
    engine.use(thudPlugin);
    ```
 
-### What this means for the npm security flag
+#### What this means for the npm security flag
 
 Automated scanners flag `document.createElement('script')` with variable `src` as a potential injection vector. This is architecturally identical to every CDN-based module loader, `importmap`, and module federation setup. The PluginLoader is a developer-facing utility — not an end-user-facing API. The security boundary is your CSP and the trust you place in the URLs you provide.
+
+</details>
 
 ## License
 
