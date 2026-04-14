@@ -208,9 +208,13 @@ export function createDotgrid(userConfig) {
   /** @type {number} Current bleed value (updated in build()) */
   var bleed = DESKTOP_BLEED;
 
-  // ── Pause state ──────────────────────────────────────────────
+  // ── Pause / step state ───────────────────────────────────────
   var _paused = false;
+  var _noRAF = false;  // When true, render() skips RAF scheduling (for frame-by-frame step mode)
   var _pauseResumeTimer = null;
+
+  // ── Effect plugin registry ───────────────────────────────────
+  var _effectRegistry = {};
 
   // ── Grid state ───────────────────────────────────────────────
   var gridCols = 0, gridRows = 0;
@@ -672,7 +676,49 @@ export function createDotgrid(userConfig) {
     drawBaseGrid(dotSz);
 
     built = true;
+
+    // Update grid context for effect plugins (getters stay fresh across rebuilds)
+    _gridCtx = _createGridCtx();
   }
+
+  /**
+   * Create the grid context object that effect plugins receive.
+   * Uses getters so references stay valid across grid rebuilds.
+   * @returns {Object}
+   * @private
+   */
+  function _createGridCtx() {
+    return {
+      // Fluid field arrays (getters return current references after rebuild)
+      get density() { return density; },
+      get velX() { return velX; },
+      get velY() { return velY; },
+      get colorR() { return colorR; },
+      get colorG() { return colorG; },
+      get colorB() { return colorB; },
+
+      // Grid dimensions
+      get gridCols() { return gridCols; },
+      get gridRows() { return gridRows; },
+
+      // Config
+      get dotSize() { return config.dotSize; },
+      get densityMultiplier() { return config.densityMultiplier; },
+      get isMobile() { return _isMobile; },
+      get isTablet() { return _isTablet; },
+      get mobileMaxRadiusFraction() { return mobileConfig.maxRadiusFraction; },
+      get tabletMaxRadiusFraction() { return tabletConfig.maxRadiusFraction; },
+
+      // Helpers
+      v2g: v2g,
+      expandBbox: expandBbox,
+      startSim: startSim,
+      parseColor: parseColor,
+    };
+  }
+
+  /** @type {Object|null} Grid context for effect plugins */
+  var _gridCtx = null;
 
   // ── Base grid rendering ──────────────────────────────────────
 
@@ -847,7 +893,7 @@ export function createDotgrid(userConfig) {
     // When paused (during completion animations), skip sim + render
     // but keep the RAF loop alive so we resume seamlessly
     if (_paused) {
-      rafId = requestAnimationFrame(render);
+      if (!_noRAF) rafId = requestAnimationFrame(render);
       return;
     }
 
@@ -1015,7 +1061,7 @@ export function createDotgrid(userConfig) {
     if (hasEnergy) {
       // Shrink bbox to fit actual active area
       shrinkBbox();
-      rafId = requestAnimationFrame(render);
+      if (!_noRAF) rafId = requestAnimationFrame(render);
     } else {
       // Simulation exhausted — full cleanup
       simRunning = false;
@@ -1541,9 +1587,83 @@ export function createDotgrid(userConfig) {
     built = false;
   }
 
+  // ── Built-in effect dispatch table ─────────────────────────────
+  // Maps effect names to the existing closure functions.
+  // Used by runEffect() as fallback when no plugin is registered.
+
+  var _builtinEffects = {
+    ripple:  function (a) { ripple(a.cx, a.cy, a.opts); },
+    vortex:  function (a) { vortex(a.cx, a.cy, a.opts); },
+    crater:  function (a) { crater(a.cx, a.cy, (a.opts && a.opts.radius) || 160, (a.opts && a.opts.depth) || 1.0, a.opts); },
+    nuclear: function (a) { nuclear(a.cx, a.cy, a.opts); },
+    scorch:  function (a) { scorch(a.x1, a.y1, a.x2, a.y2, a.opts); },
+  };
+
+  // ── Effect plugin system ────────────────────────────────────────
+
+  /**
+   * Register a named dotgrid effect plugin.
+   * @param {string} name - Effect name (e.g., 'heart', 'shockwave')
+   * @param {Object} effect - Effect object with a `run(gridCtx, args)` method
+   */
+  function registerEffect(name, effect) {
+    _effectRegistry[name] = effect;
+  }
+
+  /**
+   * Install a dotgrid plugin. Mirrors engine.use(plugin).
+   * @param {Object} plugin - Plugin with an install(grid) method
+   */
+  function usePlugin(plugin) {
+    if (!plugin) return;
+    // Support both { install } and { default: { install } } patterns
+    var p = (plugin.install ? plugin : plugin.default) || plugin;
+    if (typeof p.install === 'function') {
+      p.install(publicApi);
+    }
+  }
+
+  /**
+   * Run a named dotgrid effect. Checks the plugin registry first,
+   * then falls back to built-in effects.
+   * @param {string} name - Effect name
+   * @param {Object} args - Arguments object (e.g., { cx, cy, opts })
+   * @returns {boolean} true if the effect was found and executed
+   */
+  function runEffect(name, args) {
+    // Plugin registry takes priority
+    var effect = _effectRegistry[name];
+    if (effect && typeof effect.run === 'function') {
+      if (!_gridCtx) return false;
+      effect.run(_gridCtx, args);
+      return true;
+    }
+    // Fall back to built-in effects
+    var builtin = _builtinEffects[name];
+    if (builtin) {
+      builtin(args);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * List all available effect names (built-in + registered plugins).
+   * @returns {string[]}
+   */
+  function getEffectNames() {
+    var names = Object.keys(_builtinEffects);
+    for (var k in _effectRegistry) {
+      if (_effectRegistry.hasOwnProperty(k) && names.indexOf(k) === -1) {
+        names.push(k);
+      }
+    }
+    return names;
+  }
+
   // ── Public API ───────────────────────────────────────────────
 
-  return {
+  var publicApi = {
     init: init,
     build: build,
     ripple: ripple,
@@ -1558,7 +1678,32 @@ export function createDotgrid(userConfig) {
     resume: resume,
     isIdle: isIdle,
     destroy: destroy,
+
+    /**
+     * Step the simulation forward by one tick and redraw.
+     * Use this for frame-by-frame rendering (e.g., Remotion, tests)
+     * instead of the RAF-based sim loop. Calls render() with RAF
+     * suppressed so no animation loop is started.
+     */
+    step: function () {
+      if (!built || !canvasEl) return;
+      if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+      simRunning = false;
+      _noRAF = true;
+      render();
+      _noRAF = false;
+      simRunning = false;
+      rafId = null;
+    },
+
+    // Effect plugin system
+    registerEffect: registerEffect,
+    use: usePlugin,
+    runEffect: runEffect,
+    getEffectNames: getEffectNames,
   };
+
+  return publicApi;
 }
 
 // ── Singleton convenience ──────────────────────────────────────

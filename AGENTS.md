@@ -34,7 +34,7 @@ src/
 
   plugins/
     thud.js             10 action variants (slam, crater, meteor, nuclear, ...)
-    death.js            11 destroy variants (explode, shredder, piranhas, ...)
+    death.js            11 destroy variants under 'action' category (explode, shredder, piranhas, ...)
     cute.js             13 action variants (confetti, fireworks, hearts, ...)
     creation.js         15 enter variants (fade-in, portal, glitch-in, ...)
     in-progress.js      10 persist variants (glow, pulse, snake-border, ...)
@@ -47,7 +47,7 @@ src/
 
 ## Key Concepts
 
-**Categories** are the top-level animation types: `action`, `destroy`, `enter`, `persist`, `container`, `containerExit`. Each has a `play(el, params)` function. Register with `engine.registerCategory()`.
+**Categories** are the top-level animation types: `action`, `enter`, `persist`, `container`, `containerExit`. Each has a `play(el, params)` function. Register with `engine.registerCategory()`. Destroy variants are registered under `action` with style `destroy`.
 
 **Variants** are specific animations within a category. The `thud` style has `anime-slam`, `meteor`, `nuclear`, etc. Register with `engine.register(category, style, variants)` or via plugins.
 
@@ -88,8 +88,7 @@ Build outputs:
 
 | Category | Old Name (Toto internal) | Purpose |
 |----------|--------------------------|---------|
-| `action` | completion | Task completed, item acted on |
-| `destroy` | deletion | Item removed/deleted |
+| `action` | completion | Task completed, item acted on, or item destroyed (destroy style) |
 | `enter` | creation | New item appears |
 | `persist` | inProgress | Long-running state indicator |
 | `container` | list | Container-level animation |

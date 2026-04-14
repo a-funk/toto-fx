@@ -52,17 +52,18 @@ The `ctx` object passed to `play(el, ctx)` contains:
 
 ```js
 {
-  params: {},        // Merged user overrides on top of your param defaults
-  speed: 1,          // Global speed multiplier (>1 = faster)
-  intensity: 5,      // 1-10 intensity scale
-  onDone: Function,  // MUST be called when animation completes
-  elapsed: 0,        // ms since animation started (for phase continuity on reconnect)
-  style: 'elastic',  // Resolved style name
-  variant: 'bounce', // Resolved variant name
-  key: 'item-42',    // Element key (data-anim-id)
-  groupId: 'list-7', // Group/list ID
-  helpers: FX,       // The FX utility object (when available)
-  styleOverride: null // Style/variant override from caller
+  params: {},           // Merged user overrides on top of your param defaults
+  speed: 1,             // Global speed multiplier (>1 = faster)
+  intensity: 5,         // 1-10 intensity scale
+  onDone: Function,     // MUST be called when animation completes
+  elapsed: 0,           // ms since animation started (for phase continuity on reconnect)
+  style: 'elastic',     // Resolved style name
+  variant: 'bounce',    // Resolved variant name
+  key: 'item-42',       // Element key (data-anim-id)
+  groupId: 'list-7',    // Group/list ID
+  helpers: FX,          // The FX utility object (when available)
+  styleOverride: null,  // Style/variant override from caller
+  reducedMotion: false, // true when user prefers reduced motion (engine-level setting)
 }
 ```
 
@@ -339,10 +340,9 @@ myPlugin.play(el, { params: {}, helpers: mockFX, onDone: function () {} });
 
 3. **Respect speed scaling** -- divide durations by `ctx.speed`, or use `FX.resolveParams()` which auto-scales `unit: 'ms'` params.
 
-4. **Handle `prefers-reduced-motion`** -- check the media query and skip or simplify:
+4. **Handle `prefers-reduced-motion`** -- use the engine-provided `ctx.reducedMotion` flag (set when the engine is configured with `reducedMotion: 'respect'`). No need to query the media query yourself:
    ```js
-   var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-   if (reduced) {
+   if (ctx.reducedMotion) {
      // Skip particles, use opacity fade instead of physics
      el.style.opacity = '0';
      setTimeout(function () { ctx.onDone(); }, 200);
@@ -362,6 +362,8 @@ myPlugin.play(el, { params: {}, helpers: mockFX, onDone: function () {} });
 
 10. **Use the compositor for canvas animations** -- never run your own `requestAnimationFrame` loop on the FX canvas. Use `FX.registerFxDraw()` instead (see Rendering Layers below).
 
+11. **Errors are caught, but don't rely on it** -- the reconciler wraps `_startElement` in try/catch so one broken plugin won't kill other animations. But you should still handle your own errors gracefully. The error boundary is a safety net, not a control flow mechanism.
+
 ---
 
 ## Rendering Layers
@@ -374,7 +376,7 @@ Raw canvas access for bespoke frame-by-frame rendering. The compositor runs one 
 
 **Use when:** your animation needs direct canvas control -- complex scene rendering, multi-phase state machines, coordinated ASCII art, gradients, stroke paths, rotated text blocks.
 
-**Built-in users:** all death variants (explosions, lightning bolts, steamroller, piranhas), all cute variants (fireworks, butterflies, snowfall).
+**Built-in users:** all destroy variants (explosions, lightning bolts, steamroller, piranhas), all cute variants (fireworks, butterflies, snowfall).
 
 ```js
 play: function (el, ctx) {
@@ -454,7 +456,7 @@ play: function (el, ctx) {
 
 ### Combining Layers
 
-Most built-in animations combine layers. A thud animation uses Layer 3 (card lift via CSS transforms) + Layer 2 (impact particles). A death animation uses Layer 1 (scene rendering on FX canvas) + Layer 3 (card style manipulation like `clipPath`, `opacity`). You can freely mix layers -- they render on separate surfaces and don't interfere.
+Most built-in animations combine layers. A thud animation uses Layer 3 (card lift via CSS transforms) + Layer 2 (impact particles). A destroy animation uses Layer 1 (scene rendering on FX canvas) + Layer 3 (card style manipulation like `clipPath`, `opacity`). You can freely mix layers -- they render on separate surfaces and don't interfere.
 
 ### Canvas Stack (bottom to top)
 

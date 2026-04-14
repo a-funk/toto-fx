@@ -1,0 +1,28 @@
+{
+  "name": "toto-fx-react",
+  "version": "0.2.0",
+  "description": "React integration for toto-fx animation engine",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist/",
+    "src/"
+  ],
+  "scripts": {
+    "build": "echo 'TODO: configure bundler (tsup, rollup, etc.)'"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18",
+    "toto-fx": ">=0.2.0"
+  },
+  "license": "(MIT OR Apache-2.0)"
+}

@@ -1391,9 +1391,15 @@ export const allVariants = [
  *   registerCategory(category, style, variants) method.
  */
 export function install(registry) {
-  registry.registerCategory('enter', 'subtle', subtleVariants);
-  registry.registerCategory('enter', 'dramatic', dramaticVariants);
-  registry.registerCategory('enter', 'fun', funVariants);
+  if (typeof registry.register === 'function') {
+    registry.register('enter', 'subtle', subtleVariants);
+    registry.register('enter', 'dramatic', dramaticVariants);
+    registry.register('enter', 'fun', funVariants);
+  } else if (typeof registry.registerCategory === 'function') {
+    registry.registerCategory('enter', 'subtle', subtleVariants);
+    registry.registerCategory('enter', 'dramatic', dramaticVariants);
+    registry.registerCategory('enter', 'fun', funVariants);
+  }
 }
 
 

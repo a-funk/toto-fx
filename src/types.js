@@ -35,6 +35,9 @@
  * @property {ElementResolver} [resolve] - Key-to-element resolver for this category.
  *   Falls back to the engine's default resolver if not provided.
  * @property {CategoryPlayFunction} play - Animation trigger function.
+ * @property {CategoryStopFunction} [stop] - Teardown function called when animation
+ *   is cleared via engine.clear() or stopped by the reconciler before re-application.
+ *   Should undo whatever play() did (remove classes, clear inline styles, etc.).
  */
 
 /**
@@ -42,6 +45,13 @@
  * @callback CategoryPlayFunction
  * @param {HTMLElement} el - The element to animate
  * @param {CategoryPlayParams} params - Animation parameters
+ */
+
+/**
+ * Called by the engine to stop/teardown an animation on an element.
+ * Should undo whatever play() did (remove classes, clear inline styles, etc.).
+ * @callback CategoryStopFunction
+ * @param {HTMLElement} el - The element to clean up
  */
 
 /**

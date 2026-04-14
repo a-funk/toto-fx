@@ -38,9 +38,9 @@
 
 // Core engine
 export { createEngine } from './engine.js';
-export { StateStore } from './state-store.js';
-export { DOMObserver } from './dom-observer.js';
-export { createReconciler } from './reconciler.js';
+export { createStateStore, StateStore } from './state-store.js';
+export { createDOMObserver, DOMObserver } from './dom-observer.js';
+export { createReconciler, ANIM_KEY } from './reconciler.js';
 export { createRefreshCoordinator } from './refresh-coordinator.js';
 export { createLayoutAnimator } from './layout-animator.js';
 
