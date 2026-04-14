@@ -305,9 +305,24 @@ engine.registerCategory('pulse', {
 
 ### register() vs registerCategory()
 
-These serve different purposes:
+**`engine.register(category, style, variants)`** is the standard way to add animations. It stores a map of variant plugin objects and auto-creates the dispatch logic so `engine.play()`, `engine.set()`, and `engine.clear()` all work immediately. All built-in plugins use this.
 
-**`engine.registerCategory(name, descriptor)`** registers a top-level animation category (like `action`, `destroy`, `enter`, `persist`). You provide a `play` function directly. Use this for custom one-off animations.
+```javascript
+// Register variants under a category and style
+engine.register('action', 'thud', {
+  'anime-slam': { name: 'anime-slam', play: (el, ctx) => { ... }, cleanup: (el) => { ... } },
+  'meteor':     { name: 'meteor',     play: (el, ctx) => { ... }, cleanup: (el) => { ... } },
+});
+
+// Now these just work:
+engine.play('action', el, { params: { style: 'thud', variant: 'anime-slam' } });
+engine.set('persist', 'item-1', { style: 'ambient', variant: 'glow' });
+engine.clear('persist', 'item-1');
+```
+
+Multiple `register()` calls for the same category are fine -- for example, the thud and cute plugins both register under `'action'`. The engine dispatches by looking up `category → style → variant` at call time.
+
+**`engine.registerCategory(name, descriptor)`** is for custom one-off categories where you write your own `play` function directly. You don't need this for built-in plugins.
 
 ```javascript
 // Custom category with a play function
@@ -319,16 +334,6 @@ engine.registerCategory('flash', {
       params.onDone();
     }, 200);
   },
-});
-```
-
-**`engine.register(category, style, variants)`** registers variant functions within an existing category. A style groups related variants under a category -- for example, `'thud'` style with `'anime-slam'` and `'meteor'` variants under the `'action'` category. The built-in plugins use `register()`.
-
-```javascript
-// Register variants under a category and style
-engine.register('action', 'thud', {
-  'anime-slam': { name: 'anime-slam', play: (el, params) => { ... } },
-  'meteor':     { name: 'meteor',     play: (el, params) => { ... } },
 });
 ```
 
@@ -419,11 +424,12 @@ Plugin globals reference:
 
 ### Quickstart with built-in plugins
 
-The most common use case: load everything, play an anime-slam on click.
+Load a plugin, install it, play animations. `install()` calls `engine.register()` which wires up the category, style, and variant dispatch automatically.
 
 ```html
 <script src="dist/toto-fx.min.js"></script>
 <script src="dist/plugins/thud.min.js"></script>
+<script src="dist/plugins/in-progress.min.js"></script>
 <script>
   var engine = TotoFX.createEngine({
     resolveElement: function (key) {
@@ -431,11 +437,11 @@ The most common use case: load everything, play an anime-slam on click.
     },
   });
 
-  // Install the thud plugin (adds 'action' category with 10 slam variants)
   TotoFXThud.install(engine);
+  TotoFXInProgress.install(engine);
   engine.init();
 
-  // Play anime-slam on any element
+  // One-shot animation (takes an element)
   document.querySelectorAll('.card').forEach(function (card) {
     card.addEventListener('click', function () {
       engine.play('action', card, {
@@ -443,6 +449,12 @@ The most common use case: load everything, play an anime-slam on click.
       });
     });
   });
+
+  // Persistent animation (takes a key string — engine resolves the element)
+  engine.set('persist', 'task-1', { style: 'ambient', variant: 'glow' });
+
+  // Clear it later
+  engine.clear('persist', 'task-1');
 </script>
 ```
 ### Write your own plugin in 60s
@@ -477,7 +489,25 @@ The most common use case: load everything, play an anime-slam on click.
 ```
 ## Built-in Animation Variants
 
-59 animations across 4 categories:
+59 animations across 4 categories. The **category**, **style**, and **variant** are the three values you pass to `play()` or `set()`:
+
+```javascript
+engine.play(category, el, { params: { style: style, variant: variant } });
+engine.set(category, key, { style: style, variant: variant });
+```
+
+### Quick reference
+
+| Category | Style | Variants |
+|----------|-------|----------|
+| `action` | `thud` | `anime-slam`, `low-bounce`, `stratosphere`, `orbit-slam`, `crater`, `deep-crater`, `meteor`, `detonation`, `nuclear`, `shatter` |
+| `action` | `cute` | `confetti`, `flowers`, `sparkle`, `shooting-star`, `butterflies`, `rainbow`, `fireworks`, `hearts`, `cat`, `dog`, `snowfall`, `ocean`, `fireflies` |
+| `destroy` | `death` | `explode`, `incinerate`, `shredder`, `guillotine`, `heartbeat`, `sniper`, `eaten`, `lightning`, `steamroller`, `piranhas`, `woodchipper` |
+| `enter` | `subtle` | `fade-in`, `slide-in`, `unfold`, `typewriter`, `rise` |
+| `enter` | `dramatic` | `slam-down`, `scale-bounce`, `materialize`, `portal`, `glitch-in` |
+| `enter` | `fun` | `confetti-drop`, `sparkle-trail`, `butterfly-carry`, `bounce-in`, `grow` |
+| `persist` | `ambient` | `glow`, `pulse`, `colored-border`, `shimmer`, `breathing` |
+| `persist` | `rich` | `snake-border`, `particle-orbit`, `corner-accents`, `heartbeat`, `progress-bar` |
 
 ### Action (completion)
 
