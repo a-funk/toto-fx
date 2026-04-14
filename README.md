@@ -246,7 +246,16 @@ engine.clear('persist', 'task-1');
 
 ### State Store
 
-Each engine instance has its own isolated state store. Multiple engines on the same page (e.g., a main content area and a modal) won't collide.
+Each engine instance has its own isolated state store. Multiple engines on the same page (e.g., a main content area and a modal) won't collide — each gets independent state, observers, and reconciliation:
+
+```javascript
+var mainEngine = TotoFX.createEngine({ root: document.getElementById('main') });
+var modalEngine = TotoFX.createEngine({ root: document.getElementById('modal') });
+
+// Same key, different engines — no collision
+mainEngine.set('persist', 'item-1', { style: 'ambient', variant: 'glow' });
+modalEngine.set('persist', 'item-1', { style: 'rich', variant: 'snake-border' });
+```
 
 The engine maintains two types of animation state:
 
@@ -342,6 +351,50 @@ Your `stop()` function is called in these situations:
 3. **DOM element removed** — cleanup via `MutationObserver` (category stop fires if the animation handle was set)
 
 The `stop` callback should be the inverse of `play` — remove classes, clear inline styles, cancel timers. Without `stop`, `engine.clear()` removes internal state but leaves the visual effect on the element.
+
+### Engine Events
+
+The engine emits lifecycle events you can subscribe to for debugging, progress tracking, or coordinating with external systems:
+
+```javascript
+engine.on('animationStart', function (e) {
+  console.log(e.type + ' ' + e.category + '/' + e.key + ' started');
+});
+
+engine.on('animationEnd', function (e) {
+  console.log(e.category + '/' + e.key + ' ended');
+});
+
+engine.on('reconcile', function (e) {
+  console.log(e.persistentCount + ' persistent, ' + e.transientCount + ' transient');
+});
+```
+
+Three events are available:
+
+| Event | Data | Fires when |
+|-------|------|------------|
+| `animationStart` | `{ type, category, key, element }` | `set()` or `play()` starts an animation |
+| `animationEnd` | `{ type, category, key, element }` | `clear()` or `onDone()` ends an animation |
+| `reconcile` | `{ persistentCount, transientCount }` | A reconciliation pass completes |
+
+Listener errors are caught internally and never break the engine. Unsubscribe with `engine.off(event, fn)`.
+
+For full documentation with use cases, see [docs/engine-events.md](docs/engine-events.md).
+
+### Accessibility
+
+The engine supports `prefers-reduced-motion` via the `reducedMotion` config option:
+
+```javascript
+var engine = TotoFX.createEngine({
+  reducedMotion: 'respect', // default: 'ignore'
+});
+```
+
+When set to `'respect'`, the engine checks the user's system preference and passes `reducedMotion: true` to every plugin `play()` call. Plugins should skip particles, screen shake, and flashes when this flag is set, falling back to simpler alternatives like opacity fades.
+
+For plugin author guidelines and implementation details, see [docs/accessibility.md](docs/accessibility.md).
 
 ### Categories
 
@@ -963,6 +1016,9 @@ Type definitions ship at `types/index.d.ts` and are referenced in `package.json`
 - [docs/fx-api.md](docs/fx-api.md) -- FX utilities API reference (all 50+ exports)
 - [docs/dotgrid.md](docs/dotgrid.md) -- Dotgrid fluid simulation deep dive
 - [docs/plugin-guide.md](docs/plugin-guide.md) -- Writing custom plugins
+- [docs/engine-events.md](docs/engine-events.md) -- Engine lifecycle events (on/off API)
+- [docs/accessibility.md](docs/accessibility.md) -- Reduced motion support and plugin guidelines
+- [docs/migration-v1.1.md](docs/migration-v1.1.md) -- Migrating from v1.0 to v1.1
 
 ## Browser Support
 
