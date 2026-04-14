@@ -146,26 +146,36 @@ export function createReconciler(store, config, categories, opts) {
         return;
       }
 
-      // Fallback: use variant lookup for categories with start/stop objects
+      // Fallback: use variant lookup for categories without a category descriptor
       if (!opts.lookupVariant) return;
       const variant = opts.lookupVariant(state.category, state.style, state.variant);
-      if (!variant || !variant.start) return;
+      if (!variant) return;
 
-      const handle = variant.start(el, state.params);
-
-      // Apply phase offset if element was replaced
-      if (elapsed > 0 && handle) {
-        applyPhaseOffset(el, handle, elapsed, opts.tickerRef || null);
+      if (typeof variant.play === 'function') {
+        variant.play(el, {
+          elapsed: elapsed,
+          style: state.style,
+          variant: state.variant,
+          params: state.params,
+          key: key,
+          reducedMotion: opts.isReducedMotion ? opts.isReducedMotion() : false,
+        });
+      } else if (typeof variant.start === 'function') {
+        // Legacy compat: some third-party variants may use start()
+        const handle = variant.start(el, state.params);
+        if (elapsed > 0 && handle) {
+          applyPhaseOffset(el, handle, elapsed, opts.tickerRef || null);
+        }
       }
 
-      // Store unified handle
-      el[ANIM_KEY] = {
-        handle: handle,
-        variant: state.variant,
-        _fxVersion: state.version,
-        _fxCategory: state.category,
-        _fxStyle: state.style,
-      };
+      // Store unified handle (may already have been set by variant.play())
+      if (!el[ANIM_KEY]) {
+        el[ANIM_KEY] = {};
+      }
+      el[ANIM_KEY]._fxVersion = state.version;
+      el[ANIM_KEY]._fxCategory = state.category;
+      el[ANIM_KEY]._fxStyle = state.style;
+      el[ANIM_KEY]._fxVariant = state.variant;
     },
 
     /**

@@ -2270,7 +2270,11 @@ const allVariants = {
  * @param {Object} registry - An AnimationRegistry instance with registerCategory().
  */
 export function install(registry) {
-  registry.registerCategory('destroy', 'death', allVariants);
+  if (typeof registry.register === 'function') {
+    registry.register('destroy', 'death', allVariants);
+  } else if (typeof registry.registerCategory === 'function') {
+    registry.registerCategory('destroy', 'death', allVariants);
+  }
 }
 
 export const deathPlugin = {

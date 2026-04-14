@@ -2211,7 +2211,11 @@ export const variants = {
  * @param {Object} registry - An AnimationRegistry (or compatible object with registerCategory).
  */
 export function install(registry) {
-  registry.registerCategory('action', 'cute', variants);
+  if (typeof registry.register === 'function') {
+    registry.register('action', 'cute', variants);
+  } else if (typeof registry.registerCategory === 'function') {
+    registry.registerCategory('action', 'cute', variants);
+  }
 }
 
 /**

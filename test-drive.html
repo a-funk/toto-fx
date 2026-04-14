@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>TotoFX Test Drive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #1a1a2e;
+      color: #e0e0e0;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    #dotgrid-bg {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 0;
+    }
+
+    #content {
+      position: relative;
+      z-index: 1;
+      padding: 40px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    h1 { font-size: 24px; margin-bottom: 8px; color: #c0c0ff; }
+    .subtitle { font-size: 13px; color: #666; margin-bottom: 24px; }
+
+    #card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .card {
+      padding: 20px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+      cursor: pointer;
+      transition: border-color 0.2s;
+      position: relative;
+    }
+    .card:hover { border-color: rgba(255,255,255,0.2); }
+    .card .label { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .card .desc { font-size: 11px; color: #888; }
+    .card .category {
+      font-size: 10px; text-transform: uppercase;
+      letter-spacing: 1px; color: #555; margin-bottom: 8px;
+    }
+
+    .fx-shadow {
+      position: absolute; bottom: -4px; left: 10%; right: 10%;
+      height: 8px; background: rgba(0,0,0,0.3);
+      border-radius: 50%; opacity: 0; pointer-events: none;
+    }
+    .fx-burst {
+      position: absolute; inset: 0; border-radius: 10px;
+      opacity: 0; pointer-events: none;
+    }
+
+    .controls { display: flex; gap: 12px; margin-bottom: 24px; }
+    .controls button {
+      padding: 10px 24px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.06);
+      color: #c0c0ff; font-family: inherit; font-size: 13px;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .controls button:hover { background: rgba(255,255,255,0.12); }
+
+    #fx-flash-overlay {
+      position: fixed; inset: 0; pointer-events: none;
+      z-index: 10000; opacity: 0;
+    }
+
+    #log {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      max-height: 150px; overflow-y: auto;
+      background: rgba(0,0,0,0.85); padding: 8px 16px;
+      font-size: 11px; color: #888; z-index: 10001;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    #log .entry { margin: 2px 0; }
+    #log .error { color: #ff6666; }
+    #log .success { color: #66ff88; }
+  </style>
+</head>
+<body>
+
+<div id="dotgrid-bg"></div>
+<div id="fx-flash-overlay"></div>
+
+<div id="content">
+  <h1>TotoFX Test Drive</h1>
+  <p class="subtitle">Click each card to trigger its animation. Dotgrid background reacts.</p>
+
+  <div class="controls">
+    <button id="btn-rise-all">Rise All</button>
+    <button id="btn-fall-all">Fall All</button>
+  </div>
+
+  <div id="card-grid"></div>
+</div>
+
+<div id="log"></div>
+
+<!-- Core + plugins via documented IIFE pattern -->
+<script src="dist/toto-fx.min.js"></script>
+<script src="dist/plugins/thud.min.js"></script>
+<script src="dist/plugins/cute.min.js"></script>
+<script src="dist/plugins/death.min.js"></script>
+<script src="dist/plugins/creation.min.js"></script>
+<script src="dist/plugins/in-progress.min.js"></script>
+
+<script>
+// ── Logging ──────────────────────────────────────────────
+var logEl = document.getElementById('log');
+function log(msg, type) {
+  var div = document.createElement('div');
+  div.className = 'entry' + (type ? ' ' + type : '');
+  div.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+  logEl.appendChild(div);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// ── Card definitions ─────────────────────────────────────
+var cards = [
+  { id: 'card-1',  label: 'Anime Slam',              desc: 'Action / Thud',      category: 'action',  style: 'thud',     variant: 'anime-slam' },
+  { id: 'card-2',  label: 'Meteor',                  desc: 'Action / Thud',      category: 'action',  style: 'thud',     variant: 'meteor' },
+  { id: 'card-3',  label: 'Confetti',                desc: 'Action / Cute',      category: 'action',  style: 'cute',     variant: 'confetti' },
+  { id: 'card-4',  label: 'Sparkle',                 desc: 'Action / Cute',      category: 'action',  style: 'cute',     variant: 'sparkle' },
+  { id: 'card-5',  label: 'Explode',                 desc: 'Destroy / Death',    category: 'destroy', style: 'death',    variant: 'explode' },
+  { id: 'card-6',  label: 'Lightning',               desc: 'Destroy / Death',    category: 'destroy', style: 'death',    variant: 'lightning' },
+  { id: 'card-7',  label: 'Slam Down',               desc: 'Enter / Dramatic',   category: 'enter',   style: 'dramatic', variant: 'slam-down' },
+  { id: 'card-8',  label: 'Portal',                  desc: 'Enter / Dramatic',   category: 'enter',   style: 'dramatic', variant: 'portal' },
+  { id: 'card-9',  label: 'Glow (toggle)',           desc: 'Persist / Ambient',  category: 'persist', style: 'ambient',  variant: 'glow',           persist: true },
+  { id: 'card-10', label: 'Particle Orbit (toggle)', desc: 'Persist / Rich',     category: 'persist', style: 'rich',     variant: 'particle-orbit', persist: true },
+];
+
+// ── Create card elements ─────────────────────────────────
+var gridEl = document.getElementById('card-grid');
+
+function createCardElements() {
+  gridEl.innerHTML = '';
+  cards.forEach(function (c) {
+    var div = document.createElement('div');
+    div.className = 'card';
+    div.setAttribute('data-id', c.id);
+    div.innerHTML =
+      '<div class="category">' + c.category + '</div>' +
+      '<div class="label">' + c.label + '</div>' +
+      '<div class="desc">' + c.desc + '</div>' +
+      '<div class="fx-shadow"></div>' +
+      '<div class="fx-burst"></div>';
+    gridEl.appendChild(div);
+  });
+}
+
+createCardElements();
+
+// ── Engine setup — follows the documented pattern exactly ─
+var engine = TotoFX.createEngine({
+  resolveElement: function (key) {
+    return document.querySelector('[data-id="' + key + '"]');
+  },
+  debug: true,
+});
+
+// Install plugins
+TotoFXThud.install(engine);
+TotoFXCute.install(engine);
+TotoFXDeath.install(engine);
+TotoFXCreation.install(engine);
+TotoFXInProgress.install(engine);
+
+engine.init();
+log('Engine initialized with ' + engine.getCategoryNames().join(', ') + ' categories', 'success');
+
+// ── Dotgrid ──────────────────────────────────────────────
+var grid = TotoFX.createDotgrid({
+  container: '#dotgrid-bg',
+  dotSize: 28,
+  fontSize: 14,
+  baseChar: '\u00b7',
+  baseOpacity: 0.15,
+  baseColor: [100, 100, 140],
+  densityDecay: 0.985,
+  velDecay: 0.92,
+  palette: 'katakana',
+  glowEnabled: true,
+});
+grid.init();
+TotoFX.FX.setDotgrid(grid);
+log('Dotgrid + FX wired up', 'success');
+
+// ── Helpers ──────────────────────────────────────────────
+function getCardCenter(el) {
+  var rect = el.getBoundingClientRect();
+  return { cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2 };
+}
+
+var persistState = {};
+
+// ── Click handlers ───────────────────────────────────────
+gridEl.addEventListener('click', function (e) {
+  var cardEl = e.target.closest('.card');
+  if (!cardEl) return;
+
+  var cardId = cardEl.getAttribute('data-id');
+  var cardDef = cards.find(function (c) { return c.id === cardId; });
+  if (!cardDef) return;
+
+  var pos = getCardCenter(cardEl);
+
+  if (cardDef.persist) {
+    // Toggle persistent animation
+    if (persistState[cardId]) {
+      engine.clear('persist', cardId);
+      persistState[cardId] = false;
+      log('Cleared: ' + cardDef.variant, 'success');
+    } else {
+      engine.set('persist', cardId, { style: cardDef.style, variant: cardDef.variant });
+      persistState[cardId] = true;
+      log('Set: ' + cardDef.variant, 'success');
+    }
+    TotoFX.FX.doDotgridRipple(pos.cx, pos.cy, { radius: 200, push: 8, density: 0.4 });
+    return;
+  }
+
+  // One-shot animation
+  engine.play(cardDef.category, cardEl, {
+    params: { style: cardDef.style, variant: cardDef.variant },
+  });
+  log('Played: ' + cardDef.category + '/' + cardDef.style + '/' + cardDef.variant, 'success');
+
+  // Dotgrid reaction
+  if (cardDef.category === 'action') {
+    TotoFX.FX.doDotgridCrater(pos.cx, pos.cy, 100, 1, { cracks: 6 });
+  } else if (cardDef.category === 'destroy') {
+    TotoFX.FX.doDotgridNuclear(pos.cx, pos.cy, { blastRadius: 250, color: '#C45A3C' });
+  } else if (cardDef.category === 'enter') {
+    TotoFX.FX.doDotgridRipple(pos.cx, pos.cy, { radius: 300, push: 12, density: 0.6, color: '#4A90D9' });
+  }
+});
+
+// ── Rise All ─────────────────────────────────────────────
+document.getElementById('btn-rise-all').addEventListener('click', function () {
+  log('Rise All...');
+  Object.keys(persistState).forEach(function (key) {
+    if (persistState[key]) { engine.clear('persist', key); persistState[key] = false; }
+  });
+  gridEl.innerHTML = '';
+  setTimeout(function () {
+    createCardElements();
+    gridEl.querySelectorAll('.card').forEach(function (cardEl, i) {
+      setTimeout(function () {
+        var variant = (i % 2 === 0) ? 'slam-down' : 'portal';
+        engine.play('enter', cardEl, { params: { style: 'dramatic', variant: variant } });
+        var pos = getCardCenter(cardEl);
+        TotoFX.FX.doDotgridRipple(pos.cx, pos.cy, { radius: 150, push: 6, density: 0.3, color: '#6688ff' });
+      }, i * 120);
+    });
+  }, 300);
+});
+
+// ── Fall All ─────────────────────────────────────────────
+document.getElementById('btn-fall-all').addEventListener('click', function () {
+  log('Fall All...');
+  gridEl.querySelectorAll('.card').forEach(function (cardEl, i) {
+    setTimeout(function () {
+      var variant = (i % 2 === 0) ? 'explode' : 'lightning';
+      engine.play('destroy', cardEl, { params: { style: 'death', variant: variant } });
+      var pos = getCardCenter(cardEl);
+      TotoFX.FX.doDotgridNuclear(pos.cx, pos.cy, { blastRadius: 200, color: '#ff4422' });
+    }, i * 200);
+  });
+});
+
+// Initial dotgrid ripple
+setTimeout(function () {
+  grid.ripple(window.innerWidth / 2, window.innerHeight / 2, {
+    radius: 400, push: 10, density: 0.5, color: '#4466aa'
+  });
+}, 500);
+</script>
+</body>
+</html>

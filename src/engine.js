@@ -270,7 +270,7 @@ export function createEngine(userConfig) {
     set: function (category, key, params) {
       if (_config.debug) {
         if (typeof key !== 'string') _warn('set() expects a string key, got ' + typeof key + '. Did you mean play()?');
-        if (!_categories[category] && !_store._persistent.has(key)) _warn('Category "' + category + '" is not registered. Call registerCategory() first.');
+        if (!_categories[category] && !_store._persistent.has(key)) _warn('Category "' + category + '" is not registered. Call register() or registerCategory() first.');
       }
       params = params || {};
 
@@ -355,7 +355,7 @@ export function createEngine(userConfig) {
       if (_config.debug) {
         if (!el || typeof el.nodeType === 'undefined') _warn('play() expects a DOM element, got ' + typeof el + '. Did you mean set()?');
         else if (!el.isConnected) _warn('play() called on a detached element. Animation will not be visible.');
-        if (!_categories[category]) _warn('Category "' + category + '" is not registered. Call registerCategory() first.');
+        if (!_categories[category]) _warn('Category "' + category + '" is not registered. Call register() or registerCategory() first.');
       }
       opts = opts || {};
       const key = el && el.dataset ? (el.dataset.animId || el.id || '') : '';
@@ -623,15 +623,60 @@ export function createEngine(userConfig) {
 
     /**
      * Register animation variants under a category and style.
-     * @param {string} category
-     * @param {string} style
-     * @param {Object} variants
+     *
+     * Stores variants in the internal registry and auto-creates a category
+     * dispatcher if one doesn't exist yet. The dispatcher reads the registry
+     * dynamically, so multiple register() calls for the same category
+     * (e.g. thud + cute both under 'action') work without merge logic.
+     *
+     * @param {string} category - e.g. 'action', 'destroy', 'enter', 'persist'
+     * @param {string} style - e.g. 'thud', 'cute', 'death', 'dramatic'
+     * @param {Object} variants - Map of variant name to plugin object with play() and cleanup()
      */
     register: function (category, style, variants) {
-      // Store in internal registry for standalone use
       if (!this._variantRegistry) this._variantRegistry = {};
       if (!this._variantRegistry[category]) this._variantRegistry[category] = {};
       this._variantRegistry[category][style] = variants;
+
+      // Auto-create a category dispatcher if one doesn't exist yet.
+      // The dispatcher looks up variants from _variantRegistry at call time,
+      // so styles added by later register() calls are picked up automatically.
+      if (!_categories[category]) {
+        var self = this;
+        _categories[category] = {
+          play: function (el, ctx) {
+            var s = (ctx.params && ctx.params.style) || ctx.style || '';
+            var v = (ctx.params && ctx.params.variant) || ctx.variant || '';
+            var reg = self._variantRegistry;
+            var styleMap = reg && reg[category] && reg[category][s];
+            var variantObj = styleMap && styleMap[v];
+            if (!variantObj || typeof variantObj.play !== 'function') {
+              if (_config.debug) {
+                _warn('No variant "' + v + '" in ' + category + '/' + s +
+                  '. Available styles: ' + (reg && reg[category] ? Object.keys(reg[category]).join(', ') : 'none'));
+              }
+              if (ctx.onDone) ctx.onDone();
+              return;
+            }
+            variantObj.play(el, ctx);
+            el[ANIM_KEY] = {
+              _fxCategory: category,
+              _fxStyle: s,
+              _fxVariant: v,
+            };
+          },
+          stop: function (el) {
+            var handle = el[ANIM_KEY];
+            if (!handle) return;
+            var reg = self._variantRegistry;
+            var styleMap = reg && reg[category] && reg[category][handle._fxStyle];
+            var variantObj = styleMap && styleMap[handle._fxVariant];
+            if (variantObj && typeof variantObj.cleanup === 'function') {
+              variantObj.cleanup(el);
+            }
+          },
+        };
+      }
     },
 
     /**
