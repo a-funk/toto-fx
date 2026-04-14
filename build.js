@@ -21,7 +21,12 @@ const plugins = [
 
 // Dotgrid effect plugin entry points
 const dotgridPlugins = [
-  { name: 'heart', entry: 'src/dotgrid-plugins/heart.js', global: 'TotoFXDotgridHeart' },
+  { name: 'ripple',  entry: 'src/dotgrid-plugins/ripple.js',  global: 'TotoFXDotgridRipple' },
+  { name: 'vortex',  entry: 'src/dotgrid-plugins/vortex.js',  global: 'TotoFXDotgridVortex' },
+  { name: 'crater',  entry: 'src/dotgrid-plugins/crater.js',  global: 'TotoFXDotgridCrater' },
+  { name: 'nuclear', entry: 'src/dotgrid-plugins/nuclear.js', global: 'TotoFXDotgridNuclear' },
+  { name: 'scorch',  entry: 'src/dotgrid-plugins/scorch.js',  global: 'TotoFXDotgridScorch' },
+  { name: 'heart',   entry: 'src/dotgrid-plugins/heart.js',   global: 'TotoFXDotgridHeart' },
 ];
 
 // Sub-module entry points

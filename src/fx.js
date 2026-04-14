@@ -982,68 +982,32 @@ export function doDotgridEffect(name, args) {
  * @param {Object} [opts] - Options passed through to Dotgrid.ripple.
  */
 export function doDotgridRipple(cx, cy, opts) {
-  if (!fxEnabled('dotgrid')) return;
-  if (_ctx.dotgridOverride) {
-    _fireDotgridOverride(cx, cy);
-    return;
-  }
-  if (_hasDotgrid()) _Dotgrid.ripple(cx, cy, opts);
+  doDotgridEffect('ripple', { cx: cx, cy: cy, opts: opts });
 }
 
 /**
  * Trigger a dotgrid crater effect.
- *
- * @param {number} cx - Center x coordinate in viewport pixels.
- * @param {number} cy - Center y coordinate in viewport pixels.
- * @param {number} radius - Crater radius in pixels.
- * @param {number} depth - Crater depth multiplier.
- * @param {Object} [opts] - Options passed through to Dotgrid.crater.
+ * @param {number} cx @param {number} cy @param {number} radius @param {number} depth @param {Object} [opts]
  */
 export function doDotgridCrater(cx, cy, radius, depth, opts) {
-  if (!fxEnabled('dotgrid')) return;
-  if (_ctx.dotgridOverride) {
-    _fireDotgridOverride(cx, cy);
-    return;
-  }
-  if (_hasDotgrid()) _Dotgrid.crater(cx, cy, radius, depth, opts);
+  doDotgridEffect('crater', { cx: cx, cy: cy, opts: Object.assign({ radius: radius, depth: depth }, opts || {}) });
 }
 
 /**
  * Trigger a dotgrid nuclear mushroom cloud effect.
- *
- * @param {number} cx - Center x coordinate in viewport pixels.
- * @param {number} cy - Center y coordinate in viewport pixels.
- * @param {Object} [opts] - Options passed through to Dotgrid.nuclear.
- * @param {number} [opts.blastRadius=280] - Overall blast radius in pixels.
- * @param {string} [opts.color='#C45A3C'] - CSS color for the shockwave ring.
+ * @param {number} cx @param {number} cy @param {Object} [opts]
  */
 export function doDotgridNuclear(cx, cy, opts) {
-  if (!fxEnabled('dotgrid')) return;
-  if (_ctx.dotgridOverride) {
-    _fireDotgridOverride(cx, cy);
-    return;
-  }
-  if (_hasDotgrid()) _Dotgrid.nuclear(cx, cy, opts);
+  doDotgridEffect('nuclear', { cx: cx, cy: cy, opts: opts });
 }
 
 /**
  * Trigger a dotgrid scorch trail effect.
- *
- * @param {number} x1 - Start x coordinate in viewport pixels.
- * @param {number} y1 - Start y coordinate in viewport pixels.
- * @param {number} x2 - End x coordinate in viewport pixels.
- * @param {number} y2 - End y coordinate in viewport pixels.
- * @param {number} width - Trail width in pixels.
+ * @param {number} x1 @param {number} y1 @param {number} x2 @param {number} y2 @param {number} width
  */
 export function doDotgridScorch(x1, y1, x2, y2, width) {
-  if (!fxEnabled('dotgrid')) return;
-  if (_ctx.dotgridOverride) {
-    const midX = (x1 + x2) / 2;
-    const midY = (y1 + y2) / 2;
-    _fireDotgridOverride(midX, midY);
-    return;
-  }
-  if (_hasDotgrid()) _Dotgrid.scorch(x1, y1, x2, y2, width);
+  var o = typeof width === 'number' ? { width: width } : width || {};
+  doDotgridEffect('scorch', { x1: x1, y1: y1, x2: x2, y2: y2, opts: o });
 }
 
 /**
