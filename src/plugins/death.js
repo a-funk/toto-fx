@@ -75,8 +75,8 @@ function getTaskText(el) {
 // ═══════════════════════════════════════════════════════════════
 export const explodePlugin = {
   name: 'explode',
-  category: 'destroy',
-  style: 'death',
+  category: 'action',
+  style: 'destroy',
   meta: { label: 'Explode', description: 'Directional ASCII fragment explosion with smoke puffs', tags: ['explosion', 'fragments', 'particles'] },
   params: {
     fragmentCount: { label: 'Fragment Count', type: 'range', min: 10, max: 150, default: 60, step: 5, unit: '', group: 'particles' },
@@ -222,8 +222,8 @@ export const explodePlugin = {
 // ═══════════════════════════════════════════════════════════════
 export const incineratePlugin = {
   name: 'incinerate',
-  category: 'destroy',
-  style: 'death',
+  category: 'action',
+  style: 'destroy',
   meta: { label: 'Incinerate', description: 'Fast burn from bottom to top with ASCII flame characters', tags: ['fire', 'burn', 'flames'] },
   params: {
     burnDuration: { label: 'Burn Duration', type: 'range', min: 300, max: 2000, default: 700, step: 50, unit: 'ms', group: 'timing' },
@@ -350,8 +350,8 @@ export const incineratePlugin = {
 // ═══════════════════════════════════════════════════════════════
 export const shredderPlugin = {
   name: 'shredder',
-  category: 'destroy',
-  style: 'death',
+  category: 'action',
+  style: 'destroy',
   meta: { label: 'Shredder', description: 'Sword slashes cut card into strips that tumble and fall', tags: ['slash', 'cut', 'strips'] },
   params: {
     stripCount: { label: 'Strip Count', type: 'range', min: 3, max: 16, default: 8, step: 1, unit: '', group: 'visual' },
@@ -507,8 +507,8 @@ export const shredderPlugin = {
 // ═══════════════════════════════════════════════════════════════
 export const guillotinePlugin = {
   name: 'guillotine',
-  category: 'destroy',
-  style: 'death',
+  category: 'action',
+  style: 'destroy',
   meta: { label: 'Guillotine', description: 'Blade drops and cuts card in two, halves tumble apart', tags: ['blade', 'cut', 'halves'] },
   params: {
     bladeDropDuration: { label: 'Blade Drop Speed', type: 'range', min: 80, max: 600, default: 200, step: 20, unit: 'ms', group: 'timing' },
@@ -658,8 +658,8 @@ export const guillotinePlugin = {
 // ═══════════════════════════════════════════════════════════════
 export const heartbeatPlugin = {
   name: 'heartbeat',
-  category: 'destroy',
-  style: 'death',
+  category: 'action',
+  style: 'destroy',
   meta: { label: 'Heartbeat', description: 'Accelerating pulse with ECG spike trace then flatline', tags: ['pulse', 'ecg', 'medical'] },
   params: {
     duration: { label: 'Duration', type: 'range', min: 2000, max: 6000, default: 3800, step: 100, unit: 'ms', group: 'timing' },
@@ -886,8 +886,8 @@ export const heartbeatPlugin = {
 // ═══════════════════════════════════════════════════════════════
 export const sniperPlugin = {
   name: 'sniper',
-  category: 'destroy',
-  style: 'death',
+  category: 'action',
+  style: 'destroy',
   meta: { label: 'Sniper', description: 'Crosshair locks on target then bang, card falls over', tags: ['crosshair', 'gun', 'shot'] },
   params: {
     lockOnDuration: { label: 'Lock-on Time', type: 'range', min: 300, max: 2000, default: 800, step: 50, unit: 'ms', group: 'timing' },
@@ -1015,8 +1015,8 @@ export const sniperPlugin = {
 // ═══════════════════════════════════════════════════════════════
 export const eatenPlugin = {
   name: 'eaten',
-  category: 'destroy',
-  style: 'death',
+  category: 'action',
+  style: 'destroy',
   meta: { label: 'Eaten', description: 'ASCII jaws approach and chomp card with crumbs falling', tags: ['jaws', 'chomp', 'teeth'] },
   params: {
     approachDuration: { label: 'Approach Speed', type: 'range', min: 100, max: 800, default: 350, step: 25, unit: 'ms', group: 'timing' },
@@ -1291,8 +1291,8 @@ export const eatenPlugin = {
 // ═══════════════════════════════════════════════════════════════
 export const lightningPlugin = {
   name: 'lightning',
-  category: 'destroy',
-  style: 'death',
+  category: 'action',
+  style: 'destroy',
   meta: { label: 'Lightning', description: 'Van Gogh-style thick ASCII bolt with swirling energy', tags: ['bolt', 'electric', 'vangogh'] },
   params: {
     buildupDuration: { label: 'Buildup Duration', type: 'range', min: 200, max: 1200, default: 500, step: 50, unit: 'ms', group: 'timing' },
@@ -1583,8 +1583,8 @@ export const lightningPlugin = {
 // ═══════════════════════════════════════════════════════════════
 export const steamrollerPlugin = {
   name: 'steamroller',
-  category: 'destroy',
-  style: 'death',
+  category: 'action',
+  style: 'destroy',
   meta: { label: 'Steamroller', description: 'ASCII roller drives across and crushes card flat', tags: ['roller', 'crush', 'vehicle'] },
   params: {
     totalDuration: { label: 'Total Duration', type: 'range', min: 800, max: 4000, default: 1900, step: 100, unit: 'ms', group: 'timing' },
@@ -1837,8 +1837,8 @@ export const steamrollerPlugin = {
 // ═══════════════════════════════════════════════════════════════
 export const piranhasPlugin = {
   name: 'piranhas',
-  category: 'destroy',
-  style: 'death',
+  category: 'action',
+  style: 'destroy',
   meta: { label: 'Piranhas', description: 'ASCII fish swarm bites card edges with blood splatter', tags: ['fish', 'swarm', 'bite'] },
   params: {
     swarmInDuration: { label: 'Swarm-in Time', type: 'range', min: 100, max: 800, default: 300, step: 50, unit: 'ms', group: 'timing' },
@@ -2118,8 +2118,8 @@ export const piranhasPlugin = {
 // ═══════════════════════════════════════════════════════════════
 export const woodchipperPlugin = {
   name: 'woodchipper',
-  category: 'destroy',
-  style: 'death',
+  category: 'action',
+  style: 'destroy',
   meta: { label: 'Woodchipper', description: 'Card feeds into chipper machine, ASCII chunks spray out', tags: ['chipper', 'spray', 'machine'] },
   params: {
     feedDuration: { label: 'Feed Duration', type: 'range', min: 300, max: 3000, default: 1000, step: 50, unit: 'ms', group: 'timing' },
@@ -2265,20 +2265,20 @@ const allVariants = {
 };
 
 /**
- * Install all death animation variants into a registry.
+ * Install all destroy animation variants into a registry.
  *
  * @param {Object} registry - An AnimationRegistry instance with registerCategory().
  */
 export function install(registry) {
   if (typeof registry.register === 'function') {
-    registry.register('destroy', 'death', allVariants);
+    registry.register('action', 'destroy', allVariants);
   } else if (typeof registry.registerCategory === 'function') {
-    registry.registerCategory('destroy', 'death', allVariants);
+    registry.registerCategory('action', 'destroy', allVariants);
   }
 }
 
 export const deathPlugin = {
-  name: 'death',
+  name: 'destroy',
   install: install,
 };
 

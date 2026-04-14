@@ -3,7 +3,7 @@
  * @description FX — animation effects toolkit for TotoFX.
  *
  * Particles, screen effects, physics-based card animations, and canvas
- * rendering helpers. Used by all built-in plugins (thud, death, cute,
+ * rendering helpers. Used by all built-in plugins (thud, destroy, cute,
  * creation) and available for custom animations.
  *
  * ## Setup
@@ -1695,7 +1695,7 @@ export function finalize(el, opts) {
 }
 
 /**
- * Hide a card instantly for death/destruction animations. Adds the
+ * Hide a card instantly for destroy animations. Adds the
  * destroyed class and sets opacity/visibility to hidden.
  *
  * @param {HTMLElement} el - The card element to destroy visually.

@@ -11,8 +11,8 @@
 
 /**
  * Central registry where animation modules register their styles and variants.
- * Each animation category (e.g. 'action', 'destroy') contains styles
- * (e.g. 'thud', 'cute', 'death'), each of which contains named variant functions.
+ * Each animation category (e.g. 'action', 'enter') contains styles
+ * (e.g. 'thud', 'cute', 'destroy'), each of which contains named variant functions.
  *
  * @namespace AnimationRegistry
  */
@@ -23,8 +23,8 @@ export const AnimationRegistry = {
   /**
    * Register a set of animation variants under a category and style.
    *
-   * @param {string} category - Animation category (e.g. 'action', 'destroy', 'enter', 'persist').
-   * @param {string} style - Style group name (e.g. 'thud', 'cute', 'death').
+   * @param {string} category - Animation category (e.g. 'action', 'enter', 'persist').
+   * @param {string} style - Style group name (e.g. 'thud', 'cute', 'destroy').
    * @param {Object<string, AnimationFunction>} variants - Map of variant name to animation function.
    */
   registerCategory: function (category, style, variants) {
@@ -141,7 +141,7 @@ export const DEFAULT_SETTINGS = {
         badgeDuration: 500, badgeColor: 'var(--green)', cardHideDelay: 550 },
     },
     destroy: {
-      style: 'death', variant: 'shredder', intensity: 5, speed: 1,
+      style: 'destroy', variant: 'shredder', intensity: 5, speed: 1,
       fx: { shake: false, speedLines: false, dotgrid: false, flash: false, cardSquash: false },
       params: {}, behavior: null,
     },

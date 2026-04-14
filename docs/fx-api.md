@@ -1,6 +1,6 @@
 # FX Utilities API Reference
 
-The `fx` module is the shared animation infrastructure for TotoFX. It provides reusable building blocks -- particles, screen effects, card animation helpers, canvas management, and dotgrid integration -- that any animation style (thud, cute, death, etc.) can compose. Nothing in this module is style-specific.
+The `fx` module is the shared animation infrastructure for TotoFX. It provides reusable building blocks -- particles, screen effects, card animation helpers, canvas management, and dotgrid integration -- that any animation style (thud, cute, destroy, etc.) can compose. Nothing in this module is style-specific.
 
 **Import paths:**
 
@@ -569,7 +569,7 @@ cleanupCard(card);
 
 ### `destroyCard(el)`
 
-Hide a card instantly for death/destruction animations. Adds the `destroyed` class and sets opacity/visibility to hidden. Does **not** remove from DOM.
+Hide a card instantly for destroy animations. Adds the `destroyed` class and sets opacity/visibility to hidden. Does **not** remove from DOM.
 
 | Param | Type | Description |
 |-------|------|-------------|

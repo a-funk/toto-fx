@@ -629,8 +629,8 @@ export function createEngine(userConfig) {
      * dynamically, so multiple register() calls for the same category
      * (e.g. thud + cute both under 'action') work without merge logic.
      *
-     * @param {string} category - e.g. 'action', 'destroy', 'enter', 'persist'
-     * @param {string} style - e.g. 'thud', 'cute', 'death', 'dramatic'
+     * @param {string} category - e.g. 'action', 'enter', 'persist'
+     * @param {string} style - e.g. 'thud', 'cute', 'destroy', 'dramatic'
      * @param {Object} variants - Map of variant name to plugin object with play() and cleanup()
      */
     register: function (category, style, variants) {

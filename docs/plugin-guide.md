@@ -376,7 +376,7 @@ Raw canvas access for bespoke frame-by-frame rendering. The compositor runs one 
 
 **Use when:** your animation needs direct canvas control -- complex scene rendering, multi-phase state machines, coordinated ASCII art, gradients, stroke paths, rotated text blocks.
 
-**Built-in users:** all death variants (explosions, lightning bolts, steamroller, piranhas), all cute variants (fireworks, butterflies, snowfall).
+**Built-in users:** all destroy variants (explosions, lightning bolts, steamroller, piranhas), all cute variants (fireworks, butterflies, snowfall).
 
 ```js
 play: function (el, ctx) {
@@ -456,7 +456,7 @@ play: function (el, ctx) {
 
 ### Combining Layers
 
-Most built-in animations combine layers. A thud animation uses Layer 3 (card lift via CSS transforms) + Layer 2 (impact particles). A death animation uses Layer 1 (scene rendering on FX canvas) + Layer 3 (card style manipulation like `clipPath`, `opacity`). You can freely mix layers -- they render on separate surfaces and don't interfere.
+Most built-in animations combine layers. A thud animation uses Layer 3 (card lift via CSS transforms) + Layer 2 (impact particles). A destroy animation uses Layer 1 (scene rendering on FX canvas) + Layer 3 (card style manipulation like `clipPath`, `opacity`). You can freely mix layers -- they render on separate surfaces and don't interfere.
 
 ### Canvas Stack (bottom to top)
 

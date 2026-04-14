@@ -6,7 +6,8 @@
  * out of the box. Override individual values via AnimationSettings
  * or pass a custom defaults object to createSettings().
  *
- * Category names: action, destroy, enter, persist, container, containerExit
+ * Category names: action, enter, persist, container, containerExit
+ * Settings keys: action, destroy (deletion settings), enter, persist
  */
 
 export const DEFAULTS = {
@@ -62,7 +63,7 @@ export const DEFAULTS = {
     },
 
     destroy: {
-      style: 'death',
+      style: 'destroy',
       variant: 'shredder',
       intensity: 5,
       speed: 1,

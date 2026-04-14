@@ -256,8 +256,8 @@
           }
         }
       },
-      "death": {
-        "description": "Dramatic destruction animations (available for both action and destroy categories)",
+      "destroy": {
+        "description": "Dramatic destruction animations",
         "variants": {
           "explode": {
             "description": "Directional ASCII fragment explosion with smoke",
@@ -372,10 +372,8 @@
       }
     },
     "destroy": {
-      "death": {
-        "description": "Dramatic destruction animations for item deletion",
-        "sameAs": "categories.action.death"
-      }
+      "_note": "Destroy variants are registered under the 'action' category with style 'destroy'. This settings key exists for independent deletion animation configuration.",
+      "sameAs": "categories.action.destroy"
     }
   },
   "dotgridEffects": {

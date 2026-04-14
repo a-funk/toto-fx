@@ -487,11 +487,11 @@ describe('AnimationRegistry', function () {
   });
 
   it('getVariants() returns variant names', function () {
-    AnimationRegistry.registerCategory('destroy', 'death', {
+    AnimationRegistry.registerCategory('action', 'destroy', {
       shredder: function () {},
       dissolve: function () {},
     });
-    var variants = AnimationRegistry.getVariants('destroy', 'death');
+    var variants = AnimationRegistry.getVariants('action', 'destroy');
     assert.deepEqual(variants.sort(), ['dissolve', 'shredder']);
   });
 
