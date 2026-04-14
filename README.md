@@ -129,9 +129,27 @@ A complete working page. Copy this into an HTML file and open it in a browser. C
 <body>
   <div id="bg"></div>
   <div class="cards">
-    <div class="card" data-id="task-1">Buy milk</div>
-    <div class="card" data-id="task-2">Write tests</div>
-    <div class="card" data-id="task-3">Ship feature</div>
+    <div class="card" data-id="task-1">
+      Buy milk
+      <div class="fx-shadow"></div>
+      <div class="fx-burst"></div>
+      <div class="fx-badge"></div>
+      <div class="fx-strike"></div>
+    </div>
+    <div class="card" data-id="task-2">
+      Write tests
+      <div class="fx-shadow"></div>
+      <div class="fx-burst"></div>
+      <div class="fx-badge"></div>
+      <div class="fx-strike"></div>
+    </div>
+    <div class="card" data-id="task-3">
+      Ship feature
+      <div class="fx-shadow"></div>
+      <div class="fx-burst"></div>
+      <div class="fx-badge"></div>
+      <div class="fx-strike"></div>
+    </div>
   </div>
 
   <script src="dist/toto-fx.min.js"></script>
@@ -142,6 +160,7 @@ A complete working page. Copy this into an HTML file and open it in a browser. C
       resolveElement: function (key) {
         return document.querySelector('[data-id="' + key + '"]');
       },
+      debug: true, // recommended during development — logs warnings for common mistakes
     });
 
     // 2. Install the thud plugin
@@ -178,6 +197,19 @@ A complete working page. Copy this into an HTML file and open it in a browser. C
 </body>
 </html>
 ```
+
+> **Tip:** Always enable `debug: true` during development. Without it, mistakes like misspelled variants, missing plugins, or wrong argument types fail silently. Debug mode logs warnings to the console so you can catch issues immediately.
+
+> **Sub-elements:** Many animations look for child elements inside each card to render shadows, impact bursts, done badges, and strikethrough effects. Add these four divs inside each card element:
+>
+> | Class | Used by | Purpose |
+> |-------|---------|---------|
+> | `.fx-shadow` | Thud lift/fall animations | Drop shadow that scales during lift and spreads on impact |
+> | `.fx-burst` | Impact animations | Radial glow burst on landing |
+> | `.fx-badge` | Completion animations | "Done" badge popup |
+> | `.fx-strike` | Completion animations | Strikethrough line across the card |
+>
+> These are **optional** — animations still play without them, but the visual effects will be incomplete (no shadow during lifts, no burst on impact, etc.). The selectors are configurable via `FX.configure({ selectors: { shadow: '.my-shadow', ... } })`.
 
 ### ESM equivalent
 
