@@ -431,7 +431,7 @@ export const flowersPlugin = {
       const groundWidth2 = gardenWidth + 40;
       const groundLeft2 = gardenLeft - 20;
       const groundDensity = Math.floor(lerp(10, 40, intensity));
-      const groundAlpha = Math.min(elapsed / 600, 1) * lerp(0.3, 0.8, intensity);
+      const groundAlpha = Math.min(elapsed / 600, 1) * lerp(0.5, 0.9, intensity);
 
       for (let layer = 0; layer < Math.floor(lerp(1, 3, intensity)); layer++) {
         const layerY = groundY + layer * lerp(6, 10, intensity);
@@ -453,12 +453,12 @@ export const flowersPlugin = {
           const grassSway = Math.sin(elapsed * 0.002 + gi * 0.5) * 0.15;
           FX.drawChar(fxCtx, pick([',', '\'', '`', '"', ';', '|']), gxi + randRange(-4, 4),
             groundY - lerp(3, 8, intensity) + randRange(-2, 2),
-            pick(MONET_GREENS), lerp(4, 8, intensity), groundAlpha * lerp(0.3, 0.7, intensity),
+            pick(MONET_GREENS), lerp(4, 8, intensity), groundAlpha * lerp(0.45, 0.8, intensity),
             grassSway + breezeWind * 0.05);
           if (isHighIntensity && Math.random() > 0.85) {
             FX.drawChar(fxCtx, pick(['\u273F', '\u00B7', '\u00B7']),
               gxi + randRange(-6, 6), groundY - lerp(6, 12, intensity),
-              pick(MONET_PINKS.concat(MONET_YELLOWS)), 4, groundAlpha * 0.5 * lerp(0.3, 0.7, intensity), 0);
+              pick(MONET_PINKS.concat(MONET_YELLOWS)), 4, groundAlpha * 0.65 * lerp(0.45, 0.8, intensity), 0);
           }
         }
       }
@@ -471,7 +471,7 @@ export const flowersPlugin = {
             groundLeft2 + (pb / pebbleCount) * groundWidth2 + randRange(-5, 5),
             groundY + randRange(2, 14),
             pick(['#9a8a70', '#8a7a60', '#a09080', '#706858']),
-            lerp(3, 6, intensity), groundAlpha * 0.35, 0);
+            lerp(3, 6, intensity), groundAlpha * 0.55, 0);
         }
       }
 
@@ -512,13 +512,13 @@ export const flowersPlugin = {
             if (f.hasThorns && s > 1 && s < stemSegments - 1 && s % 2 === 0) {
               const thornSide = (s % 4 === 0) ? 1 : -1;
               FX.drawChar(fxCtx, thornSide > 0 ? '>' : '<', sx + thornSide * 5, sy,
-                f.stemColor, 5, stemAlpha * 0.5, thornSide * 0.3);
+                f.stemColor, 5, stemAlpha * 0.65, thornSide * 0.3);
             }
           }
           fxCtx.save();
           fxCtx.strokeStyle = f.stemColor;
           fxCtx.lineWidth = lerp(1, 2, intensity);
-          fxCtx.globalAlpha = Math.min(stemT * 2.5, 1) * lerp(0.5, 0.85, intensity) * 0.4;
+          fxCtx.globalAlpha = Math.min(stemT * 2.5, 1) * lerp(0.5, 0.85, intensity) * 0.6;
           fxCtx.beginPath();
           fxCtx.moveTo(f.baseX, f.baseY);
           fxCtx.quadraticCurveTo(cpX, cpY, stemTopX, stemTopY);
@@ -536,7 +536,7 @@ export const flowersPlugin = {
             const lt = leaf.heightRatio;
             const lx = f.baseX * (1 - lt) * (1 - lt) + cpX * 2 * lt * (1 - lt) + stemTopX * lt * lt;
             const ly = f.baseY * (1 - lt) * (1 - lt) + cpY * 2 * lt * (1 - lt) + stemTopY * lt * lt;
-            const leafAlpha = easeLeaf * lerp(0.4, 0.75, intensity);
+            const leafAlpha = easeLeaf * lerp(0.55, 0.85, intensity);
             const leafSize = leaf.size * easeLeaf;
             const leafSway = Math.sin(elapsed * 0.002 + leaf.heightRatio * 3) * 0.1 + breezeWind * 0.02;
             const lox = lx + leaf.side * leaf.offset * easeLeaf;
@@ -544,15 +544,15 @@ export const flowersPlugin = {
             FX.drawChar(fxCtx, leaf.char, lox, loy, pick(MONET_GREENS), leafSize, leafAlpha, leaf.angle + leafSway);
             if (leaf.hasVein) {
               FX.drawChar(fxCtx, '-', lox + leaf.side * 2, loy,
-                pick(MONET_STEM_GREENS), leafSize * 0.3, leafAlpha * 0.3, leaf.angle + leafSway);
+                pick(MONET_STEM_GREENS), leafSize * 0.3, leafAlpha * 0.5, leaf.angle + leafSway);
             }
             if (intensity > 0.4) {
               FX.drawChar(fxCtx, pick(['\u2663', '\u00B7']), lox + leaf.side * 3, loy + 2,
-                pick(MONET_GREENS), leafSize * 0.6, leafAlpha * 0.5, leaf.angle * 0.5);
+                pick(MONET_GREENS), leafSize * 0.6, leafAlpha * 0.65, leaf.angle * 0.5);
             }
             if (intensity > 0.7) {
               FX.drawChar(fxCtx, pick(['\u2663', '\u2767']), lox + leaf.side * 5, loy - 1,
-                pick(MONET_GREENS), leafSize * 0.45, leafAlpha * 0.35, leaf.angle * 0.3 + 0.1);
+                pick(MONET_GREENS), leafSize * 0.45, leafAlpha * 0.55, leaf.angle * 0.3 + 0.1);
             }
           });
         }
@@ -567,13 +567,13 @@ export const flowersPlugin = {
           const hSize = f.headSize * lerp(0.8, 1.0, intensity);
 
           if (budT > 0 && openT < 1) {
-            const budAlpha = budT * (1 - openT) * 0.5;
+            const budAlpha = budT * (1 - openT) * 0.65;
             FX.drawChar(fxCtx, '*', stemTopX, stemTopY, pick(f.petalColors), hSize * 0.3 * budT, budAlpha, 0);
             if (budT > 0.5) {
               for (let si = 0; si < 3; si++) {
                 const sa = (si / 3) * Math.PI * 2 + Math.PI / 2;
                 FX.drawChar(fxCtx, pick(['\u2663', ',']), stemTopX + Math.cos(sa) * 4,
-                  stemTopY + Math.sin(sa) * 4, pick(MONET_GREENS), 5, budAlpha * 0.6, sa * 0.5);
+                  stemTopY + Math.sin(sa) * 4, pick(MONET_GREENS), 5, budAlpha * 0.75, sa * 0.5);
               }
             }
           }
@@ -581,7 +581,7 @@ export const flowersPlugin = {
           if (openT > 0) {
             const oe = 1 - Math.pow(1 - openT, 2);
             const outerSize = hSize * oe * breathe;
-            const outerAlpha = openT * lerp(0.35, 0.65, intensity);
+            const outerAlpha = openT * lerp(0.55, 0.85, intensity);
             const outerPetalCount = f.species.petalLayers + Math.floor(lerp(0, 2, intensity));
             for (let op = 0; op < outerPetalCount; op++) {
               const opAngle = (op / outerPetalCount) * Math.PI * 2 + elapsed * 0.0003;
@@ -594,7 +594,7 @@ export const flowersPlugin = {
             if (openT > 0.3) {
               const innerT = (openT - 0.3) / 0.7;
               const innerSize = hSize * 0.75 * innerT * breathe;
-              const innerAlpha = innerT * lerp(0.4, 0.7, intensity);
+              const innerAlpha = innerT * lerp(0.55, 0.85, intensity);
               const innerPetalCount = 2 + f.species.petalLayers + Math.floor(lerp(0, 2, intensity));
               for (let ip = 0; ip < innerPetalCount; ip++) {
                 const ipAngle = (ip / innerPetalCount) * Math.PI * 2 + Math.PI / 6;
@@ -653,13 +653,13 @@ export const flowersPlugin = {
         const flap = Math.sin(b.flapPhase + bLife * 0.01 * b.flapSpeed);
         const alpha = lr > 0.8 ? 1 - (lr - 0.8) / 0.2 : Math.min(bLife / 300, 1);
         if (flap > 0) {
-          FX.drawChar(fxCtx, '\u2572', b.x - 4, b.y, b.color, b.size, alpha * 0.7, 0);
-          FX.drawChar(fxCtx, '\u2571', b.x + 4, b.y, b.color, b.size, alpha * 0.7, 0);
+          FX.drawChar(fxCtx, '\u2572', b.x - 4, b.y, b.color, b.size, alpha * 0.85, 0);
+          FX.drawChar(fxCtx, '\u2571', b.x + 4, b.y, b.color, b.size, alpha * 0.85, 0);
         } else {
-          FX.drawChar(fxCtx, '\u2571', b.x - 3, b.y, b.color, b.size * 0.7, alpha * 0.7, 0);
-          FX.drawChar(fxCtx, '\u2572', b.x + 3, b.y, b.color, b.size * 0.7, alpha * 0.7, 0);
+          FX.drawChar(fxCtx, '\u2571', b.x - 3, b.y, b.color, b.size * 0.7, alpha * 0.85, 0);
+          FX.drawChar(fxCtx, '\u2572', b.x + 3, b.y, b.color, b.size * 0.7, alpha * 0.85, 0);
         }
-        FX.drawChar(fxCtx, '\u00B7', b.x, b.y, b.color, 4, alpha * 0.5, 0);
+        FX.drawChar(fxCtx, '\u00B7', b.x, b.y, b.color, 4, alpha * 0.65, 0);
       });
 
       // Garden bees
@@ -679,11 +679,11 @@ export const flowersPlugin = {
         }
         const buzzX = Math.sin(bee.buzzPhase + bLife * 0.05) * 1.5;
         const buzzY = Math.cos(bee.buzzPhase + bLife * 0.07) * 1;
-        FX.drawChar(fxCtx, '=', tx + buzzX - 3, ty + buzzY, '#c9a84c', bee.size * 0.8, alpha * 0.6, 0);
-        FX.drawChar(fxCtx, '*', tx + buzzX, ty + buzzY, '#3d3530', bee.size * 0.6, alpha * 0.7, 0);
-        FX.drawChar(fxCtx, '=', tx + buzzX + 3, ty + buzzY, '#c9a84c', bee.size * 0.8, alpha * 0.6, 0);
+        FX.drawChar(fxCtx, '=', tx + buzzX - 3, ty + buzzY, '#c9a84c', bee.size * 0.8, alpha * 0.75, 0);
+        FX.drawChar(fxCtx, '*', tx + buzzX, ty + buzzY, '#3d3530', bee.size * 0.6, alpha * 0.85, 0);
+        FX.drawChar(fxCtx, '=', tx + buzzX + 3, ty + buzzY, '#c9a84c', bee.size * 0.8, alpha * 0.75, 0);
         if (Math.sin(bLife * 0.03) > 0) {
-          FX.drawChar(fxCtx, '\u00B7', tx + buzzX, ty + buzzY - 4, '#e8e4e0', 4, alpha * 0.4, 0);
+          FX.drawChar(fxCtx, '\u00B7', tx + buzzX, ty + buzzY - 4, '#e8e4e0', 4, alpha * 0.6, 0);
         }
       });
 
@@ -697,7 +697,7 @@ export const flowersPlugin = {
           p.x += (p.vx + Math.sin(p.phase + p.life * 0.002) * 8 + breezeWind) * pdt;
           p.y += p.vy * pdt;
           const alpha = lr > 0.7 ? (1 - (lr - 0.7) / 0.3) : Math.min(p.life / 400, 1);
-          FX.drawChar(fxCtx, '\u00B7', p.x, p.y, p.color, p.size, alpha * 0.6, 0);
+          FX.drawChar(fxCtx, '\u00B7', p.x, p.y, p.color, p.size, alpha * 0.75, 0);
         });
       }
 
@@ -708,7 +708,7 @@ export const flowersPlugin = {
         const lr = Math.min(bpLife / (totalDuration - bp.delay), 1);
         bp.x += bp.vx * 0.016;
         bp.y += (bp.vy + Math.sin(bp.phase + bpLife * 0.001) * 4) * 0.016;
-        const alpha = lr > 0.7 ? (1 - (lr - 0.7) / 0.3) * 0.4 : Math.min(bpLife / 500, 0.4);
+        const alpha = lr > 0.7 ? (1 - (lr - 0.7) / 0.3) * 0.6 : Math.min(bpLife / 500, 0.6);
         FX.drawChar(fxCtx, bp.char, bp.x, bp.y, bp.color, bp.size, alpha, bpLife * 0.001);
       });
 
@@ -1000,7 +1000,7 @@ export const butterfliesPlugin = {
         }
         FX.drawChar(fxCtx, '\u00B7', b.x, b.y, b.color, 6, alpha, 0);
         if (b.life > 100 && Math.random() > 0.7) {
-          FX.drawChar(fxCtx, '\u00B7', b.x + randRange(-3, 3), b.y + randRange(5, 15), b.color, 4, alpha * 0.3, 0);
+          FX.drawChar(fxCtx, '\u00B7', b.x + randRange(-3, 3), b.y + randRange(5, 15), b.color, 4, alpha * 0.5, 0);
         }
       });
 
@@ -1312,7 +1312,7 @@ export const heartsPlugin = {
           fxCtx.save();
           fxCtx.shadowColor = h.color;
           fxCtx.shadowBlur = 8;
-          FX.drawChar(fxCtx, h.char, h.x, h.y, h.color, h.size * pulse, alpha * 0.3, h.rotation);
+          FX.drawChar(fxCtx, h.char, h.x, h.y, h.color, h.size * pulse, alpha * 0.5, h.rotation);
           fxCtx.restore();
         }
       });
@@ -1469,8 +1469,8 @@ export const catPlugin = {
         const alpha = lr > 0.6 ? (1 - (lr - 0.6) / 0.4) : Math.min(pl.life / 200, 1);
         const plx = pl.x + pl.vx * lr;
         if (alpha > 0.01) {
-          FX.drawChar(fxCtx, '~', plx, pl.y, pick(CAT_COLORS), pl.size * (0.8 + lr * 0.3), alpha * 0.4, 0);
-          FX.drawChar(fxCtx, '~', plx + pl.size * 0.8, pl.y, pick(CAT_COLORS), pl.size * (0.6 + lr * 0.2), alpha * 0.3, 0);
+          FX.drawChar(fxCtx, '~', plx, pl.y, pick(CAT_COLORS), pl.size * (0.8 + lr * 0.3), alpha * 0.6, 0);
+          FX.drawChar(fxCtx, '~', plx + pl.size * 0.8, pl.y, pick(CAT_COLORS), pl.size * (0.6 + lr * 0.2), alpha * 0.5, 0);
         }
       });
 
@@ -1637,7 +1637,7 @@ export const dogPlugin = {
         const alpha = lr > 0.6 ? (1 - (lr - 0.6) / 0.4) : Math.min(bk.life / 150, 1);
         if (alpha > 0.01) {
           FX.drawChar(fxCtx, bk.text, bk.x, bk.y - bk.life * 0.03,
-            pick(DOG_COLORS), bk.size, alpha * 0.7, 0);
+            pick(DOG_COLORS), bk.size, alpha * 0.85, 0);
         }
       });
 
@@ -1650,7 +1650,7 @@ export const dogPlugin = {
         const swish = Math.sin(tp.phase + elapsed * 0.012) * tp.length;
         if (alpha > 0.01) {
           FX.drawChar(fxCtx, '~', center.cx + 30 + swish, center.cy + (tp.phase * 3) - 5,
-            pick(['#c9a84c', '#d99a7c']), lerp(6, 10, intensity), alpha * 0.35, swish * 0.02);
+            pick(['#c9a84c', '#d99a7c']), lerp(6, 10, intensity), alpha * 0.55, swish * 0.02);
         }
       });
 
@@ -1780,7 +1780,7 @@ export const snowfallPlugin = {
             fxCtx.save();
             fxCtx.shadowColor = '#b4dae8';
             fxCtx.shadowBlur = 8;
-            FX.drawChar(fxCtx, sf.char, sf.x, sf.y, sf.color, sf.size, alpha * globalFade * 0.2, sf.rotation);
+            FX.drawChar(fxCtx, sf.char, sf.x, sf.y, sf.color, sf.size, alpha * globalFade * 0.35, sf.rotation);
             fxCtx.restore();
           }
         }
@@ -1800,12 +1800,12 @@ export const snowfallPlugin = {
             const len = cr.size * lr;
             FX.drawChar(fxCtx, '-', cr.x + Math.cos(crAngle) * len * 0.5,
               cr.y + Math.sin(crAngle) * len * 0.5,
-              pick(ICE_COLORS), cr.size * 0.4, alpha * 0.5, crAngle);
+              pick(ICE_COLORS), cr.size * 0.4, alpha * 0.65, crAngle);
             FX.drawChar(fxCtx, '*', cr.x + Math.cos(crAngle) * len,
               cr.y + Math.sin(crAngle) * len,
-              pick(ICE_COLORS), cr.size * 0.3, alpha * 0.4, 0);
+              pick(ICE_COLORS), cr.size * 0.3, alpha * 0.55, 0);
           }
-          FX.drawChar(fxCtx, '*', cr.x, cr.y, pick(ICE_COLORS), cr.size * 0.5, alpha * 0.6, spin);
+          FX.drawChar(fxCtx, '*', cr.x, cr.y, pick(ICE_COLORS), cr.size * 0.5, alpha * 0.75, spin);
         }
       });
 
@@ -1926,7 +1926,7 @@ export const oceanPlugin = {
       const globalFade = elapsed > totalDuration - 800 ? (totalDuration - elapsed) / 800 : 1;
 
       // Wave rows
-      const waveAlpha = Math.min(elapsed / 600, 1) * lerp(0.3, 0.7, intensity);
+      const waveAlpha = Math.min(elapsed / 600, 1) * lerp(0.5, 0.85, intensity);
       for (let row = 0; row < waveRows; row++) {
         const rowY = center.cy - center.h * 0.3 + (row / waveRows) * center.h * 1.0;
         const rowPhase = elapsed * 0.002 + row * 0.8;
@@ -1935,7 +1935,7 @@ export const oceanPlugin = {
           const wx = center.rect.left - 20 + (w / waveDensity) * (center.w + 40);
           const waveY = rowY + Math.sin(rowPhase + w * 0.3) * lerp(3, 8, intensity);
           FX.drawChar(fxCtx, pick(WAVE_CHARS), wx, waveY, rowColor,
-            lerp(8, 14, intensity), waveAlpha * globalFade * (0.4 + row * 0.08), 0);
+            lerp(8, 14, intensity), waveAlpha * globalFade * (0.55 + row * 0.06), 0);
         }
         // Foam on top waves
         if (row === 0) {
@@ -1944,7 +1944,7 @@ export const oceanPlugin = {
             const fx = center.rect.left + (fi / foamCount) * center.w;
             const fy = rowY + Math.sin(rowPhase + fi * 0.5) * 5 - 5;
             FX.drawChar(fxCtx, pick(['.', '\u00B7', ',']), fx, fy, pick(OCEAN_FOAM),
-              lerp(4, 8, intensity), waveAlpha * globalFade * 0.4, 0);
+              lerp(4, 8, intensity), waveAlpha * globalFade * 0.6, 0);
           }
         }
       }
@@ -2090,7 +2090,7 @@ export const firefliesPlugin = {
 
       // Night sky gradient feel — subtle dark overlay chars
       if (elapsed > 300) {
-        const nightAlpha = Math.min((elapsed - 300) / 800, 1) * 0.15 * globalFade;
+        const nightAlpha = Math.min((elapsed - 300) / 800, 1) * 0.25 * globalFade;
         for (let ni = 0; ni < 5; ni++) {
           FX.drawChar(fxCtx, '\u2591',
             center.cx + randRange(-center.w * 0.6, center.w * 0.6),
@@ -2110,7 +2110,7 @@ export const firefliesPlugin = {
       foliage.forEach(function (f) {
         const sway = Math.sin(f.swayPhase + elapsed * 0.001) * 3;
         FX.drawChar(fxCtx, f.char, f.x + sway, f.y, f.color,
-          f.size, lerp(0.2, 0.4, intensity) * globalFade, sway * 0.02);
+          f.size, lerp(0.35, 0.55, intensity) * globalFade, sway * 0.02);
       });
 
       // Fireflies with pulsing glow
@@ -2132,7 +2132,7 @@ export const firefliesPlugin = {
 
         if (alpha > 0.01) {
           // Dim body always visible
-          FX.drawChar(fxCtx, '\u00B7', ffx, ffy, ff.color, ff.size * 0.6, alpha * 0.3, 0);
+          FX.drawChar(fxCtx, '\u00B7', ffx, ffy, ff.color, ff.size * 0.6, alpha * 0.5, 0);
 
           // Bright glow pulse
           if (glowAlpha > 0.05) {
@@ -2145,7 +2145,7 @@ export const firefliesPlugin = {
               fxCtx.shadowColor = ff.color;
               fxCtx.shadowBlur = lerp(6, 16, intensity) * glowAlpha;
               FX.drawChar(fxCtx, '*', ffx, ffy, ff.color,
-                ff.size * 0.4, alpha * glowAlpha * 0.3, 0);
+                ff.size * 0.4, alpha * glowAlpha * 0.5, 0);
               fxCtx.restore();
             }
           }
@@ -2155,7 +2155,7 @@ export const firefliesPlugin = {
             const trailX = ffx - driftX * 0.1;
             const trailY = ffy - driftY * 0.1;
             FX.drawChar(fxCtx, '\u00B7', trailX, trailY, ff.color,
-              ff.size * 0.3, alpha * glowAlpha * 0.15, 0);
+              ff.size * 0.3, alpha * glowAlpha * 0.3, 0);
           }
         }
       });
