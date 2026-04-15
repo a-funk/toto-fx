@@ -357,7 +357,7 @@ export function fxEnabled(key) {
 // Single requestAnimationFrame drives all active subsystems (particles,
 // speed lines) to avoid 2+ RAF callbacks per frame during animations.
 let _masterRAF = null;
-let _masterSubs = { particles: false, speedLines: false };
+let _masterSubs = { particles: false, speedLines: false, fxDraw: false };
 
 // Frame budget monitor: track consecutive slow frames
 let _lastFrameTime = 0;
@@ -409,6 +409,12 @@ function _masterTick(now) {
     }
     if (_speedLinesActive) anyActive = true;
     else _masterSubs.speedLines = false;
+  }
+
+  if (_masterSubs.fxDraw) {
+    _tickFxDrawInner(now);
+    if (Object.keys(_fxDrawCallbacks).length > 0) anyActive = true;
+    else _masterSubs.fxDraw = false;
   }
 
   if (anyActive) _masterRAF = requestAnimationFrame(_masterTick);
@@ -1831,55 +1837,53 @@ export function getAdaptiveQuality() {
 // draw callbacks instead of running their own RAF loops. One clearRect
 // per frame, then all active callbacks draw — no cross-animation wipe.
 let _fxDrawCallbacks = {};
-let _fxDrawRAF = null;
 let _fxDrawIdCounter = 0;
 
 /**
  * Register a draw callback on the FX canvas compositor.
- * The compositor runs a single RAF loop, clears the canvas once per frame,
- * then calls all registered callbacks with (ctx, timestamp).
+ * The callback is driven by the unified master tick loop — one clear per
+ * frame, then all registered callbacks draw in order.
  *
  * @param {string} id - Unique draw callback ID (use nextFxDrawId()).
  * @param {Function} drawFn - Called each frame with (ctx, now).
  */
 export function registerFxDraw(id, drawFn) {
   _fxDrawCallbacks[id] = drawFn;
-  if (!_fxDrawRAF) _tickFxDraw();
+  _masterSubs.fxDraw = true;
+  _ensureMasterTick();
 }
 
 /**
  * Remove a draw callback from the FX canvas compositor.
+ * When the last callback is removed, the fxDraw subsystem stops.
  *
  * @param {string} id - The draw callback ID to remove.
  */
 export function deregisterFxDraw(id) {
   delete _fxDrawCallbacks[id];
+  if (Object.keys(_fxDrawCallbacks).length === 0) {
+    _masterSubs.fxDraw = false;
+    // Final clear after all animations finish
+    const fxC = getFxCtx();
+    if (fxC) fxC.clearRect(0, 0, fxC.canvas.width, fxC.canvas.height);
+  }
 }
 
-function _tickFxDraw() {
-  _fxDrawRAF = requestAnimationFrame(function(now) {
-    const ctx = getFxCtx();
-    if (!ctx) { _fxDrawRAF = null; return; }
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+// Inner FX draw tick — called by master tick, no self-scheduling
+function _tickFxDrawInner(now) {
+  const ctx = getFxCtx();
+  if (!ctx) return;
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-    const ids = Object.keys(_fxDrawCallbacks);
-    for (let i = 0; i < ids.length; i++) {
-      const cb = _fxDrawCallbacks[ids[i]];
-      if (cb) {
-        ctx.save();
-        cb(ctx, now);
-        ctx.restore();
-      }
+  const ids = Object.keys(_fxDrawCallbacks);
+  for (let i = 0; i < ids.length; i++) {
+    const cb = _fxDrawCallbacks[ids[i]];
+    if (cb) {
+      ctx.save();
+      cb(ctx, now);
+      ctx.restore();
     }
-
-    if (Object.keys(_fxDrawCallbacks).length > 0) {
-      _tickFxDraw();
-    } else {
-      _fxDrawRAF = null;
-      // Final clear after all animations finish
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    }
-  });
+  }
 }
 
 /**
