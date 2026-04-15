@@ -357,7 +357,7 @@ export function fxEnabled(key) {
 // Single requestAnimationFrame drives all active subsystems (particles,
 // speed lines) to avoid 2+ RAF callbacks per frame during animations.
 let _masterRAF = null;
-let _masterSubs = { particles: false, speedLines: false, fxDraw: false };
+let _masterSubs = { speedLines: false, fxDraw: false };
 
 // Frame budget monitor: track consecutive slow frames
 let _lastFrameTime = 0;
@@ -403,12 +403,6 @@ function _masterTick(now) {
     _fxC.restore();
   }
 
-  if (_masterSubs.particles) {
-    _tickParticlesInner(now);
-    if (particles.length > 0) anyActive = true;
-    else _masterSubs.particles = false;
-  }
-
   if (_masterSubs.speedLines) {
     if (!_adaptiveSkipSpeedLines) {
       _tickSpeedLinesInner(now);
@@ -436,7 +430,6 @@ function _ensureMasterTick() {
 
 // ── Particle State ───────────────────────────────────────────────
 let particles = [];
-let particleRAF = null;
 
 let _getCanvasDeprecated = false;
 /**
@@ -641,20 +634,28 @@ export function spawnParticles(cx, cy, opts) {
       drag: opts.drag || 0.98,
     });
   }
-  if (!particleRAF) _tickParticles();
+  _ensureParticlePool();
 }
 
-// Inner particle tick — called by master tick loop, no self-scheduling
-// Renders to the unified FX canvas (cleared once by _masterTick)
-function _tickParticlesInner(_now) {
-  const ctx = getFxCtx();
-  if (!ctx) return;
+// ── Particle Pool FX Draw Callback ──────────────────────────────
+// The particle pool is managed by a single registered FX draw callback.
+// spawnParticles/pushParticles push into the pool; the callback
+// handles physics, alpha, and batch rendering via drawChar.
+const _particlePoolId = 'particle-pool';
+let _particlePoolActive = false;
+
+function _ensureParticlePool() {
+  if (_particlePoolActive) return;
+  _particlePoolActive = true;
+  registerFxDraw(_particlePoolId, _particlePoolDraw);
+}
+
+function _particlePoolDraw(ctx, _now) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
   // Adaptive quality: cull particles when frame budget is exceeded
   if (_adaptiveParticleScale < 1.0 && particles.length > 30) {
-    // Remove every other particle to halve the count
     const kept = [];
     for (let k = 0; k < particles.length; k++) {
       if (k % 2 === 0) kept.push(particles[k]);
@@ -700,12 +701,12 @@ function _tickParticlesInner(_now) {
     }
   }
   ctx.globalAlpha = 1;
-}
 
-// Legacy entry point — starts particles via the unified master tick
-function _tickParticles() {
-  _masterSubs.particles = true;
-  _ensureMasterTick();
+  // Deregister when pool is empty
+  if (particles.length === 0) {
+    _particlePoolActive = false;
+    deregisterFxDraw(_particlePoolId);
+  }
 }
 
 /**
@@ -722,7 +723,7 @@ export function pushParticles(arr) {
   const cap = isMobile ? _mobileDefaults.maxParticlesTotal : isTablet ? _tabletDefaults.maxParticlesTotal : MAX_PARTICLES;
   for (let i = 0; i < arr.length; i++) particles.push(arr[i]);
   if (particles.length > cap) particles.splice(0, particles.length - cap);
-  if (!particleRAF) _tickParticles();
+  _ensureParticlePool();
 }
 
 /**
@@ -748,7 +749,7 @@ export function spawnSmoke(cx, cy, count) {
       char: glyphs[Math.floor(Math.random() * glyphs.length)],
     });
   }
-  if (!particleRAF) _tickParticles();
+  _ensureParticlePool();
 }
 
 /**
@@ -774,7 +775,7 @@ export function spawnFireTrail(x, y, angle) {
       char: glyphs[Math.floor(Math.random() * glyphs.length)],
     });
   }
-  if (!particleRAF) _tickParticles();
+  _ensureParticlePool();
 }
 
 // ── Screen Effects ───────────────────────────────────────────────
