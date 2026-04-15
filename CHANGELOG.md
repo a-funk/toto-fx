@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-04-15
+
+### Unified Particle Pipeline
+
+Three separate canvases (`animation-canvas`, `speed-lines-canvas`, `fx-canvas`) merged into a single unified canvas. One canvas, one RAF loop, one clear per frame.
+
+#### Changed
+
+- **Single canvas** — All rendering (particles, speed lines, FX draw callbacks) draws to `fx-canvas`. `animation-canvas` and `speed-lines-canvas` are no longer created.
+- **Single master tick** — `_tickFxDraw` brought into `_masterTick`. All subsystems driven by one RAF loop with unified frame budget monitoring.
+- **spawnParticles as FX draw callback** — The particle pool is now a registered FX draw callback. Batch rendering preserved (font-bucket pass). `spawnParticles()` API unchanged.
+- **creation.js migrated** — 6 creation variants (materialize, portal, confetti-drop, sparkle-trail, butterfly-carry, grow) converted from direct RAF + `getFxCtx()` to `registerFxDraw()`. Fixes latent bug where interrupted creation animations would wipe the entire FX canvas.
+- **Cute alpha values bumped** — 43 manual alpha multipliers across 8 cute variants raised proportionally. Flower petals, butterflies, bees, cats, dogs, snowfall, ocean, fireflies are all more visible, especially on light themes.
+
+#### Deprecated
+
+- `getCanvas()` — Returns the unified canvas with a debug warning. Use `getFxCanvas()` instead.
+- `getSpeedCanvas()` — Returns the unified canvas. Speed lines render to the main canvas.
+
+#### Added
+
+- `configure({ debug: true })` — Enables debug mode in the FX module.
+- **Debug alpha warning** — `drawChar()` warns (once per char+size) when alpha is below 0.1 in debug mode.
+- **Debug budget warning** — Master tick warns when total entity count exceeds device-tier cap (500/200/40) in debug mode.
+
+---
+
 ## [0.2.0] - 2026-04-14
 
 ### Breaking Changes

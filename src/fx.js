@@ -231,6 +231,9 @@ let _theme = {
   active: null,
 };
 
+// ── Debug Mode ──────────────────────────────────────────────────
+let _fxDebug = false;
+
 /**
  * Configure FX defaults. Call before using any FX functions to customize
  * behavior for your application. All options are optional — only provide
@@ -272,6 +275,7 @@ export function configure(opts) {
   }
 
   if (opts.autoWarmup === false) _autoWarmup = false;
+  if (opts.debug !== undefined) _fxDebug = opts.debug;
 }
 
 // ── Device Detection ──────────────────────────────────────────────
@@ -367,6 +371,7 @@ let _frameBudgetExceeded = 0;
 let _adaptiveQuality = 1.0;
 let _adaptiveParticleScale = 1.0;
 let _adaptiveSkipSpeedLines = false;
+let _budgetWarnThrottled = false;
 
 function _monitorFrame(now) {
   if (_lastFrameTime > 0) {
@@ -420,6 +425,17 @@ function _masterTick(now) {
     else _masterSubs.fxDraw = false;
   }
 
+  // Debug: warn when total entity count exceeds device-tier budget
+  if (_fxDebug && anyActive) {
+    const totalEntities = particles.length + Object.keys(_fxDrawCallbacks).length;
+    const cap = isMobile ? _mobileDefaults.maxParticlesTotal : isTablet ? _tabletDefaults.maxParticlesTotal : MAX_PARTICLES;
+    if (totalEntities > cap && !_budgetWarnThrottled) {
+      console.warn('toto-fx: entity count (' + totalEntities + ') exceeds device budget (' + cap + ')');
+      _budgetWarnThrottled = true;
+      setTimeout(function () { _budgetWarnThrottled = false; }, 2000);
+    }
+  }
+
   if (anyActive) _masterRAF = requestAnimationFrame(_masterTick);
   else { _masterRAF = null; _lastFrameTime = 0; }
 }
@@ -437,7 +453,7 @@ let _getCanvasDeprecated = false;
  * @returns {HTMLCanvasElement} The unified FX canvas element.
  */
 export function getCanvas() {
-  if (!_getCanvasDeprecated && _config.debug) {
+  if (!_getCanvasDeprecated && _fxDebug) {
     console.warn('toto-fx: getCanvas() is deprecated — use getFxCanvas() for the unified canvas.');
     _getCanvasDeprecated = true;
   }
@@ -1491,7 +1507,16 @@ export function drawAsciiChar(targetCtx, ch, x, y, color, size, alpha, rotation)
  * @param {number} rotation - Rotation angle in radians. 0 for no rotation.
  */
 let _lastDrawFont = '';
+let _alphaWarnSet = null; // track which draw IDs have warned (debug only)
 export function drawChar(targetCtx, ch, x, y, color, size, alpha, rotation) {
+  if (_fxDebug && alpha > 0 && alpha < 0.1) {
+    if (!_alphaWarnSet) _alphaWarnSet = new Set();
+    const key = ch + ':' + size;
+    if (!_alphaWarnSet.has(key)) {
+      _alphaWarnSet.add(key);
+      console.warn('toto-fx: drawChar alpha ' + alpha.toFixed(3) + ' below 0.1 — nearly invisible (' + ch + ', size ' + size + ')');
+    }
+  }
   const font = size + 'px monospace';
   if (font !== _lastDrawFont) { targetCtx.font = font; _lastDrawFont = font; }
   targetCtx.globalAlpha = alpha;
