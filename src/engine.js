@@ -37,7 +37,7 @@ export function createEngine(userConfig) {
       return document.querySelector('[data-anim-id="' + key + '"]');
     },
     onRefresh: userConfig.onRefresh || null,
-    debug: userConfig.debug !== undefined ? userConfig.debug : true,
+    debug: userConfig.debug !== undefined ? userConfig.debug : false,
     reducedMotion: userConfig.reducedMotion || 'ignore', // 'respect' | 'ignore'
   };
 
