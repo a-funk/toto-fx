@@ -106,6 +106,7 @@ Set FX defaults before using any functions. All options are optional -- only pro
 | `theme.particleColor` | `(key: string) => number[]\|string` | `[255, 200, 50]` | Get particle color by key |
 | `theme.active` | `Object\|null` | `null` | Active theme object with `palette` and `colorScheme` |
 | `autoWarmup` | `boolean` | `true` | Set `false` to disable automatic warmup on import |
+| `debug` | `boolean` | `false` | Enable debug warnings (alpha < 0.1, budget exceeded, deprecated API calls) |
 
 ```js
 import { configure } from 'toto-fx/fx';
@@ -130,7 +131,7 @@ configure({
 
 ### `spawnParticles(cx, cy, opts)`
 
-Spawn themed ASCII particles from a center point. Particles render on a shared full-viewport canvas with physics (gravity, drag, velocity decay). Count is automatically scaled down on mobile and tablet.
+Spawn themed ASCII particles from a center point. Particles render on the unified FX canvas via a shared pool draw callback with physics (gravity, drag, velocity decay). Count is automatically scaled down on mobile and tablet.
 
 If an impact flash is currently active, particle spawning is deferred until the flash clears so particles are visible on spawn.
 
@@ -292,7 +293,7 @@ flashColor('rgba(0, 255, 100, 0.3)', 150); // green success flash
 
 ### `startSpeedLines(cx, cy, direction, durationMs)`
 
-Render radial anime-style speed lines emanating from or converging to a center point. Uses a dedicated full-viewport canvas layer. Automatically cleans up after the duration. Respects the `speedLines` FX toggle.
+Render radial anime-style speed lines emanating from or converging to a center point. Renders to the unified FX canvas. Automatically cleans up after the duration. Respects the `speedLines` FX toggle.
 
 | Param | Type | Description |
 |-------|------|-------------|
@@ -720,41 +721,11 @@ if (shouldShadow()) {
 
 ## Canvas
 
-FX manages three canvas layers, all full-viewport, fixed-position, pointer-events:none:
-
-| Canvas | z-index | Purpose | Getter |
-|--------|---------|---------|--------|
-| Particle canvas | 9998 | ASCII particle rendering | `getCanvas()` |
-| Speed lines canvas | 9996 | Radial anime speed lines | `getSpeedCanvas()` |
-| FX canvas | 9999 | Custom animation rendering | `getFxCanvas()` |
-
-### `getCanvas()`
-
-Get or create the particle canvas. Lazily creates a full-viewport fixed-position canvas (`#animation-canvas`).
-
-**Returns:** `HTMLCanvasElement`
-
-```js
-import { getCanvas } from 'toto-fx/fx';
-
-const canvas = getCanvas();
-```
-
-### `getSpeedCanvas()`
-
-Get or create the speed lines canvas (`#speed-lines-canvas`).
-
-**Returns:** `HTMLCanvasElement`
-
-```js
-import { getSpeedCanvas } from 'toto-fx/fx';
-
-const canvas = getSpeedCanvas();
-```
+FX uses a single unified full-viewport canvas (`#fx-canvas`, z-index 9999) for all rendering -- particles, speed lines, and custom animation draw callbacks. The canvas is fixed-position with pointer-events:none.
 
 ### `getFxCanvas()`
 
-Get or create the FX canvas (`#fx-canvas`, z-index 9999). Used by animations for custom particle/effect rendering. Re-acquires the canvas if a previous reference was detached from the DOM.
+Get or create the unified FX canvas. Lazily creates a full-viewport fixed-position canvas. Re-acquires the canvas if a previous reference was detached from the DOM.
 
 **Returns:** `HTMLCanvasElement`
 
@@ -766,17 +737,19 @@ const canvas = getFxCanvas();
 
 ### `getFxCtx()`
 
-Get the 2D rendering context of the FX canvas. Creates the canvas if needed.
+Get the 2D rendering context of the unified canvas. Creates the canvas if needed.
 
 **Returns:** `CanvasRenderingContext2D`
 
-```js
-import { getFxCtx } from 'toto-fx/fx';
+> **Note:** Plugin authors should use `registerFxDraw()` instead of calling `getFxCtx()` directly. The context is passed to your draw callback each frame.
 
-const ctx = getFxCtx();
-ctx.fillStyle = 'red';
-ctx.fillRect(100, 100, 50, 50);
-```
+### `getCanvas()` (deprecated)
+
+Returns `getFxCanvas()`. In debug mode, logs a deprecation warning on first call. Use `getFxCanvas()` instead.
+
+### `getSpeedCanvas()` (deprecated)
+
+Returns `getFxCanvas()`. Speed lines now render to the unified canvas.
 
 ### `registerFxDraw(id, drawFn)`
 
@@ -1098,7 +1071,7 @@ warmup();
 ```
 
 **What it warms:**
-- Particle canvas and speed lines canvas creation + sizing
+- Unified FX canvas creation + sizing
 - `promoteCard` / `cleanupCard` layout path
 - Impact flash overlay element caching
 - Screen shake CSS class path
