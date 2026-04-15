@@ -2,9 +2,9 @@
 
 An animation engine that survives DOM replacement.
 
-TotoFX is a Animation Reconciliation Engine for web UIs — a layers-based approach to animating that treats animation as a **state reconciliation problem**, not a DOM lifecycle. Fluid-simulation backgrounds, animation plugin system, and theme engine that stack independently. Zero dependencies. Framework-agnostic.
+TotoFX is an Animation Reconciliation Engine for web UIs — a layers-based approach to animating that treats animation as a **state reconciliation problem**, not a DOM lifecycle. Fluid-simulation backgrounds, animation plugin system, and theme engine that stack independently. Zero dependencies. Framework-agnostic.
 
-Built on techniques and arcitectural inspiration from [pretext](https://github.com/chenglou/pretext) by Cheng Lou.
+Built on techniques and architectural inspiration from [pretext](https://github.com/chenglou/pretext) by Cheng Lou.
 
 Most animation libraries assume you control the DOM. You create an element, animate it, remove it. But if your app uses htmx, morphdom, idiomorph, Turbo, LiveView, or any server-driven approach that *replaces* DOM nodes, those animations die on every swap.
 

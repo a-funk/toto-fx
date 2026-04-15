@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Breaking Changes
 
 - **Destroy category merged into action** — `engine.play('destroy', ...)` is now `engine.play('action', el, { params: { style: 'destroy', ... } })`. All one-shot animations are under a unified `action` category with styles: `thud`, `cute`, `destroy`.
-- **Debug default changed to `true`** — Console warnings are now on by default. Pass `debug: false` to silence in production.
+- **Debug default is `false`** — Console warnings are opt-in. Pass `debug: true` to enable during development.
 - **Symbol-based animation keys** — DOM animation handles use `ANIM_KEY` symbol instead of string property `__totoAnimation`.
 
 ### Added
