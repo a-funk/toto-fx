@@ -205,12 +205,12 @@ Import the `FX` object for particle spawning, screen effects, card helpers, and 
 import { FX } from 'toto-fx/fx';
 
 // Inside play():
-var rect = FX.getItemRect(el);        // { cx, cy, width, height, top, left }
+var pos = FX.getItemRect(el);          // { cx, cy, rect: DOMRect }
 var sub = FX.getSubElements(el);       // { shadow, burst, badge, strike }
-var scale = FX.intensityScale(ctx.intensity); // 0.5 - 2.0 multiplier
+var scale = FX.intensityScale(ctx.intensity); // 0.3 - 1.0 multiplier
 
 // Particles
-FX.spawnParticles(rect.cx, rect.cy, {
+FX.spawnParticles(pos.cx, pos.cy, {
   count: Math.round(30 * scale),
   spread: 8,
   gravity: 0.15,
@@ -227,12 +227,12 @@ FX.doImpactFlash();                    // Black flash + color inversion
 FX.flashColor([255, 0, 0], 200);       // Custom color flash
 
 // Dotgrid effects (requires dotgrid module)
-FX.doDotgridRipple(rect.cx, rect.cy, { radius: 200, push: 8, density: 0.4 });
+FX.doDotgridRipple(pos.cx, pos.cy, { radius: 200, push: 8, density: 0.4 });
 
 // Card lifecycle (for action animations that remove elements)
-FX.liftCard(el, sub.shadow, rect.cx, rect.cy, 450, 350, -6, 2, function () {
-  FX.gravityFall(el, sub.shadow, 450, -6, 2, 200, 3, rect.cx, rect.cy, function () {
-    FX.standardImpact(el, sub.shadow, sub.burst, rect.cx, rect.cy);
+FX.liftCard(el, sub.shadow, pos.cx, pos.cy, 450, 350, -6, 2, function () {
+  FX.gravityFall(el, sub.shadow, 450, -6, 2, 200, 3, pos.cx, pos.cy, function () {
+    FX.standardImpact(el, sub.shadow, sub.burst, pos.cx, pos.cy);
     FX.completeAndRemove(el, sub.badge, sub.strike, 300, ctx.onDone);
   });
 });
@@ -472,3 +472,39 @@ Most built-in animations combine layers. A thud animation uses Layer 3 (card lif
 ### Animation Context
 
 The engine maintains a context stack for concurrent animations. Each `setContext()` pushes a frame; each `clearContext()` pops it. This prevents one animation's cleanup from poisoning another's settings (flash, speed, dotgrid overrides). Plugin authors don't manage this directly -- the engine handles it via `_withScopedContext()`.
+
+---
+
+## Debugging
+
+Use these built-in APIs to monitor your plugin's performance and state:
+
+### `FX.isIdle()`
+
+Returns `true` when no particles, speed lines, or draw callbacks are active. Useful for determining when it's safe to tear down or when all animations have finished.
+
+### `FX.getAdaptiveQuality()`
+
+Returns `1.0` (full quality) or `0.5` (degraded). The engine drops quality when 3+ consecutive frames exceed 20ms. During degraded quality, particles are culled and speed lines are skipped. Your plugin should check this and reduce detail:
+
+```js
+if (FX.getAdaptiveQuality() < 1.0) {
+  // skip secondary detail (leaf veins, glow halos, trails)
+}
+```
+
+### `FX.fxConfig`
+
+The live FX toggle object. Inspect it to see which effects are enabled:
+
+```js
+console.log(FX.fxConfig);
+// { speedLines: true, flash: true, shake: true, dotgrid: true, cardSquash: true }
+```
+
+### Debug mode
+
+Enable debug mode via `configure({ debug: true })` to get console warnings for:
+- `drawChar` calls with alpha below 0.1 (nearly invisible)
+- Entity count exceeding the device-tier particle budget
+- Use of deprecated APIs (`getCanvas()`, `getSpeedCanvas()`)

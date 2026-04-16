@@ -30,6 +30,7 @@ export function createEngine(userConfig) {
   // ── Configuration ──────────────────────────────────────────
 
   var _dotgrid = null;
+  var _helpers = userConfig.helpers || null;
 
   const _config = {
     root: userConfig.root || (typeof document !== 'undefined' ? document.body : null),
@@ -188,6 +189,7 @@ export function createEngine(userConfig) {
       if (opts.variantLookup) this._variantLookup = opts.variantLookup;
       if (opts.stopHandler) this._stopHandler = opts.stopHandler;
       if (opts.fxContextManager) this._fxContextManager = opts.fxContextManager;
+      if (opts.helpers) _helpers = opts.helpers;
     },
 
     // ── Events ───────────────────────────────────────────────
@@ -745,8 +747,12 @@ export function createEngine(userConfig) {
               if (ctx.onDone) ctx.onDone();
               return;
             }
-            // Inject dotgrid effect dispatcher so plugins can trigger
-            // dotgrid effects without bundling their own FX copy
+            // Stop any existing animation on this element before starting
+            if (el[ANIM_KEY] && _categories[category] && typeof _categories[category].stop === 'function') {
+              _categories[category].stop(el);
+            }
+            // Inject helpers so plugins can access FX utilities
+            if (_helpers) ctx.helpers = _helpers;
             ctx.dotgridEffect = function (name, args) {
               if (_dotgrid && typeof _dotgrid.runEffect === 'function') {
                 _dotgrid.runEffect(name, args);

@@ -627,6 +627,31 @@ Load a plugin, install it, play animations. `engine.use()` calls `engine.registe
 
   engine.use({ categories: { persist: { play: myPlugin.play } } });
 ```
+
+**IIFE / script tag:** Register a custom variant under an existing category:
+
+```html
+<script src="toto-fx.min.js"></script>
+<script>
+  var engine = TotoFX.createEngine({ helpers: TotoFX.FX });
+
+  var myVariant = {
+    name: 'sparkle-burst',
+    play: function (el, ctx) {
+      var FX = ctx.helpers;
+      var rect = el.getBoundingClientRect();
+      FX.spawnParticles(rect.left + rect.width / 2, rect.top + rect.height / 2, {
+        count: 40, spread: 10, chars: ['*', '+', '\u2726'],
+      });
+      if (ctx.onDone) ctx.onDone();
+    },
+    cleanup: function (el) { /* reset styles if needed */ },
+  };
+
+  engine.register('action', 'custom', { 'sparkle-burst': myVariant });
+</script>
+```
+
 ## Built-in Animation Variants
 
 59 animations across 3 categories. The **category**, **style**, and **variant** are the three values you pass to `play()` or `set()`:
