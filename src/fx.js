@@ -58,11 +58,11 @@
  *   pCount(n)          — scale particle count for mobile/tablet
  *   resolveParams(descriptors, overrides) — merge param defaults with user overrides
  *
- * ### Canvas
- *   getFxCanvas()      — full-viewport particle canvas element
- *   getFxCtx()         — 2D context for the particle canvas
- *   getCanvas()        — particle canvas (creates if needed)
- *   getSpeedCanvas()   — speed lines canvas (creates if needed)
+ * ### Canvas (unified — one canvas for particles, speed lines, and FX draw)
+ *   getFxCanvas()      — unified full-viewport canvas element
+ *   getFxCtx()         — 2D context for the unified canvas
+ *   getCanvas()        — deprecated, returns getFxCanvas()
+ *   getSpeedCanvas()   — deprecated, returns getFxCanvas()
  *   drawAsciiChar(ctx, ch, x, y, color, size, alpha, rotation) — render one character
  *   drawChar(ctx, ch, x, y, color, size, alpha, rotation) — optimized character draw
  *
@@ -231,6 +231,9 @@ let _theme = {
   active: null,
 };
 
+// ── Debug Mode ──────────────────────────────────────────────────
+let _fxDebug = false;
+
 /**
  * Configure FX defaults. Call before using any FX functions to customize
  * behavior for your application. All options are optional — only provide
@@ -272,6 +275,7 @@ export function configure(opts) {
   }
 
   if (opts.autoWarmup === false) _autoWarmup = false;
+  if (opts.debug !== undefined) _fxDebug = opts.debug;
 }
 
 // ── Device Detection ──────────────────────────────────────────────
@@ -357,7 +361,7 @@ export function fxEnabled(key) {
 // Single requestAnimationFrame drives all active subsystems (particles,
 // speed lines) to avoid 2+ RAF callbacks per frame during animations.
 let _masterRAF = null;
-let _masterSubs = { particles: false, speedLines: false };
+let _masterSubs = { speedLines: false, fxDraw: false };
 
 // Frame budget monitor: track consecutive slow frames
 let _lastFrameTime = 0;
@@ -367,6 +371,7 @@ let _frameBudgetExceeded = 0;
 let _adaptiveQuality = 1.0;
 let _adaptiveParticleScale = 1.0;
 let _adaptiveSkipSpeedLines = false;
+let _budgetWarnThrottled = false;
 
 function _monitorFrame(now) {
   if (_lastFrameTime > 0) {
@@ -394,10 +399,13 @@ function _masterTick(now) {
   _monitorFrame(now);
   let anyActive = false;
 
-  if (_masterSubs.particles) {
-    _tickParticlesInner(now);
-    if (particles.length > 0) anyActive = true;
-    else _masterSubs.particles = false;
+  // Single clear of the unified canvas before any subsystem renders
+  const _fxC = getFxCtx();
+  if (_fxC) {
+    _fxC.save();
+    _fxC.setTransform(1, 0, 0, 1, 0, 0);
+    _fxC.clearRect(0, 0, _fxC.canvas.width, _fxC.canvas.height);
+    _fxC.restore();
   }
 
   if (_masterSubs.speedLines) {
@@ -411,6 +419,23 @@ function _masterTick(now) {
     else _masterSubs.speedLines = false;
   }
 
+  if (_masterSubs.fxDraw) {
+    _tickFxDrawInner(now);
+    if (Object.keys(_fxDrawCallbacks).length > 0) anyActive = true;
+    else _masterSubs.fxDraw = false;
+  }
+
+  // Debug: warn when total entity count exceeds device-tier budget
+  if (_fxDebug && anyActive) {
+    const totalEntities = particles.length + Object.keys(_fxDrawCallbacks).length;
+    const cap = isMobile ? _mobileDefaults.maxParticlesTotal : isTablet ? _tabletDefaults.maxParticlesTotal : MAX_PARTICLES;
+    if (totalEntities > cap && !_budgetWarnThrottled) {
+      console.warn('toto-fx: entity count (' + totalEntities + ') exceeds device budget (' + cap + ')');
+      _budgetWarnThrottled = true;
+      setTimeout(function () { _budgetWarnThrottled = false; }, 2000);
+    }
+  }
+
   if (anyActive) _masterRAF = requestAnimationFrame(_masterTick);
   else { _masterRAF = null; _lastFrameTime = 0; }
 }
@@ -419,56 +444,24 @@ function _ensureMasterTick() {
   if (!_masterRAF) _masterRAF = requestAnimationFrame(_masterTick);
 }
 
-// ── Particle Canvas ──────────────────────────────────────────────
-let canvas = null;
-let ctx = null;
+// ── Particle State ───────────────────────────────────────────────
 let particles = [];
-let particleRAF = null;
 
+let _getCanvasDeprecated = false;
 /**
- * Get or create the particle canvas. Lazily creates a full-viewport
- * fixed-position canvas for rendering ASCII particles.
- *
- * @returns {HTMLCanvasElement} The particle canvas element.
+ * @deprecated Use getFxCanvas() instead. Returns the unified canvas.
+ * @returns {HTMLCanvasElement} The unified FX canvas element.
  */
 export function getCanvas() {
-  if (canvas) return canvas;
-  canvas = document.getElementById('animation-canvas');
-  if (!canvas) {
-    canvas = document.createElement('canvas');
-    canvas.id = 'animation-canvas';
-    canvas.style.cssText = 'position:fixed;inset:0;z-index:9998;pointer-events:none;';
-    document.body.appendChild(canvas);
+  if (!_getCanvasDeprecated && _fxDebug) {
+    console.warn('toto-fx: getCanvas() is deprecated — use getFxCanvas() for the unified canvas.');
+    _getCanvasDeprecated = true;
   }
-  ctx = canvas.getContext('2d');
-  resizeCanvas();
-  return canvas;
+  return getFxCanvas();
 }
 
-function resizeCanvas() {
-  if (!canvas) return;
-  // Cap DPR at 1.5x — particle effects don't benefit from 2x resolution
-  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-  canvas.width = window.innerWidth * dpr;
-  canvas.height = window.innerHeight * dpr;
-  // CSS display size MUST match viewport, not buffer. Without this,
-  // the canvas renders at buffer dimensions (1.5x viewport), pushing
-  // particles off their intended viewport positions.
-  canvas.style.width = window.innerWidth + 'px';
-  canvas.style.height = window.innerHeight + 'px';
-  if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
-
-if (typeof window !== 'undefined') {
-  window.addEventListener('resize', resizeCanvas);
-}
-
-// ── Speed Lines Canvas ───────────────────────────────────────────
-let speedCanvas = null;
-let speedCtx = null;
-let speedLinesRAF = null;
-
-// Speed lines state — hoisted for unified RAF access
+// ── Speed Lines State ────────────────────────────────────────────
+// Speed lines render to the unified FX canvas (no separate canvas)
 let _speedLinesActive = false;
 let _speedLinesStart = 0;
 let _speedLinesDuration = 0;
@@ -499,37 +492,11 @@ for (let i = 0; i < radialLineCount; i++) {
 }
 
 /**
- * Get or create the speed lines canvas. Lazily creates a full-viewport
- * fixed-position canvas for rendering radial anime-style speed lines.
- *
- * @returns {HTMLCanvasElement} The speed lines canvas element.
+ * @deprecated Speed lines now render to the unified FX canvas. Returns getFxCanvas().
+ * @returns {HTMLCanvasElement} The unified FX canvas element.
  */
 export function getSpeedCanvas() {
-  if (speedCanvas) return speedCanvas;
-  speedCanvas = document.getElementById('speed-lines-canvas');
-  if (!speedCanvas) {
-    speedCanvas = document.createElement('canvas');
-    speedCanvas.id = 'speed-lines-canvas';
-    speedCanvas.style.cssText = 'position:fixed;inset:0;z-index:9996;pointer-events:none;opacity:0;';
-    document.body.appendChild(speedCanvas);
-  }
-  speedCtx = speedCanvas.getContext('2d');
-  resizeSpeedCanvas();
-  return speedCanvas;
-}
-
-function resizeSpeedCanvas() {
-  if (!speedCanvas) return;
-  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-  speedCanvas.width = window.innerWidth * dpr;
-  speedCanvas.height = window.innerHeight * dpr;
-  speedCanvas.style.width = window.innerWidth + 'px';
-  speedCanvas.style.height = window.innerHeight + 'px';
-  if (speedCtx) speedCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
-
-if (typeof window !== 'undefined') {
-  window.addEventListener('resize', resizeSpeedCanvas);
+  return getFxCanvas();
 }
 
 function _getSpeedLineRGB() {
@@ -545,21 +512,12 @@ function _getSpeedLineRGB() {
   return '255,255,255';
 }
 
-// Inner speed lines tick — called by master tick, no self-scheduling
+// Inner speed lines tick — called by master tick, renders to unified FX canvas
 function _tickSpeedLinesInner(now) {
   if (!_speedLinesActive) return;
-  // Health check: re-acquire speed canvas if detached
-  if (!speedCanvas || !document.contains(speedCanvas)) {
-    speedCanvas = null; speedCtx = null;
-    getSpeedCanvas();
-  }
-  if (!speedCtx) return;
+  const sCtx = getFxCtx();
+  if (!sCtx) return;
   const t = Math.min((now - _speedLinesStart) / _speedLinesDuration, 1);
-  // Clear full buffer (not transformed coordinates) to prevent DPR artifacts
-  speedCtx.save();
-  speedCtx.setTransform(1, 0, 0, 1, 0, 0);
-  speedCtx.clearRect(0, 0, speedCanvas.width, speedCanvas.height);
-  speedCtx.restore();
 
   const cx = _speedLinesCx;
   const cy = _speedLinesCy;
@@ -586,12 +544,12 @@ function _tickSpeedLinesInner(now) {
     const y2 = cy + s * hd;
     const fade = direction === 'outward' ? Math.sin(t * Math.PI) : 0.5 + 0.5 * t;
     const alpha = ln.opacity * fade;
-    speedCtx.beginPath();
-    speedCtx.moveTo(x1, y1);
-    speedCtx.lineTo(x2, y2);
-    speedCtx.strokeStyle = 'rgba(' + rgb + ',' + alpha + ')';
-    speedCtx.lineWidth = ln.width;
-    speedCtx.stroke();
+    sCtx.beginPath();
+    sCtx.moveTo(x1, y1);
+    sCtx.lineTo(x2, y2);
+    sCtx.strokeStyle = 'rgba(' + rgb + ',' + alpha + ')';
+    sCtx.lineWidth = ln.width;
+    sCtx.stroke();
   }
 
   if (t >= 1) _finishSpeedLines();
@@ -599,13 +557,6 @@ function _tickSpeedLinesInner(now) {
 
 function _finishSpeedLines() {
   _speedLinesActive = false;
-  if (speedCtx && speedCanvas) {
-    speedCtx.save();
-    speedCtx.setTransform(1, 0, 0, 1, 0, 0);
-    speedCtx.clearRect(0, 0, speedCanvas.width, speedCanvas.height);
-    speedCtx.restore();
-    speedCanvas.style.opacity = '0';
-  }
 }
 
 /**
@@ -619,17 +570,15 @@ function _finishSpeedLines() {
  */
 export function startSpeedLines(cx, cy, direction, durationMs) {
   if (!fxEnabled('speedLines')) return;
-  getSpeedCanvas();
-  // Cancel any previous speed line animation
+  const c = getFxCanvas();
   _speedLinesActive = true;
   _speedLinesStart = performance.now();
   _speedLinesDuration = durationMs;
   _speedLinesCx = cx;
   _speedLinesCy = cy;
   _speedLinesDirection = direction;
-  _speedLinesMaxR = Math.max(speedCanvas.width, speedCanvas.height);
+  _speedLinesMaxR = Math.max(c.width, c.height);
   _speedLinesRGB = _getSpeedLineRGB();
-  speedCanvas.style.opacity = '1';
   // Register with master tick
   _masterSubs.speedLines = true;
   _ensureMasterTick();
@@ -641,13 +590,6 @@ export function startSpeedLines(cx, cy, direction, durationMs) {
 export function stopSpeedLines() {
   _speedLinesActive = false;
   _masterSubs.speedLines = false;
-  if (speedCtx && speedCanvas) {
-    speedCtx.save();
-    speedCtx.setTransform(1, 0, 0, 1, 0, 0);
-    speedCtx.clearRect(0, 0, speedCanvas.width, speedCanvas.height);
-    speedCtx.restore();
-    speedCanvas.style.opacity = '0';
-  }
 }
 
 // ── Particle System ──────────────────────────────────────────────
@@ -679,7 +621,7 @@ export function spawnParticles(cx, cy, opts) {
     setTimeout(function() { spawnParticles(cx, cy, opts); }, remaining);
     return;
   }
-  getCanvas();
+  getFxCanvas();
   let count = opts.count || 30;
   if (isMobile) count = Math.min(Math.ceil(count * _mobileDefaults.particleScale), _mobileDefaults.maxParticles);
   else if (isTablet) count = Math.min(Math.ceil(count * _tabletDefaults.particleScale), _tabletDefaults.maxParticles);
@@ -708,28 +650,28 @@ export function spawnParticles(cx, cy, opts) {
       drag: opts.drag || 0.98,
     });
   }
-  if (!particleRAF) _tickParticles();
+  _ensureParticlePool();
 }
 
-// Inner particle tick — called by master tick loop, no self-scheduling
-function _tickParticlesInner(_now) {
-  // Health check: re-acquire canvas if detached from DOM (e.g., full page swap)
-  if (!canvas || !document.contains(canvas)) {
-    canvas = null; ctx = null;
-    getCanvas();
-  }
-  if (!ctx) return;
-  // Clear full buffer (identity transform) to prevent DPR-scaled artifacts
-  ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.restore();
+// ── Particle Pool FX Draw Callback ──────────────────────────────
+// The particle pool is managed by a single registered FX draw callback.
+// spawnParticles/pushParticles push into the pool; the callback
+// handles physics, alpha, and batch rendering via drawChar.
+const _particlePoolId = 'particle-pool';
+let _particlePoolActive = false;
+
+function _ensureParticlePool() {
+  if (_particlePoolActive) return;
+  _particlePoolActive = true;
+  registerFxDraw(_particlePoolId, _particlePoolDraw);
+}
+
+function _particlePoolDraw(ctx, _now) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
   // Adaptive quality: cull particles when frame budget is exceeded
   if (_adaptiveParticleScale < 1.0 && particles.length > 30) {
-    // Remove every other particle to halve the count
     const kept = [];
     for (let k = 0; k < particles.length; k++) {
       if (k % 2 === 0) kept.push(particles[k]);
@@ -775,12 +717,12 @@ function _tickParticlesInner(_now) {
     }
   }
   ctx.globalAlpha = 1;
-}
 
-// Legacy entry point — starts particles via the unified master tick
-function _tickParticles() {
-  _masterSubs.particles = true;
-  _ensureMasterTick();
+  // Deregister when pool is empty
+  if (particles.length === 0) {
+    _particlePoolActive = false;
+    deregisterFxDraw(_particlePoolId);
+  }
 }
 
 /**
@@ -793,11 +735,11 @@ function _tickParticles() {
  */
 const MAX_PARTICLES = 500;
 export function pushParticles(arr) {
-  getCanvas();
+  getFxCanvas();
   const cap = isMobile ? _mobileDefaults.maxParticlesTotal : isTablet ? _tabletDefaults.maxParticlesTotal : MAX_PARTICLES;
   for (let i = 0; i < arr.length; i++) particles.push(arr[i]);
   if (particles.length > cap) particles.splice(0, particles.length - cap);
-  if (!particleRAF) _tickParticles();
+  _ensureParticlePool();
 }
 
 /**
@@ -809,7 +751,7 @@ export function pushParticles(arr) {
  * @param {number} count - Number of smoke particles. Halved on mobile.
  */
 export function spawnSmoke(cx, cy, count) {
-  getCanvas();
+  getFxCanvas();
   if (isMobile) count = Math.min(Math.ceil(count * _mobileDefaults.particleScale), _mobileDefaults.maxParticles);
   else if (isTablet) count = Math.min(Math.ceil(count * _tabletDefaults.particleScale), _tabletDefaults.maxParticles);
   const glyphs = _theme.chars('smoke');
@@ -823,7 +765,7 @@ export function spawnSmoke(cx, cy, count) {
       char: glyphs[Math.floor(Math.random() * glyphs.length)],
     });
   }
-  if (!particleRAF) _tickParticles();
+  _ensureParticlePool();
 }
 
 /**
@@ -835,7 +777,7 @@ export function spawnSmoke(cx, cy, count) {
  * @param {number} angle - Direction of travel in radians (particles emit opposite).
  */
 export function spawnFireTrail(x, y, angle) {
-  getCanvas();
+  getFxCanvas();
   const glyphs = _theme.chars('fire');
   const color = _theme.particleColor('fire');
   for (let i = 0; i < 4; i++) {
@@ -849,7 +791,7 @@ export function spawnFireTrail(x, y, angle) {
       char: glyphs[Math.floor(Math.random() * glyphs.length)],
     });
   }
-  if (!particleRAF) _tickParticles();
+  _ensureParticlePool();
 }
 
 // ── Screen Effects ───────────────────────────────────────────────
@@ -1565,7 +1507,16 @@ export function drawAsciiChar(targetCtx, ch, x, y, color, size, alpha, rotation)
  * @param {number} rotation - Rotation angle in radians. 0 for no rotation.
  */
 let _lastDrawFont = '';
+let _alphaWarnSet = null; // track which draw IDs have warned (debug only)
 export function drawChar(targetCtx, ch, x, y, color, size, alpha, rotation) {
+  if (_fxDebug && alpha > 0 && alpha < 0.1) {
+    if (!_alphaWarnSet) _alphaWarnSet = new Set();
+    const key = ch + ':' + size;
+    if (!_alphaWarnSet.has(key)) {
+      _alphaWarnSet.add(key);
+      console.warn('toto-fx: drawChar alpha ' + alpha.toFixed(3) + ' below 0.1 — nearly invisible (' + ch + ', size ' + size + ')');
+    }
+  }
   const font = size + 'px monospace';
   if (font !== _lastDrawFont) { targetCtx.font = font; _lastDrawFont = font; }
   targetCtx.globalAlpha = alpha;
@@ -1831,55 +1782,53 @@ export function getAdaptiveQuality() {
 // draw callbacks instead of running their own RAF loops. One clearRect
 // per frame, then all active callbacks draw — no cross-animation wipe.
 let _fxDrawCallbacks = {};
-let _fxDrawRAF = null;
 let _fxDrawIdCounter = 0;
 
 /**
  * Register a draw callback on the FX canvas compositor.
- * The compositor runs a single RAF loop, clears the canvas once per frame,
- * then calls all registered callbacks with (ctx, timestamp).
+ * The callback is driven by the unified master tick loop — one clear per
+ * frame, then all registered callbacks draw in order.
  *
  * @param {string} id - Unique draw callback ID (use nextFxDrawId()).
  * @param {Function} drawFn - Called each frame with (ctx, now).
  */
 export function registerFxDraw(id, drawFn) {
   _fxDrawCallbacks[id] = drawFn;
-  if (!_fxDrawRAF) _tickFxDraw();
+  _masterSubs.fxDraw = true;
+  _ensureMasterTick();
 }
 
 /**
  * Remove a draw callback from the FX canvas compositor.
+ * When the last callback is removed, the fxDraw subsystem stops.
  *
  * @param {string} id - The draw callback ID to remove.
  */
 export function deregisterFxDraw(id) {
   delete _fxDrawCallbacks[id];
+  if (Object.keys(_fxDrawCallbacks).length === 0) {
+    _masterSubs.fxDraw = false;
+    // Final clear after all animations finish
+    const fxC = getFxCtx();
+    if (fxC) fxC.clearRect(0, 0, fxC.canvas.width, fxC.canvas.height);
+  }
 }
 
-function _tickFxDraw() {
-  _fxDrawRAF = requestAnimationFrame(function(now) {
-    const ctx = getFxCtx();
-    if (!ctx) { _fxDrawRAF = null; return; }
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+// Inner FX draw tick — called by master tick, no self-scheduling
+// Canvas already cleared by _masterTick before this is called
+function _tickFxDrawInner(now) {
+  const ctx = getFxCtx();
+  if (!ctx) return;
 
-    const ids = Object.keys(_fxDrawCallbacks);
-    for (let i = 0; i < ids.length; i++) {
-      const cb = _fxDrawCallbacks[ids[i]];
-      if (cb) {
-        ctx.save();
-        cb(ctx, now);
-        ctx.restore();
-      }
+  const ids = Object.keys(_fxDrawCallbacks);
+  for (let i = 0; i < ids.length; i++) {
+    const cb = _fxDrawCallbacks[ids[i]];
+    if (cb) {
+      ctx.save();
+      cb(ctx, now);
+      ctx.restore();
     }
-
-    if (Object.keys(_fxDrawCallbacks).length > 0) {
-      _tickFxDraw();
-    } else {
-      _fxDrawRAF = null;
-      // Final clear after all animations finish
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    }
-  });
+  }
 }
 
 /**
@@ -1903,9 +1852,8 @@ export function nextFxDrawId(prefix) {
  * if `requestIdleCallback` is available.
  */
 export function warmup() {
-  // Eagerly acquire canvas contexts
-  getCanvas();
-  getSpeedCanvas();
+  // Eagerly acquire unified canvas context
+  getFxCanvas();
 
   // Silent phantom animation to warm the full pipeline
   const phantom = document.createElement('div');

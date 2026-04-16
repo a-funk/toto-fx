@@ -205,12 +205,12 @@ Import the `FX` object for particle spawning, screen effects, card helpers, and 
 import { FX } from 'toto-fx/fx';
 
 // Inside play():
-var rect = FX.getItemRect(el);        // { cx, cy, width, height, top, left }
+var pos = FX.getItemRect(el);          // { cx, cy, rect: DOMRect }
 var sub = FX.getSubElements(el);       // { shadow, burst, badge, strike }
-var scale = FX.intensityScale(ctx.intensity); // 0.5 - 2.0 multiplier
+var scale = FX.intensityScale(ctx.intensity); // 0.3 - 1.0 multiplier
 
 // Particles
-FX.spawnParticles(rect.cx, rect.cy, {
+FX.spawnParticles(pos.cx, pos.cy, {
   count: Math.round(30 * scale),
   spread: 8,
   gravity: 0.15,
@@ -227,12 +227,12 @@ FX.doImpactFlash();                    // Black flash + color inversion
 FX.flashColor([255, 0, 0], 200);       // Custom color flash
 
 // Dotgrid effects (requires dotgrid module)
-FX.doDotgridRipple(rect.cx, rect.cy, { radius: 200, push: 8, density: 0.4 });
+FX.doDotgridRipple(pos.cx, pos.cy, { radius: 200, push: 8, density: 0.4 });
 
 // Card lifecycle (for action animations that remove elements)
-FX.liftCard(el, sub.shadow, rect.cx, rect.cy, 450, 350, -6, 2, function () {
-  FX.gravityFall(el, sub.shadow, 450, -6, 2, 200, 3, rect.cx, rect.cy, function () {
-    FX.standardImpact(el, sub.shadow, sub.burst, rect.cx, rect.cy);
+FX.liftCard(el, sub.shadow, pos.cx, pos.cy, 450, 350, -6, 2, function () {
+  FX.gravityFall(el, sub.shadow, 450, -6, 2, 200, 3, pos.cx, pos.cy, function () {
+    FX.standardImpact(el, sub.shadow, sub.burst, pos.cx, pos.cy);
     FX.completeAndRemove(el, sub.badge, sub.strike, 300, ctx.onDone);
   });
 });
@@ -370,13 +370,15 @@ myPlugin.play(el, { params: {}, helpers: mockFX, onDone: function () {} });
 
 TotoFX has three rendering layers. Understanding when to use each is the most important architectural decision for a plugin author.
 
+**The golden rule:** If you want to draw to the canvas, register a draw callback. The engine handles everything else.
+
 ### Layer 1: FX Canvas Compositor (`registerFxDraw`)
 
-Raw canvas access for bespoke frame-by-frame rendering. The compositor runs one `clearRect` per frame, then calls all registered draw callbacks in sequence. Each callback gets a `save()`/`restore()`-isolated 2D context.
+Raw canvas access for bespoke frame-by-frame rendering. A single unified master tick loop clears the canvas once per frame, then calls all registered draw callbacks in sequence. Each callback gets a `save()`/`restore()`-isolated 2D context.
 
 **Use when:** your animation needs direct canvas control -- complex scene rendering, multi-phase state machines, coordinated ASCII art, gradients, stroke paths, rotated text blocks.
 
-**Built-in users:** all destroy variants (explosions, lightning bolts, steamroller, piranhas), all cute variants (fireworks, butterflies, snowfall).
+**Built-in users:** all destroy variants, all cute variants, all canvas-based creation variants (materialize, portal, confetti-drop, sparkle-trail, butterfly-carry, grow), speed lines, and the particle system itself (particles are internally a registered draw callback).
 
 ```js
 play: function (el, ctx) {
@@ -392,7 +394,7 @@ play: function (el, ctx) {
   FX.registerFxDraw(_drawId, function (fxCtx, now) {
     var elapsed = now - startTime;
 
-    // Draw your scene -- NO clearRect needed, compositor handles it
+    // Draw your scene -- NO clearRect needed, the engine handles it
     fxCtx.textAlign = 'center';
     fragments.forEach(function (f) {
       // ... update and draw each fragment ...
@@ -408,14 +410,15 @@ play: function (el, ctx) {
 ```
 
 **Rules:**
-- Never call `fxCtx.clearRect()` -- the compositor clears once per frame before calling your callback
-- Never run your own `requestAnimationFrame` loop on the FX canvas
+- Never call `fxCtx.clearRect()` -- the engine clears once per frame before calling any callbacks
+- Never run your own `requestAnimationFrame` loop for canvas rendering -- register a draw callback instead
+- Never call `getFxCtx()` to draw outside a registered callback
 - Always call `FX.deregisterFxDraw(_drawId)` before `FX.finalize()`
-- Multiple animations can draw concurrently -- the compositor composites them all
+- Multiple animations can draw concurrently -- the engine composites them all
 
 ### Layer 2: Particle System (`spawnParticles`)
 
-High-level convenience API for independent physics-driven particles. You push particles into a shared array; a centralized tick loop advances them all with gravity, drag, and fade. Renders to a separate particle canvas.
+High-level convenience API for independent physics-driven particles. You push particles into a shared pool; the engine advances them all with gravity, drag, and automatic alpha fade. Internally, the particle pool is a registered draw callback on the same unified canvas -- you just don't have to manage it.
 
 **Use when:** you need a burst of ASCII characters that fly outward, fall with gravity, and fade. This covers ~90% of animation particle needs.
 
@@ -433,7 +436,7 @@ FX.spawnParticles(cx, cy, {
 });
 ```
 
-**Why not use this for everything?** Particles are stateless independent points. They can't express coordinated scenes (a steamroller driving across), phased state machines (crosshair tracking then firing), or interleaved DOM + canvas work (clipPath burning while flames render). For those, use the compositor.
+**Why not use this for everything?** Particles are stateless independent points. They can't express coordinated scenes (a steamroller driving across), phased state machines (crosshair tracking then firing), or interleaved DOM + canvas work (clipPath burning while flames render). For those, use `registerFxDraw`.
 
 ### Layer 3: DOM Animations (`requestAnimationFrame`)
 
@@ -456,17 +459,52 @@ play: function (el, ctx) {
 
 ### Combining Layers
 
-Most built-in animations combine layers. A thud animation uses Layer 3 (card lift via CSS transforms) + Layer 2 (impact particles). A destroy animation uses Layer 1 (scene rendering on FX canvas) + Layer 3 (card style manipulation like `clipPath`, `opacity`). You can freely mix layers -- they render on separate surfaces and don't interfere.
+Most built-in animations combine layers. A thud animation uses Layer 3 (card lift via CSS transforms) + Layer 2 (impact particles). A destroy animation uses Layer 1 (scene rendering via registerFxDraw) + Layer 3 (card style manipulation like `clipPath`, `opacity`). You can freely mix layers -- particles and draw callbacks render to the same canvas and composite naturally.
 
 ### Canvas Stack (bottom to top)
 
-| Z-Index | Canvas | Owner | Purpose |
-|---------|--------|-------|---------|
+| Z-Index | Element | Owner | Purpose |
+|---------|---------|-------|---------|
 | page flow | Dotgrid `<canvas>` | Dotgrid module | Fluid simulation grid |
-| 9998 | `#animation-canvas` | Particle system | `spawnParticles` output |
-| 9999 | `#fx-canvas` | Compositor | `registerFxDraw` output |
+| 9999 | `#fx-canvas` | FX engine | All canvas rendering: particles, speed lines, draw callbacks |
 | DOM | Card elements | CSS transforms | `liftCard`, `promoteCard` |
 
 ### Animation Context
 
 The engine maintains a context stack for concurrent animations. Each `setContext()` pushes a frame; each `clearContext()` pops it. This prevents one animation's cleanup from poisoning another's settings (flash, speed, dotgrid overrides). Plugin authors don't manage this directly -- the engine handles it via `_withScopedContext()`.
+
+---
+
+## Debugging
+
+Use these built-in APIs to monitor your plugin's performance and state:
+
+### `FX.isIdle()`
+
+Returns `true` when no particles, speed lines, or draw callbacks are active. Useful for determining when it's safe to tear down or when all animations have finished.
+
+### `FX.getAdaptiveQuality()`
+
+Returns `1.0` (full quality) or `0.5` (degraded). The engine drops quality when 3+ consecutive frames exceed 20ms. During degraded quality, particles are culled and speed lines are skipped. Your plugin should check this and reduce detail:
+
+```js
+if (FX.getAdaptiveQuality() < 1.0) {
+  // skip secondary detail (leaf veins, glow halos, trails)
+}
+```
+
+### `FX.fxConfig`
+
+The live FX toggle object. Inspect it to see which effects are enabled:
+
+```js
+console.log(FX.fxConfig);
+// { speedLines: true, flash: true, shake: true, dotgrid: true, cardSquash: true }
+```
+
+### Debug mode
+
+Enable debug mode via `configure({ debug: true })` to get console warnings for:
+- `drawChar` calls with alpha below 0.1 (nearly invisible)
+- Entity count exceeding the device-tier particle budget
+- Use of deprecated APIs (`getCanvas()`, `getSpeedCanvas()`)

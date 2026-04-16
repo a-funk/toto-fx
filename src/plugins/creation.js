@@ -520,12 +520,6 @@ export const materialize = {
     const cy = rect.top + rect.height / 2;
     const startTime = performance.now();
 
-    // Create glitch fragment particles on the canvas
-    const fxCtx = fx.getFxCtx();
-    fxCtx.textAlign = 'center';
-    fxCtx.textBaseline = 'middle';
-    fx.resetDrawFont();
-
     const fragCount = fx.pCount(Math.round(lerp(p.minFrags, p.maxFrags, inorm)));
     const frags = [];
     for (let i = 0; i < fragCount; i++) {
@@ -543,19 +537,20 @@ export const materialize = {
     }
 
     el.style.opacity = '0';
+    const _drawId = fx.nextFxDrawId('materialize');
 
-    function frame(now) {
+    fx.registerFxDraw(_drawId, function (fxCtx, now) {
       fx.tickFrame();
       const elapsed = now - startTime;
       const t = Math.min(elapsed / duration, 1);
-      fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
+      fxCtx.textAlign = 'center';
+      fxCtx.textBaseline = 'middle';
       fx.resetDrawFont();
 
       // Card fades in during second half
       if (t > 0.4) {
         const cardT = (t - 0.4) / 0.6;
         el.style.opacity = String(cardT);
-        // Occasional glitch offset on the card
         if (t < 0.85 && Math.random() > 0.7) {
           const glitchX = (Math.random() - 0.5) * lerp(4, 12, inorm);
           el.style.transform = 'translateX(' + glitchX + 'px)';
@@ -568,40 +563,27 @@ export const materialize = {
       frags.forEach(function (f) {
         if (elapsed < f.delay) return;
         const ft = Math.min((elapsed - f.delay) / (duration * 0.7), 1);
-        // Move toward target then scatter
         const moveT = Math.min(ft * 2, 1);
         const ffx = lerp(f.x, f.targetX, moveT);
         const ffy = lerp(f.y, f.targetY, moveT);
-        // RGB offset effect
         const rgbOff = lerp(6, 2, ft) * (Math.sin(f.phase + elapsed * 0.01) > 0 ? 1 : -1);
         let alpha = ft > 0.7 ? (1 - (ft - 0.7) / 0.3) : Math.min(ft * 3, 1);
         alpha *= lerp(0.5, 0.9, inorm);
         if (alpha > 0.01) {
-          // Red channel offset
           fx.drawChar(fxCtx, f.char, ffx + rgbOff, ffy, 'rgba(255,50,50,0.5)', f.size, alpha * 0.4, 0);
-          // Blue channel offset
           fx.drawChar(fxCtx, f.char, ffx - rgbOff, ffy, 'rgba(50,50,255,0.5)', f.size, alpha * 0.4, 0);
-          // Main character
           fx.drawChar(fxCtx, f.char, ffx, ffy, f.color, f.size, alpha, 0);
         }
       });
 
-      if (t < 1) {
-        requestAnimationFrame(frame);
-      } else {
-        fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
+      if (t >= 1) {
+        fx.deregisterFxDraw(_drawId);
         creationDone(el, ctx.onDone);
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function (el) {
     creationCleanup(el);
-    // Clear FX canvas in case animation was interrupted
-    if (FX && typeof FX.getFxCtx === 'function') {
-      const fxCtx = FX.getFxCtx();
-      if (fxCtx) fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
-    }
   },
 };
 
@@ -633,12 +615,6 @@ export const portal = {
     const maxRadius = Math.sqrt(cx * cx + cy * cy) + 10;
     const startTime = performance.now();
 
-    // Canvas particles for portal ring
-    const fxCtx = fx.getFxCtx();
-    fxCtx.textAlign = 'center';
-    fxCtx.textBaseline = 'middle';
-    fx.resetDrawFont();
-
     const absCx = rect.left + cx;
     const absCy = rect.top + cy;
     const ringCount = fx.pCount(Math.round(lerp(p.minRingParts, p.maxRingParts, inorm)));
@@ -656,12 +632,14 @@ export const portal = {
 
     el.style.opacity = '1';
     el.style.clipPath = 'circle(0% at 50% 50%)';
+    const _drawId = fx.nextFxDrawId('portal');
 
-    function frame(now) {
+    fx.registerFxDraw(_drawId, function (fxCtx, now) {
       fx.tickFrame();
       const elapsed = now - startTime;
       const t = Math.min(elapsed / duration, 1);
-      fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
+      fxCtx.textAlign = 'center';
+      fxCtx.textBaseline = 'middle';
       fx.resetDrawFont();
 
       // Expand clip circle
@@ -682,21 +660,14 @@ export const portal = {
         }
       });
 
-      if (t < 1) {
-        requestAnimationFrame(frame);
-      } else {
-        fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
+      if (t >= 1) {
+        fx.deregisterFxDraw(_drawId);
         creationDone(el, ctx.onDone);
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function (el) {
     creationCleanup(el);
-    if (FX && typeof FX.getFxCtx === 'function') {
-      const fxCtx = FX.getFxCtx();
-      if (fxCtx) fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
-    }
   },
 };
 
@@ -817,12 +788,6 @@ export const confettiDrop = {
     const cy = rect.top + rect.height / 2;
     const startTime = performance.now();
 
-    // Canvas confetti
-    const fxCtx = fx.getFxCtx();
-    fxCtx.textAlign = 'center';
-    fxCtx.textBaseline = 'middle';
-    fx.resetDrawFont();
-
     const confettiCount = fx.pCount(Math.round(lerp(p.minConfetti, p.maxConfetti, inorm)));
     const confetti = [];
     for (let i = 0; i < confettiCount; i++) {
@@ -843,12 +808,14 @@ export const confettiDrop = {
 
     el.style.opacity = '0';
     el.style.transform = 'translateY(-60px) scale(0.9)';
+    const _drawId = fx.nextFxDrawId('confetti-drop');
 
-    function frame(now) {
+    fx.registerFxDraw(_drawId, function (fxCtx, now) {
       fx.tickFrame();
       const elapsed = now - startTime;
       const t = Math.min(elapsed / totalDuration, 1);
-      fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
+      fxCtx.textAlign = 'center';
+      fxCtx.textBaseline = 'middle';
       fx.resetDrawFont();
 
       // Card drops in
@@ -877,21 +844,14 @@ export const confettiDrop = {
         }
       });
 
-      if (t < 1) {
-        requestAnimationFrame(frame);
-      } else {
-        fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
+      if (t >= 1) {
+        fx.deregisterFxDraw(_drawId);
         creationDone(el, ctx.onDone);
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function (el) {
     creationCleanup(el);
-    if (FX && typeof FX.getFxCtx === 'function') {
-      const fxCtx = FX.getFxCtx();
-      if (fxCtx) fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
-    }
   },
 };
 
@@ -920,23 +880,20 @@ export const sparkleTrail = {
     const rect = el.getBoundingClientRect();
     const startTime = performance.now();
 
-    const fxCtx = fx.getFxCtx();
-    fxCtx.textAlign = 'center';
-    fxCtx.textBaseline = 'middle';
-    fx.resetDrawFont();
-
     // Sparkles spawn continuously as element fades in
     let sparkles = [];
     const sparkleRate = lerp(p.minRate, p.maxRate, inorm);
     let lastSpawn = 0;
 
     el.style.opacity = '0';
+    const _drawId = fx.nextFxDrawId('sparkle-trail');
 
-    function frame(now) {
+    fx.registerFxDraw(_drawId, function (fxCtx, now) {
       fx.tickFrame();
       const elapsed = now - startTime;
       const t = Math.min(elapsed / duration, 1);
-      fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
+      fxCtx.textAlign = 'center';
+      fxCtx.textBaseline = 'middle';
       fx.resetDrawFont();
 
       // Element fades in
@@ -969,11 +926,9 @@ export const sparkleTrail = {
         s.rotation += s.rotSpeed;
         const lr = s.life / s.maxLife;
         const alpha = lr > 0.6 ? (1 - (lr - 0.6) / 0.4) : Math.min(s.life / 100, 1);
-        // Pulse
         const pulse = 0.7 + Math.sin(s.life * 0.02) * 0.3;
         if (alpha > 0.01 && lr < 1) {
           fx.drawChar(fxCtx, s.char, s.x, s.y, s.color, s.size * pulse, alpha * lerp(0.4, 0.8, inorm), s.rotation);
-          // Glow on desktop
           if (fx.shouldShadow()) {
             fxCtx.save();
             fxCtx.shadowColor = s.color;
@@ -987,21 +942,14 @@ export const sparkleTrail = {
       // Prune dead sparkles
       sparkles = sparkles.filter(function (s) { return s.life < s.maxLife; });
 
-      if (t < 1 || sparkles.length > 0) {
-        requestAnimationFrame(frame);
-      } else {
-        fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
+      if (t >= 1 && sparkles.length === 0) {
+        fx.deregisterFxDraw(_drawId);
         creationDone(el, ctx.onDone);
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function (el) {
     creationCleanup(el);
-    if (FX && typeof FX.getFxCtx === 'function') {
-      const fxCtx = FX.getFxCtx();
-      if (fxCtx) fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
-    }
   },
 };
 
@@ -1032,11 +980,6 @@ export const butterflyCarry = {
     const cy = rect.top + rect.height / 2;
     const startTime = performance.now();
 
-    const fxCtx = fx.getFxCtx();
-    fxCtx.textAlign = 'center';
-    fxCtx.textBaseline = 'middle';
-    fx.resetDrawFont();
-
     const bflyCount = fx.pCount(Math.round(lerp(p.minButterflies, p.maxButterflies, inorm)));
     const butterflies = [];
     for (let i = 0; i < bflyCount; i++) {
@@ -1059,12 +1002,14 @@ export const butterflyCarry = {
 
     el.style.opacity = '0';
     el.style.transform = 'translateX(-30px)';
+    const _drawId = fx.nextFxDrawId('butterfly-carry');
 
-    function frame(now) {
+    fx.registerFxDraw(_drawId, function (fxCtx, now) {
       fx.tickFrame();
       const elapsed = now - startTime;
       const t = Math.min(elapsed / duration, 1);
-      fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
+      fxCtx.textAlign = 'center';
+      fxCtx.textBaseline = 'middle';
       fx.resetDrawFont();
 
       // Element slides in gently as butterflies arrive
@@ -1082,22 +1027,18 @@ export const butterflyCarry = {
 
         let bx, by;
         if (elapsed > bf.departDelay) {
-          // Butterfly departs
           const depT = Math.min((elapsed - bf.departDelay) / (duration * 0.3), 1);
           const depEased = depT * depT;
           bx = lerp(bf.targetX, bf.targetX + bf.departX, depEased);
           by = lerp(bf.targetY, bf.targetY + bf.departY, depEased);
         } else {
-          // Butterfly arriving
           bx = lerp(bf.startX, bf.targetX, arriveEased);
           by = lerp(bf.startY, bf.targetY, arriveEased);
         }
 
-        // Flutter path
         by += Math.sin(bfElapsed * 0.005) * 8;
         bx += Math.cos(bfElapsed * 0.003) * 5;
 
-        // Wing flap
         const wingAngle = Math.sin(bf.wingPhase + bfElapsed * bf.wingSpeed) * 0.4;
         let alpha = 1;
         if (elapsed > bf.departDelay) {
@@ -1106,9 +1047,7 @@ export const butterflyCarry = {
         alpha *= lerp(0.5, 0.9, inorm);
 
         if (alpha > 0.01) {
-          // Body
           fx.drawChar(fxCtx, '\u00B7', bx, by, bf.color, bf.size * 0.4, alpha, 0);
-          // Wings (two mirrored chars that flap)
           fx.drawChar(fxCtx, pick(BUTTERFLY_CHARS), bx - bf.size * 0.3, by - 2,
             bf.color, bf.size * (0.6 + wingAngle * 0.3), alpha * 0.8, -wingAngle);
           fx.drawChar(fxCtx, pick(BUTTERFLY_CHARS), bx + bf.size * 0.3, by - 2,
@@ -1116,21 +1055,14 @@ export const butterflyCarry = {
         }
       });
 
-      if (t < 1) {
-        requestAnimationFrame(frame);
-      } else {
-        fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
+      if (t >= 1) {
+        fx.deregisterFxDraw(_drawId);
         creationDone(el, ctx.onDone);
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function (el) {
     creationCleanup(el);
-    if (FX && typeof FX.getFxCtx === 'function') {
-      const fxCtx = FX.getFxCtx();
-      if (fxCtx) fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
-    }
   },
 };
 
@@ -1234,11 +1166,6 @@ export const grow = {
     const cy = rect.top + rect.height / 2;
     const startTime = performance.now();
 
-    const fxCtx = fx.getFxCtx();
-    fxCtx.textAlign = 'center';
-    fxCtx.textBaseline = 'middle';
-    fx.resetDrawFont();
-
     // Seed dot that becomes the element
     const seedSize = lerp(4, 8, inorm);
 
@@ -1261,12 +1188,14 @@ export const grow = {
 
     el.style.opacity = '0';
     el.style.transform = 'scale(0)';
+    const _drawId = fx.nextFxDrawId('grow');
 
-    function frame(now) {
+    fx.registerFxDraw(_drawId, function (fxCtx, now) {
       fx.tickFrame();
       const elapsed = now - startTime;
       const t = Math.min(elapsed / duration, 1);
-      fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
+      fxCtx.textAlign = 'center';
+      fxCtx.textBaseline = 'middle';
       fx.resetDrawFont();
 
       // Seed phase (first 20%)
@@ -1280,7 +1209,6 @@ export const grow = {
       // Growth phase (20-100%)
       if (t >= 0.2) {
         const growT = (t - 0.2) / 0.8;
-        // Organic growth curve — fast start, slight overshoot, settle
         let growEased;
         if (growT < 0.6) {
           growEased = Math.pow(growT / 0.6, 0.5) * 1.05;
@@ -1308,21 +1236,14 @@ export const grow = {
         }
       });
 
-      if (t < 1) {
-        requestAnimationFrame(frame);
-      } else {
-        fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
+      if (t >= 1) {
+        fx.deregisterFxDraw(_drawId);
         creationDone(el, ctx.onDone);
       }
-    }
-    requestAnimationFrame(frame);
+    });
   },
   cleanup: function (el) {
     creationCleanup(el);
-    if (FX && typeof FX.getFxCtx === 'function') {
-      const fxCtx = FX.getFxCtx();
-      if (fxCtx) fxCtx.clearRect(0, 0, fxCtx.canvas.width, fxCtx.canvas.height);
-    }
   },
 };
 
