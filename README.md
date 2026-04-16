@@ -13,7 +13,7 @@ TotoFX solves this. You declare that a key should be animating — the engine fi
 
 **[Try it in the playground](https://toto.tech/playground)** — create a random animation, build your own, or explore the 'Advanced' tab for near-infinite flexibility.
 
-[Deeper Reading](https://github.com/a-funk/toto-fx/blob/v1.1-improvements/docs/fx-api.md)
+[Deeper Reading](https://github.com/a-funk/toto-fx/blob/main/docs/fx-api.md)
 
 ## Animation Persistence Across DOM Replacement
 
@@ -94,7 +94,8 @@ Graph-based views.
 - **Layout animation**: smooth container resize on element add/remove
 - **Phase continuity**: persistent animations survive DOM replacement with seamless visual continuity
 - **Refresh coordination**: debounced, animation-aware refresh with transaction support
-- **Canvas compositor**: concurrent canvas animations render without interference — one clear per frame, all draw callbacks composite in sequence
+- **Unified canvas pipeline**: particles, speed lines, and custom draw callbacks render to a single canvas with one clear per frame. One RAF loop, one frame budget, adaptive quality degradation
+- **Two-tool plugin model**: `spawnParticles` for fire-and-forget physics particles, `registerFxDraw` for custom per-frame rendering — everything else is engine-managed
 
 
 ## Install
@@ -837,11 +838,12 @@ import { FX } from 'toto-fx';
 // Particles
 FX.spawnParticles(cx, cy, {
   count: 30,           // number of particles
-  colors: [[255,100,50], [255,200,0]],  // [r,g,b] arrays
+  color: [255, 100, 50],                // [r,g,b] or CSS string
   chars: ['*', '+', '#'],               // ASCII characters
-  speed: 4,            // initial velocity
-  gravity: 0.15,       // downward pull
-  spread: Math.PI * 2, // emission arc (radians)
+  spread: 8,           // max velocity magnitude
+  gravity: 0.15,       // downward pull per frame
+  life: 80,            // lifetime in frames
+  upBias: 3,           // initial upward velocity bias
 });
 FX.spawnSmoke(cx, cy, 10);              // smoke puff
 FX.spawnFireTrail(x, y, angle);         // directional fire
@@ -866,7 +868,7 @@ FX.gravityFall(el, shadow, peakZ, rotX, rotY, duration, easeExp, cx, cy, onImpac
 FX.standardImpact(el, shadow, burst, cx, cy);
 
 // Element helpers
-const pos = FX.getItemRect(el);         // { cx, cy, left, top, width, height }
+const pos = FX.getItemRect(el);         // { cx, cy, rect: DOMRect }
 const sub = FX.getSubElements(el);      // { shadow, burst, badge, strike }
 const scale = FX.intensityScale(5);     // 0.3-1.0 from intensity 1-10
 
