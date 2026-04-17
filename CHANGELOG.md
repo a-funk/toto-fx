@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1] — 2026-04-17
+
+### Fixed
+
+- **Git installs now produce a working `dist/`.** Consumers installing via `github:a-funk/toto-fx#semver:^0.3` (or any git URL) were getting only `src/` and `types/` — no `dist/` (build output, never committed) and no `build.js` (excluded from the `files` allowlist). Since `main: "dist/toto-fx.min.js"`, `require('toto-fx')` failed in consumers and there was no way to build the package from the installed copy.
+
+### Changed
+
+- Added `prepare` lifecycle script that runs `node build.js`. npm fires `prepare` automatically after installing a git dependency — it clones, installs devDependencies, runs `prepare`, producing `dist/` before the consumer's own install completes.
+- Added `build.js` to the `files` allowlist (ships to both git and npm-registry installs; 5.8KB, install/build-time only).
+
+### No consumer impact
+
+The v0.3.0 public API is unchanged. This release only affects the install path for git-dependency consumers.
+
+---
+
 ## [0.3.0] — 2026-04-15
 
 ### Unified Particle Pipeline
