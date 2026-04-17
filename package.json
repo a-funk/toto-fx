@@ -50,6 +50,7 @@
     "dist/",
     "src/",
     "types/",
+    "build.js",
     "LICENSE-MIT",
     "LICENSE-APACHE",
     "README.md"
@@ -57,6 +58,7 @@
   "scripts": {
     "build": "node build.js",
     "build:watch": "node build.js --watch",
+    "prepare": "node build.js",
     "test": "node --experimental-vm-modules --test tests/core.test.js tests/v1.1.test.js"
   },
   "keywords": [
