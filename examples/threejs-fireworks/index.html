@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>TotoFX × Three.js — Fireworks</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { height: 100%; }
+  body { margin: 0; overflow: hidden; background: #040614; font-family: ui-monospace, "JetBrains Mono", Menlo, monospace; color: #d8e0f0; }
+  #three-canvas { position: fixed; inset: 0; z-index: 0; display: block; width: 100%; height: 100%; }
+  #bg { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+  .hud {
+    position: fixed; top: 16px; left: 16px; z-index: 10;
+    padding: 14px 16px; border: 1px solid #1a2040;
+    background: rgba(6, 10, 22, 0.82); border-radius: 10px;
+    backdrop-filter: blur(6px); font-size: 12px; line-height: 1.5; max-width: 280px;
+  }
+  .hud h1 { margin: 0 0 4px; font-size: 13px; letter-spacing: 0.12em; color: #a0c8ff; }
+  .hud p { margin: 0; color: #7080a8; }
+  .hud .key { color: #c0e0ff; }
+  .hud button {
+    margin-top: 8px; padding: 8px 12px;
+    background: #0a1228; color: #a0c8ff;
+    border: 1px solid #2a4070; border-radius: 6px;
+    font: inherit; cursor: pointer;
+  }
+  .hud button:hover { background: #121a36; }
+  .hud label { display: flex; align-items: center; gap: 6px; color: #8090b0; }
+  .fps { position: fixed; bottom: 12px; right: 14px; z-index: 10; font-size: 11px; color: #3a4868; letter-spacing: 0.08em; }
+  .instr { position: fixed; bottom: 14px; left: 16px; z-index: 10; font-size: 11px; color: #4a5a80; letter-spacing: 0.06em; }
+
+  @keyframes fx-shake-light { 0%,100%{transform:translate(0,0)} 20%{transform:translate(-1px,1px)} 80%{transform:translate(1px,-1px)} }
+  @keyframes fx-shake-heavy { 0%,100%{transform:translate(0,0)} 20%{transform:translate(-2px,1.5px)} 80%{transform:translate(2px,-1.5px)} }
+  body.shaking       { animation: fx-shake-light 280ms ease-out both; }
+  body.shaking-heavy { animation: fx-shake-heavy 360ms ease-out both; }
+</style>
+</head>
+<body>
+  <canvas id="three-canvas"></canvas>
+  <div id="bg"></div>
+  <div class="hud">
+    <h1>✦ FIREWORKS</h1>
+    <p>Mortar rises. Sky blooms. Dots ripple.</p>
+    <p><span class="key">click sky</span> — launch where clicked</p>
+    <p><span class="key">space</span> — random salvo</p>
+    <button id="strike">LAUNCH</button>
+    <label><input id="auto" type="checkbox" checked /> auto-show</label>
+  </div>
+  <div class="instr">click anywhere in the sky to launch a firework</div>
+  <div class="fps" id="fps">—</div>
+
+  <script type="importmap">
+  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+  </script>
+  <script src="../../dist/toto-fx.min.js"></script>
+  <script type="module">
+    import * as THREE from 'three';
+
+    const engine = TotoFX.createEngine({ debug: false });
+    const grid = TotoFX.createDotgrid({
+      container: '#bg', dotSize: 24, fontSize: 14,
+      baseOpacity: 0.14, baseColor: [140, 160, 210],
+    });
+    grid.init();
+    TotoFX.FX.setDotgrid(grid);
+    engine.setDotgrid(grid);
+    engine.init();
+
+    const canvas = document.getElementById('three-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight, false);
+    renderer.setClearColor(0x040614, 1);
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x040614, 0.004);
+
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 800);
+    camera.position.set(0, 10, 70);
+    camera.lookAt(0, 30, 0);
+
+    // starfield
+    {
+      const g = new THREE.BufferGeometry();
+      const N = 1800;
+      const pos = new Float32Array(N * 3);
+      for (let i = 0; i < N; i++) {
+        const r = 250 + Math.random() * 250;
+        const t = Math.random() * Math.PI * 2;
+        const p = Math.acos(2 * Math.random() - 1);
+        pos[i*3+0] = r * Math.sin(p) * Math.cos(t);
+        pos[i*3+1] = Math.abs(r * Math.sin(p) * Math.sin(t)) + 20;
+        pos[i*3+2] = r * Math.cos(p);
+      }
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0xc0d8ff, size: 0.6, transparent: true, opacity: 0.7 })));
+    }
+
+    // ground silhouette
+    scene.add(new THREE.Mesh(
+      new THREE.PlaneGeometry(800, 800),
+      new THREE.MeshBasicMaterial({ color: 0x020408 })
+    )).rotation.x = -Math.PI / 2;
+    // city skyline silhouette
+    for (let i = 0; i < 40; i++) {
+      const w = 3 + Math.random() * 5;
+      const h = 3 + Math.random() * 12;
+      const d = 3 + Math.random() * 5;
+      const b = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, d),
+        new THREE.MeshBasicMaterial({ color: 0x080a1c })
+      );
+      b.position.set((i - 20) * 7 + (Math.random() - 0.5) * 2, h / 2, -40 - Math.random() * 18);
+      scene.add(b);
+    }
+
+    // reflective water below horizon (optional subtle)
+    // skip for perf
+
+    // fireworks system
+    const PALETTES = [
+      [0xff4060, 0xff80a0, 0xffc0d0], // pink/red
+      [0x40a0ff, 0x80c8ff, 0xc0e0ff], // blue
+      [0xffc040, 0xffe080, 0xfff0c0], // gold
+      [0x60ff80, 0xa0ffb0, 0xd0ffd8], // green
+      [0xc060ff, 0xe0a0ff, 0xf0d0ff], // purple
+      [0xffffff, 0xe0e0ff, 0xc0d0ff], // white
+    ];
+
+    const mortars = [];
+    const bursts = [];
+
+    // mortar pool
+    const mortarGeo = new THREE.SphereGeometry(0.3, 10, 8);
+    function spawnMortar(targetWorld, paletteIdx) {
+      const palette = PALETTES[paletteIdx];
+      const mat = new THREE.MeshBasicMaterial({ color: palette[0] });
+      const m = new THREE.Mesh(mortarGeo, mat);
+      const startX = targetWorld.x + (Math.random() - 0.5) * 8;
+      m.position.set(startX, 0, targetWorld.z);
+      scene.add(m);
+
+      // trail as points
+      const trailMax = 24;
+      const trailPos = new Float32Array(trailMax * 3);
+      const trailGeo = new THREE.BufferGeometry();
+      trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPos, 3));
+      const trailMat = new THREE.PointsMaterial({
+        color: palette[1], size: 0.8, transparent: true, opacity: 0.9,
+        depthWrite: false, blending: THREE.AdditiveBlending,
+      });
+      const trail = new THREE.Points(trailGeo, trailMat);
+      scene.add(trail);
+
+      const dur = 700 + Math.random() * 250;
+      mortars.push({
+        mesh: m, mat, palette,
+        start: new THREE.Vector3().copy(m.position),
+        end: targetWorld.clone(),
+        born: performance.now(), dur,
+        trail, trailGeo, trailPos, trailLen: 0, trailMax,
+      });
+    }
+
+    function pushTrail(mort, v) {
+      const { trailPos, trailMax } = mort;
+      if (mort.trailLen >= trailMax) {
+        for (let i = 0; i < trailMax - 1; i++) {
+          trailPos[i*3+0] = trailPos[(i+1)*3+0];
+          trailPos[i*3+1] = trailPos[(i+1)*3+1];
+          trailPos[i*3+2] = trailPos[(i+1)*3+2];
+        }
+        mort.trailLen = trailMax - 1;
+      }
+      trailPos[mort.trailLen*3+0] = v.x;
+      trailPos[mort.trailLen*3+1] = v.y;
+      trailPos[mort.trailLen*3+2] = v.z;
+      mort.trailLen++;
+      mort.trailGeo.setDrawRange(0, mort.trailLen);
+      mort.trailGeo.attributes.position.needsUpdate = true;
+    }
+
+    function spawnBurst(pos, palette) {
+      // shapes: sphere burst, ring burst, willow
+      const style = Math.random();
+      const count = style < 0.3 ? 160 : 240;
+      const geo = new THREE.BufferGeometry();
+      const p = new Float32Array(count * 3);
+      const v = [];
+      const colors = new Float32Array(count * 3);
+      for (let i = 0; i < count; i++) {
+        p[i*3+0] = pos.x; p[i*3+1] = pos.y; p[i*3+2] = pos.z;
+        const cHex = palette[Math.floor(Math.random() * palette.length)];
+        const c = new THREE.Color(cHex);
+        colors[i*3+0] = c.r; colors[i*3+1] = c.g; colors[i*3+2] = c.b;
+        // radial burst in 3D
+        const t = Math.random() * Math.PI * 2;
+        const ph = Math.acos(2 * Math.random() - 1);
+        const sp = 12 + Math.random() * 14;
+        v.push(new THREE.Vector3(
+          Math.sin(ph) * Math.cos(t) * sp,
+          Math.cos(ph) * sp,
+          Math.sin(ph) * Math.sin(t) * sp
+        ));
+      }
+      geo.setAttribute('position', new THREE.BufferAttribute(p, 3));
+      geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      const mat = new THREE.PointsMaterial({
+        size: 1.2, vertexColors: true, transparent: true, opacity: 1,
+        depthWrite: false, blending: THREE.AdditiveBlending,
+      });
+      const pts = new THREE.Points(geo, mat);
+      scene.add(pts);
+      bursts.push({ mesh: pts, velocities: v, born: performance.now(), life: 2200, pos: pos.clone() });
+
+      // light flash
+      const light = new THREE.PointLight(palette[0], 60, 120, 2);
+      light.position.copy(pos);
+      scene.add(light);
+      bursts[bursts.length - 1].light = light;
+    }
+
+    function detonateMortar(mort) {
+      const pos = mort.end;
+      const palette = mort.palette;
+
+      // remove mortar
+      scene.remove(mort.mesh); mort.mat.dispose();
+      scene.remove(mort.trail); mort.trail.geometry.dispose(); mort.trail.material.dispose();
+
+      spawnBurst(pos, palette);
+
+      // 2D FX — fireworks character: colorful, soft, no heavy shake
+      const screen = worldToScreen(pos);
+      const FX = TotoFX.FX;
+      const colorHex = '#' + new THREE.Color(palette[0]).getHexString();
+      FX.flashColor(colorHex, 180);
+      FX.doDotgridRipple(screen.x, screen.y, { radius: 220, push: 7, density: 0.5, color: colorHex });
+      FX.spawnParticles(screen.x, screen.y, {
+        count: 60, spread: 14, upBias: 4, gravity: 0.05, life: 160,
+        color: [
+          (palette[0] >> 16) & 255,
+          (palette[0] >> 8) & 255,
+          palette[0] & 255,
+        ],
+        chars: ['✦', '✧', '·', '*', '+', '✶'],
+      });
+      FX.spawnParticles(screen.x, screen.y, {
+        count: 30, spread: 22, upBias: 1, gravity: 0.14, life: 220,
+        color: [
+          (palette[1] >> 16) & 255,
+          (palette[1] >> 8) & 255,
+          palette[1] & 255,
+        ],
+        chars: ['·', '◦', '∙'],
+      });
+    }
+
+    function updateBursts(dt, now) {
+      for (let i = bursts.length - 1; i >= 0; i--) {
+        const b = bursts[i];
+        const age = now - b.born;
+        if (age > b.life) {
+          scene.remove(b.mesh); b.mesh.geometry.dispose(); b.mesh.material.dispose();
+          if (b.light) scene.remove(b.light);
+          bursts.splice(i, 1);
+          continue;
+        }
+        const pos = b.mesh.geometry.attributes.position.array;
+        const v = b.velocities;
+        for (let j = 0; j < v.length; j++) {
+          pos[j*3+0] += v[j].x * dt;
+          pos[j*3+1] += v[j].y * dt;
+          pos[j*3+2] += v[j].z * dt;
+          v[j].y -= 9 * dt;
+          v[j].multiplyScalar(0.988);
+        }
+        b.mesh.geometry.attributes.position.needsUpdate = true;
+        const t = age / b.life;
+        b.mesh.material.opacity = 1 - t;
+        if (b.light) b.light.intensity = Math.max(0, 60 * (1 - t * 2));
+      }
+    }
+
+    // screen click -> 3D target
+    // Raycast against a plane PERPENDICULAR to the camera forward axis, at a
+    // fixed camera-relative depth. This guarantees worldToScreen(target)
+    // round-trips to the original screen click — so the 3D burst and the 2D
+    // dotgrid ripple (which uses worldToScreen) align on every axis.
+    const _raycaster = new THREE.Raycaster();
+    const BURST_DEPTH = 70; // units in front of camera along its forward axis
+    function screenToAirPoint(x, y) {
+      const ndc = new THREE.Vector2((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
+      _raycaster.setFromCamera(ndc, camera);
+      // Build a plane whose normal is the camera forward, placed BURST_DEPTH
+      // units ahead of the camera. Any point on this plane projects back to
+      // the exact NDC (hence screen pixel) we cast from.
+      const forward = new THREE.Vector3();
+      camera.getWorldDirection(forward); // unit vector, camera's -Z in world
+      const planePoint = camera.position.clone().addScaledVector(forward, BURST_DEPTH);
+      // THREE.Plane wants a normal pointing AWAY from the positive side and a
+      // constant = -normal.dot(pointOnPlane). Use the forward vector as normal.
+      const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(forward, planePoint);
+      const hit = new THREE.Vector3();
+      _raycaster.ray.intersectPlane(plane, hit);
+      return hit;
+    }
+
+    function launchAt(screenX, screenY, palette) {
+      const target = screenToAirPoint(screenX, screenY);
+      if (!target) return;
+      // No y-clamp: because the raycast plane is camera-perpendicular, any
+      // on-screen click yields a target whose worldToScreen round-trips
+      // exactly back to (screenX, screenY). Clamping y would break that
+      // invariant and misalign the 3D burst from the 2D dotgrid ripple.
+      spawnMortar(target, palette ?? Math.floor(Math.random() * PALETTES.length));
+    }
+
+    function worldToScreen(v) {
+      const p = v.clone().project(camera);
+      return { x: (p.x * 0.5 + 0.5) * window.innerWidth, y: (-p.y * 0.5 + 0.5) * window.innerHeight };
+    }
+
+    function salvo() {
+      for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+          const x = window.innerWidth * (0.2 + Math.random() * 0.6);
+          const y = window.innerHeight * (0.15 + Math.random() * 0.35);
+          launchAt(x, y);
+        }, i * 220);
+      }
+    }
+
+    document.getElementById('strike').addEventListener('click', e => { e.stopPropagation(); salvo(); });
+    window.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); salvo(); } });
+    canvas.addEventListener('click', e => {
+      launchAt(e.clientX, e.clientY);
+    });
+
+    const autoEl = document.getElementById('auto');
+    let lastAuto = 0;
+
+    let lastNow = performance.now();
+    const fpsEl = document.getElementById('fps');
+    let fpsFrames = 0, fpsAccum = 0, fpsTime = 0;
+
+    function frame(now) {
+      const dt = Math.min(0.05, (now - lastNow) / 1000);
+      lastNow = now;
+
+      for (let i = mortars.length - 1; i >= 0; i--) {
+        const m = mortars[i];
+        const t = (now - m.born) / m.dur;
+        if (t >= 1) {
+          detonateMortar(m);
+          mortars.splice(i, 1);
+          continue;
+        }
+        // arc trajectory
+        const ascending = 1 - (1 - t) * (1 - t);
+        m.mesh.position.lerpVectors(m.start, m.end, ascending);
+        pushTrail(m, m.mesh.position);
+        // fade trail material over time
+        m.trail.material.opacity = 0.9 * (1 - t * 0.5);
+      }
+
+      updateBursts(dt, now);
+
+      // camera drift
+      camera.position.x = Math.sin(now * 0.00008) * 4;
+      camera.lookAt(0, 30, 0);
+
+      if (autoEl.checked && now - lastAuto > 1200) {
+        lastAuto = now;
+        const x = window.innerWidth * (0.2 + Math.random() * 0.6);
+        const y = window.innerHeight * (0.15 + Math.random() * 0.35);
+        launchAt(x, y);
+      }
+
+      renderer.render(scene, camera);
+      fpsFrames++; fpsAccum += dt;
+      if (now - fpsTime > 500) {
+        fpsEl.textContent = Math.round(fpsFrames / fpsAccum) + ' fps';
+        fpsFrames = 0; fpsAccum = 0; fpsTime = now;
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight, false);
+    });
+
+    setTimeout(salvo, 600);
+  </script>
+</body>
+</html>

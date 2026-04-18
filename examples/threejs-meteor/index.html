@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Three.js × TotoFX — Meteor Strike Compatibility Test</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; overflow: hidden; background: #05060b;
+    font-family: ui-monospace, "JetBrains Mono", Menlo, monospace;
+    color: #cfd6e4;
+  }
+
+  #three-canvas {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    z-index: 0; display: block;
+  }
+
+  /* Dotgrid container — overlays the 3D scene, does not eat pointer events */
+  #bg {
+    position: fixed; inset: 0; z-index: 1;
+    pointer-events: none;
+  }
+
+  .hud {
+    position: fixed; top: 16px; left: 16px; z-index: 10;
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 14px 16px; border: 1px solid #2a2f42;
+    background: rgba(10, 14, 24, 0.72);
+    border-radius: 10px; backdrop-filter: blur(6px);
+    font-size: 12px; line-height: 1.5; max-width: 320px;
+  }
+  .hud h1 { margin: 0 0 4px; font-size: 13px; letter-spacing: 0.04em; color: #f4d27a; }
+  .hud p { margin: 0; color: #8892a9; }
+  .hud .key { color: #7fd2ff; }
+  .hud button {
+    margin-top: 8px; padding: 8px 12px;
+    background: #1a2035; color: #f4d27a;
+    border: 1px solid #3a4468; border-radius: 6px;
+    font: inherit; cursor: pointer;
+  }
+  .hud button:hover { background: #222a47; }
+  .hud label { display: flex; align-items: center; gap: 6px; color: #a4aec5; }
+
+  .fps {
+    position: fixed; bottom: 12px; right: 14px; z-index: 10;
+    font-size: 11px; color: #5a6586; letter-spacing: 0.08em;
+  }
+
+  /* Screen shake (TotoFX applies these classes to document.body) */
+  @keyframes fx-shake-light {
+    0%,100%{transform:translate(0,0)}
+    10%{transform:translate(-3px,2px)}
+    25%{transform:translate(4px,-2px)}
+    40%{transform:translate(-2px,3px)}
+    55%{transform:translate(3px,1px)}
+    70%{transform:translate(-3px,-2px)}
+    85%{transform:translate(2px,2px)}
+  }
+  @keyframes fx-shake-heavy {
+    0%,100%{transform:translate(0,0)}
+    8% {transform:translate(-9px,5px) rotate(-0.4deg)}
+    22%{transform:translate(10px,-6px) rotate(0.5deg)}
+    38%{transform:translate(-7px,7px) rotate(-0.3deg)}
+    54%{transform:translate(8px,3px) rotate(0.4deg)}
+    70%{transform:translate(-6px,-5px) rotate(-0.3deg)}
+    86%{transform:translate(5px,6px) rotate(0.2deg)}
+  }
+  body.shaking       { animation: fx-shake-light 450ms cubic-bezier(.36,.07,.19,.97) both; }
+  body.shaking-heavy { animation: fx-shake-heavy 550ms cubic-bezier(.36,.07,.19,.97) both; }
+</style>
+</head>
+<body>
+  <canvas id="three-canvas"></canvas>
+  <div id="bg"></div>
+
+  <div class="hud">
+    <h1>THREE.JS × TOTOFX</h1>
+    <p>Meteor strike compatibility probe.</p>
+    <p><span class="key">space</span> / click — strike</p>
+    <p><span class="key">r</span> — toggle auto-loop</p>
+    <button id="strike">Trigger strike</button>
+    <label><input id="auto" type="checkbox" checked /> auto-loop (every 3.5s)</label>
+    <label><input id="shake" type="checkbox" checked /> screen shake</label>
+    <label><input id="flash" type="checkbox" checked /> impact flash</label>
+    <label><input id="speed" type="checkbox" checked /> speed lines</label>
+    <label><input id="dot" type="checkbox" checked /> dotgrid ripple + crater</label>
+  </div>
+  <div class="fps" id="fps">—</div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+    }
+  }
+  </script>
+
+  <script src="../../dist/toto-fx.min.js"></script>
+
+  <script type="module">
+    import * as THREE from 'three';
+
+    // ── TotoFX setup ──────────────────────────────────────────────
+    const engine = TotoFX.createEngine({ debug: false });
+    const grid = TotoFX.createDotgrid({
+      container: '#bg',
+      dotSize: 26,
+      fontSize: 15,
+      baseOpacity: 0.22,
+      baseColor: [140, 160, 210],
+      densityDecay: 0.985,
+      velDecay: 0.92,
+    });
+    grid.init();
+    TotoFX.FX.setDotgrid(grid);
+    engine.setDotgrid(grid);
+    engine.init();
+
+    // ── Three.js scene ────────────────────────────────────────────
+    const canvas = document.getElementById('three-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight, false);
+    renderer.setClearColor(0x05060b, 1);
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x05060b, 0.012);
+
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 600);
+    camera.position.set(0, 22, 58);
+    camera.lookAt(0, 4, 0);
+
+    // starfield
+    {
+      const g = new THREE.BufferGeometry();
+      const N = 1400;
+      const pos = new Float32Array(N * 3);
+      for (let i = 0; i < N; i++) {
+        const r = 180 + Math.random() * 180;
+        const t = Math.random() * Math.PI * 2;
+        const p = Math.acos(2 * Math.random() - 1);
+        pos[i*3+0] = r * Math.sin(p) * Math.cos(t);
+        pos[i*3+1] = r * Math.sin(p) * Math.sin(t);
+        pos[i*3+2] = r * Math.cos(p);
+      }
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const m = new THREE.PointsMaterial({ color: 0x9fb3d8, size: 0.7, sizeAttenuation: true, transparent: true, opacity: 0.7 });
+      scene.add(new THREE.Points(g, m));
+    }
+
+    // ground
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(400, 400, 80, 80),
+      new THREE.MeshStandardMaterial({
+        color: 0x1a2236, roughness: 0.9, metalness: 0.05,
+        wireframe: false,
+      })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = 0;
+    scene.add(ground);
+
+    const gridHelper = new THREE.GridHelper(400, 80, 0x2a3a62, 0x17223b);
+    gridHelper.position.y = 0.01;
+    scene.add(gridHelper);
+
+    // lighting
+    const hemi = new THREE.HemisphereLight(0x6a7fb5, 0x141a2a, 0.5);
+    scene.add(hemi);
+    const dir = new THREE.DirectionalLight(0xfff4d8, 0.5);
+    dir.position.set(30, 40, 20);
+    scene.add(dir);
+
+    // scorch decals (reused)
+    const scorches = [];
+    function leaveScorch(x, z, radius) {
+      const g = new THREE.CircleGeometry(radius, 40);
+      const m = new THREE.MeshBasicMaterial({
+        color: 0x0a0b14, transparent: true, opacity: 0.85,
+        depthWrite: false,
+      });
+      const mesh = new THREE.Mesh(g, m);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(x, 0.02, z);
+      scene.add(mesh);
+      scorches.push({ mesh, born: performance.now() });
+      if (scorches.length > 8) {
+        const old = scorches.shift();
+        scene.remove(old.mesh);
+        old.mesh.geometry.dispose();
+        old.mesh.material.dispose();
+      }
+    }
+
+    // meteor
+    const meteor = new THREE.Group();
+    const core = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(1.1, 1),
+      new THREE.MeshStandardMaterial({
+        color: 0xff6a2a, emissive: 0xff4510, emissiveIntensity: 2.2,
+        roughness: 0.45,
+      })
+    );
+    meteor.add(core);
+    const glow = new THREE.PointLight(0xff7030, 8, 40, 2);
+    meteor.add(glow);
+    scene.add(meteor);
+    meteor.visible = false;
+
+    // meteor trail (simple trailing points)
+    const trailMax = 40;
+    const trailGeo = new THREE.BufferGeometry();
+    const trailPos = new Float32Array(trailMax * 3);
+    const trailAlpha = new Float32Array(trailMax);
+    trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPos, 3));
+    trailGeo.setAttribute('alpha', new THREE.BufferAttribute(trailAlpha, 1));
+    const trailMat = new THREE.PointsMaterial({
+      color: 0xff9850, size: 1.6, transparent: true, opacity: 0.9,
+      depthWrite: false, blending: THREE.AdditiveBlending,
+    });
+    const trail = new THREE.Points(trailGeo, trailMat);
+    scene.add(trail);
+    let trailLen = 0;
+
+    function resetTrail() { trailLen = 0; trailGeo.setDrawRange(0, 0); }
+    function pushTrail(v) {
+      if (trailLen >= trailMax) {
+        // shift
+        for (let i = 0; i < trailMax - 1; i++) {
+          trailPos[i*3+0] = trailPos[(i+1)*3+0];
+          trailPos[i*3+1] = trailPos[(i+1)*3+1];
+          trailPos[i*3+2] = trailPos[(i+1)*3+2];
+        }
+        trailLen = trailMax - 1;
+      }
+      trailPos[trailLen*3+0] = v.x;
+      trailPos[trailLen*3+1] = v.y;
+      trailPos[trailLen*3+2] = v.z;
+      trailLen++;
+      trailGeo.setDrawRange(0, trailLen);
+      trailGeo.attributes.position.needsUpdate = true;
+    }
+
+    // 3D debris particles at impact
+    const debrisGroup = new THREE.Group();
+    scene.add(debrisGroup);
+    function spawnDebris(x, y, z) {
+      const count = 60;
+      const geo = new THREE.BufferGeometry();
+      const p = new Float32Array(count * 3);
+      const v = [];
+      for (let i = 0; i < count; i++) {
+        p[i*3+0] = x; p[i*3+1] = y; p[i*3+2] = z;
+        const t = Math.random() * Math.PI * 2;
+        const sp = 10 + Math.random() * 22;
+        const up = 8 + Math.random() * 16;
+        v.push(new THREE.Vector3(Math.cos(t)*sp, up, Math.sin(t)*sp));
+      }
+      geo.setAttribute('position', new THREE.BufferAttribute(p, 3));
+      const mat = new THREE.PointsMaterial({
+        color: 0xffb070, size: 0.8, transparent: true, opacity: 1,
+        depthWrite: false, blending: THREE.AdditiveBlending,
+      });
+      const pts = new THREE.Points(geo, mat);
+      pts.userData = { velocities: v, born: performance.now(), life: 1400 };
+      debrisGroup.add(pts);
+    }
+    function updateDebris(dt, now) {
+      for (let i = debrisGroup.children.length - 1; i >= 0; i--) {
+        const pts = debrisGroup.children[i];
+        const age = now - pts.userData.born;
+        if (age > pts.userData.life) {
+          debrisGroup.remove(pts);
+          pts.geometry.dispose();
+          pts.material.dispose();
+          continue;
+        }
+        const pos = pts.geometry.attributes.position.array;
+        const v = pts.userData.velocities;
+        for (let j = 0; j < v.length; j++) {
+          pos[j*3+0] += v[j].x * dt;
+          pos[j*3+1] += v[j].y * dt;
+          pos[j*3+2] += v[j].z * dt;
+          v[j].y -= 38 * dt; // gravity
+          v[j].multiplyScalar(0.985);
+        }
+        pts.geometry.attributes.position.needsUpdate = true;
+        pts.material.opacity = 1 - (age / pts.userData.life);
+      }
+    }
+
+    // Shockwave ring in 3D
+    const rings = [];
+    function spawnShockRing(x, z) {
+      const g = new THREE.RingGeometry(0.5, 1.2, 64);
+      const m = new THREE.MeshBasicMaterial({
+        color: 0xff9858, transparent: true, opacity: 0.9,
+        side: THREE.DoubleSide, depthWrite: false,
+      });
+      const mesh = new THREE.Mesh(g, m);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(x, 0.05, z);
+      scene.add(mesh);
+      rings.push({ mesh, born: performance.now(), life: 900 });
+    }
+    function updateRings(now) {
+      for (let i = rings.length - 1; i >= 0; i--) {
+        const r = rings[i];
+        const t = (now - r.born) / r.life;
+        if (t >= 1) {
+          scene.remove(r.mesh);
+          r.mesh.geometry.dispose();
+          r.mesh.material.dispose();
+          rings.splice(i, 1);
+          continue;
+        }
+        const s = 1 + t * 38;
+        r.mesh.scale.set(s, s, s);
+        r.mesh.material.opacity = 0.9 * (1 - t);
+      }
+    }
+
+    // ── Meteor flight ─────────────────────────────────────────────
+    let meteorState = 'idle'; // idle | falling
+    let meteorStart = new THREE.Vector3();
+    let meteorEnd = new THREE.Vector3();
+    let meteorT = 0;
+    let meteorDur = 1100;
+    let meteorBorn = 0;
+
+    function launchMeteor() {
+      if (meteorState !== 'idle') return;
+      const r = 22;
+      const a = Math.random() * Math.PI * 2;
+      const targetX = Math.cos(a) * r * 0.55;
+      const targetZ = Math.sin(a) * r * 0.55 - 2;
+      const srcX = targetX + (Math.random() - 0.5) * 18 + 10;
+      const srcZ = targetZ + (Math.random() - 0.5) * 18 - 10;
+      meteorStart.set(srcX, 80, srcZ);
+      meteorEnd.set(targetX, 0, targetZ);
+      meteor.position.copy(meteorStart);
+      meteor.visible = true;
+      meteorState = 'falling';
+      meteorT = 0;
+      meteorBorn = performance.now();
+      resetTrail();
+    }
+
+    // toggles
+    const toggles = {
+      shake: document.getElementById('shake'),
+      flash: document.getElementById('flash'),
+      speed: document.getElementById('speed'),
+      dot:   document.getElementById('dot'),
+      auto:  document.getElementById('auto'),
+    };
+
+    function worldToScreen(v) {
+      const p = v.clone().project(camera);
+      return {
+        x: (p.x * 0.5 + 0.5) * window.innerWidth,
+        y: (-p.y * 0.5 + 0.5) * window.innerHeight,
+      };
+    }
+
+    function fireImpactFX(worldPos) {
+      const s = worldToScreen(worldPos);
+
+      // 3D effects
+      spawnShockRing(worldPos.x, worldPos.z);
+      spawnDebris(worldPos.x, worldPos.y + 0.2, worldPos.z);
+      leaveScorch(worldPos.x, worldPos.z, 2.5 + Math.random() * 1.2);
+
+      // TotoFX 2D layers
+      const FX = TotoFX.FX;
+      if (toggles.flash.checked) FX.doImpactFlash(true);
+      if (toggles.shake.checked) FX.doScreenShake(true);
+      if (toggles.speed.checked) FX.startSpeedLines(s.x, s.y, 'outward', 650);
+      if (toggles.dot.checked) {
+        FX.doDotgridRipple(s.x, s.y, { radius: 260, push: 14, density: 0.7, color: '#ff8b55' });
+        FX.doDotgridCrater(s.x, s.y, 120, 1, { cracks: 7, crackLength: 260 });
+      }
+      FX.spawnParticles(s.x, s.y, {
+        count: 42, spread: 10, upBias: 3, gravity: 0.18, life: 80,
+        color: [255, 160, 90], chars: ['*', '+', '·', '✦'],
+      });
+      FX.spawnSmoke(s.x, s.y, 8);
+    }
+
+    // strike button and input
+    document.getElementById('strike').addEventListener('click', launchMeteor);
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') { e.preventDefault(); launchMeteor(); }
+      if (e.key === 'r' || e.key === 'R') toggles.auto.checked = !toggles.auto.checked;
+    });
+    window.addEventListener('click', (e) => {
+      // click anywhere except the HUD triggers a strike
+      if (e.target.closest('.hud')) return;
+      launchMeteor();
+    });
+
+    // auto-loop
+    let lastAuto = 0;
+    const AUTO_EVERY = 3500;
+
+    // ── Animation loop ────────────────────────────────────────────
+    let lastNow = performance.now();
+    const fpsEl = document.getElementById('fps');
+    let fpsAccum = 0, fpsFrames = 0, fpsTime = 0;
+
+    function frame(now) {
+      const dt = Math.min(0.05, (now - lastNow) / 1000);
+      lastNow = now;
+
+      // meteor update
+      if (meteorState === 'falling') {
+        meteorT = Math.min(1, (now - meteorBorn) / meteorDur);
+        // ease-in for acceleration
+        const t = meteorT * meteorT;
+        meteor.position.lerpVectors(meteorStart, meteorEnd, t);
+        core.rotation.x += dt * 4.5;
+        core.rotation.y += dt * 3.2;
+        pushTrail(meteor.position);
+        if (meteorT >= 1) {
+          meteor.visible = false;
+          meteorState = 'idle';
+          fireImpactFX(meteorEnd);
+        }
+      } else {
+        // let trail fade by trimming
+        if (trailLen > 0 && (now % 30) < 16) {
+          trailLen = Math.max(0, trailLen - 1);
+          trailGeo.setDrawRange(0, trailLen);
+        }
+      }
+
+      // update scorch fade
+      for (const s of scorches) {
+        const age = now - s.born;
+        s.mesh.material.opacity = Math.max(0.35, 0.85 - age / 20000);
+      }
+
+      updateRings(now);
+      updateDebris(dt, now);
+
+      // slow camera orbit for drama
+      const orbT = now * 0.00008;
+      camera.position.x = Math.sin(orbT) * 6;
+      camera.position.z = 58 + Math.cos(orbT) * 3;
+      camera.lookAt(0, 4, 0);
+
+      // auto-loop
+      if (toggles.auto.checked && meteorState === 'idle' && now - lastAuto > AUTO_EVERY) {
+        lastAuto = now;
+        launchMeteor();
+      }
+
+      renderer.render(scene, camera);
+
+      // fps
+      fpsFrames++;
+      fpsAccum += dt;
+      if (now - fpsTime > 500) {
+        const fps = Math.round(fpsFrames / fpsAccum);
+        fpsEl.textContent = `${fps} fps`;
+        fpsFrames = 0; fpsAccum = 0; fpsTime = now;
+      }
+
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    // resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight, false);
+    });
+
+    // kick off with a strike soon
+    setTimeout(launchMeteor, 600);
+  </script>
+</body>
+</html>

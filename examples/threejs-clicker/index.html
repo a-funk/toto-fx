@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>TotoFX × Three.js — Click Clicker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root { color-scheme: dark; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; overflow: hidden; background: #05060b;
+    font-family: ui-monospace, "JetBrains Mono", Menlo, monospace;
+    color: #e4e8f0;
+    user-select: none;
+  }
+  #three-canvas { position: fixed; inset: 0; z-index: 0; display: block; width: 100%; height: 100%; }
+  #bg { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+
+  /* ── HUD (visible during play) ──────────────────────────────── */
+  .hud {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 10;
+    display: flex; gap: 22px; align-items: center;
+    padding: 10px 20px;
+    background: rgba(10, 12, 22, 0.78); backdrop-filter: blur(8px);
+    border: 1px solid #272c42; border-radius: 999px;
+    font-size: 12px; letter-spacing: 0.08em;
+  }
+  .hud .cell { display: flex; gap: 6px; align-items: baseline; }
+  .hud .cell .lbl { color: #6a7090; font-size: 10px; text-transform: uppercase; }
+  .hud .cell .val { color: #fff; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .hud .cell .val.score { color: #ffd76a; }
+  .hud .cell .val.tier  { color: #a0c8ff; font-size: 13px; letter-spacing: 0.14em; }
+  .hud .cell .val.time  { color: #8ff0c0; min-width: 48px; text-align: center; }
+  .hud .cell .val.best  { color: #6a7090; font-size: 12px; }
+  .hud .auto-cell { display: flex; gap: 8px; align-items: center; padding-left: 6px; border-left: 1px solid #2a3048; }
+  .hud .auto-toggle { display: flex; gap: 6px; align-items: center; cursor: pointer; user-select: none; }
+  .hud .auto-toggle input { accent-color: #8ff0c0; margin: 0; width: 14px; height: 14px; cursor: pointer; }
+  .hud .val.auto-label { color: #8ff0c0; font-size: 12px; letter-spacing: 0.1em; }
+  .hud .val.auto-rate  { color: #8ff0c0; font-size: 12px; font-variant-numeric: tabular-nums; min-width: 22px; text-align: right; }
+  .hud .sound-cell { display: flex; gap: 8px; align-items: center; padding-left: 6px; border-left: 1px solid #2a3048; }
+  .hud .sound-toggle { display: flex; gap: 6px; align-items: center; cursor: pointer; user-select: none; }
+  .hud .sound-toggle input { accent-color: #ffd76a; margin: 0; width: 14px; height: 14px; cursor: pointer; }
+  .hud .val.sound-label { color: #ffd76a; font-size: 12px; letter-spacing: 0.1em; }
+  .hud input[type="range"] { width: 70px; accent-color: #8ff0c0; }
+  .hud .hud-end { font: inherit; padding: 4px 10px; font-size: 11px; letter-spacing: 0.14em; background: transparent; color: #ff6080; border: 1px solid #8a2040; border-radius: 6px; cursor: pointer; }
+  .hud .hud-end:hover { background: #2a0610; color: #ff80a0; }
+
+  /* ∞ AUTO DEMO button on splash — visually distinct from timed modes */
+  .overlay .duration-picker .demo-btn { color: #8ff0c0; border-color: #2a5040; }
+  .overlay .duration-picker .demo-btn:hover { border-color: #4a8060; background: #0e1e18; }
+
+  /* ── Central card ───────────────────────────────────────────── */
+  .card-wrap {
+    position: fixed; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 3; pointer-events: none;
+  }
+  .card {
+    position: relative; pointer-events: auto;
+    width: 280px; height: 180px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    border: 2px solid #3a4468;
+    background: linear-gradient(180deg, rgba(22, 28, 48, 0.9), rgba(14, 18, 32, 0.9));
+    color: #e3e9f5;
+    border-radius: 16px;
+    cursor: pointer;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255,255,255,0.05);
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.3s;
+    will-change: transform;
+  }
+  .card .big {
+    font-size: 34px; font-weight: 700;
+    letter-spacing: 0.1em; line-height: 1;
+    text-align: center;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+  }
+  .card .sub {
+    margin-top: 12px; font-size: 11px; color: #7a8ba8; letter-spacing: 0.24em;
+  }
+  /* FX sub-elements the thud plugin reads */
+  .card .fx-shadow, .card .fx-burst, .card .fx-badge, .card .fx-strike { position: absolute; pointer-events: none; }
+
+  /* Tier palette — escalating visual on the card */
+  .card[data-tier="0"] { border-color: #454f70; }
+  .card[data-tier="0"] .big { color: #cfd6e4; }
+  .card[data-tier="1"] { border-color: #5a80b0; box-shadow: 0 0 40px rgba(80, 140, 200, 0.35), 0 12px 40px rgba(0,0,0,0.55); background: linear-gradient(180deg, rgba(18, 30, 58, 0.9), rgba(10, 18, 32, 0.9)); }
+  .card[data-tier="1"] .big { color: #a0c8ff; }
+  .card[data-tier="2"] { border-color: #d8a858; box-shadow: 0 0 60px rgba(220, 160, 80, 0.5), 0 14px 48px rgba(0,0,0,0.6); background: linear-gradient(180deg, rgba(46, 32, 14, 0.92), rgba(22, 16, 8, 0.92)); }
+  .card[data-tier="2"] .big { color: #ffd76a; }
+  .card[data-tier="3"] { border-color: #ff8040; box-shadow: 0 0 80px rgba(255, 120, 60, 0.6), 0 16px 56px rgba(0,0,0,0.65); background: linear-gradient(180deg, rgba(66, 28, 12, 0.92), rgba(32, 14, 6, 0.92)); animation: card-wiggle 2s ease-in-out infinite; }
+  .card[data-tier="3"] .big { color: #ffa060; }
+  .card[data-tier="4"] { border-color: #ff4030; box-shadow: 0 0 110px rgba(255, 80, 40, 0.7), 0 18px 64px rgba(0,0,0,0.7); background: linear-gradient(180deg, rgba(80, 16, 8, 0.92), rgba(40, 8, 4, 0.92)); animation: card-vibrate 120ms ease-in-out infinite; }
+  .card[data-tier="4"] .big { color: #ff6050; text-shadow: 0 0 16px rgba(255,80,40,0.8); }
+  .card[data-tier="4"] ~ * {}
+  .card[data-tier="5"] { border-color: #ffffff; box-shadow: 0 0 180px rgba(255, 255, 255, 0.9), 0 24px 80px rgba(0,0,0,0.9); background: linear-gradient(180deg, rgba(20, 20, 20, 0.96), rgba(10, 10, 10, 0.96)); animation: card-insanity 60ms linear infinite; }
+  .card[data-tier="5"] .big { color: #fff; text-shadow: 0 0 32px #fff, 0 0 64px #ffe080; font-size: 28px; letter-spacing: 0.15em; }
+  .card[data-tier="6"] { border-color: #c040ff; box-shadow: 0 0 200px rgba(192, 60, 255, 0.95), 0 24px 80px rgba(0,0,0,0.92); background: linear-gradient(180deg, rgba(52, 8, 82, 0.96), rgba(22, 4, 42, 0.96)); animation: card-beyond 90ms linear infinite; }
+  .card[data-tier="6"] .big { color: #f0c8ff; text-shadow: 0 0 28px #c040ff, 0 0 64px #8020ff; font-size: 26px; letter-spacing: 0.2em; }
+  .card[data-tier="7"] { border-color: #40ffc8; box-shadow: 0 0 220px rgba(64, 255, 200, 0.95), 0 24px 80px rgba(0,0,0,0.94); background: linear-gradient(180deg, rgba(4, 60, 50, 0.96), rgba(2, 30, 25, 0.96)); animation: card-singularity 120ms linear infinite; }
+  .card[data-tier="7"] .big { color: #b8ffe8; text-shadow: 0 0 34px #40ffc8, 0 0 72px #00ffc0; font-size: 24px; letter-spacing: 0.22em; }
+  .card[data-tier="8"] { border-color: #ffae20; box-shadow: 0 0 240px rgba(255, 174, 32, 0.95), 0 28px 80px rgba(0,0,0,0.96); background: linear-gradient(180deg, rgba(80, 40, 8, 0.96), rgba(40, 20, 4, 0.96)); animation: card-godmode 4s linear infinite, card-godbeat 160ms linear infinite; }
+  .card[data-tier="8"] .big { color: #fff2c0; text-shadow: 0 0 34px #ffae20, 0 0 76px #ff6020; font-size: 24px; letter-spacing: 0.2em; }
+  .card[data-tier="9"] { border-color: #ff20c0; box-shadow: 0 0 260px rgba(255, 32, 192, 0.98), 0 28px 90px rgba(0,0,0,0.98); background: linear-gradient(180deg, rgba(90, 4, 60, 0.96), rgba(40, 2, 30, 0.96)); animation: card-omni 60ms linear infinite; }
+  .card[data-tier="9"] .big { color: #ffc0e8; text-shadow: 0 0 40px #ff20c0, 0 0 88px #ff40ff; font-size: 22px; letter-spacing: 0.26em; }
+  .card[data-tier="10"] { border-color: #ffffff; box-shadow: 0 0 320px rgba(255, 255, 255, 1), 0 32px 100px rgba(0,0,0,1); background: linear-gradient(180deg, rgba(8, 8, 20, 0.98), rgba(4, 4, 10, 0.98)); animation: card-transcendent 40ms linear infinite; }
+  .card[data-tier="10"] .big { color: #fff; text-shadow: 0 0 52px #fff, 0 0 104px #f0a0ff, 0 0 156px #40ffff; font-size: 20px; letter-spacing: 0.3em; }
+
+  @keyframes card-wiggle       { 0%,100%{ transform: translate(0,0) rotate(0deg);} 50%{ transform: translate(1px,-1px) rotate(0.4deg);} }
+  @keyframes card-vibrate      { 0%,100%{ transform: translate(0,0);} 50%{ transform: translate(1.5px,1.5px);} }
+  @keyframes card-rumble       { 0%{ transform: translate(-2px,1px) rotate(-0.4deg);} 50%{ transform: translate(2px,-1px) rotate(0.4deg);} 100%{ transform: translate(-1px,2px) rotate(-0.2deg);} }
+  @keyframes card-insanity     { 0%{ transform: translate(-3px,2px) scale(1.02);} 25%{ transform: translate(3px,-2px) scale(0.98);} 50%{ transform: translate(-2px,-3px) scale(1.03);} 75%{ transform: translate(2px,3px) scale(0.97);} 100%{ transform: translate(0,0) scale(1);} }
+  @keyframes card-beyond       { 0%{transform:translate(0,0) rotate(0)} 25%{transform:translate(-2px,2px) rotate(-0.3deg)} 50%{transform:translate(2px,-2px) rotate(0.3deg)} 75%{transform:translate(-1px,-3px) rotate(-0.2deg)} 100%{transform:translate(0,0) rotate(0)} }
+  @keyframes card-singularity  { 0%{transform:translate(-2px,3px) scale(0.99)} 33%{transform:translate(3px,-2px) scale(1.01)} 66%{transform:translate(-3px,-1px) scale(0.98)} 100%{transform:translate(0,0) scale(1)} }
+  @keyframes card-godmode      { 0%{filter:hue-rotate(0deg)} 100%{filter:hue-rotate(360deg)} }
+  @keyframes card-godbeat      { 0%{transform:translate(-3px,2px) scale(1.01)} 50%{transform:translate(3px,-2px) scale(0.99)} 100%{transform:translate(0,0) scale(1)} }
+  @keyframes card-omni         { 0%{transform:translate(-4px,2px) scale(1.02) rotate(-0.5deg)} 25%{transform:translate(4px,-2px) scale(0.97) rotate(0.5deg)} 50%{transform:translate(-3px,-4px) scale(1.03) rotate(-0.3deg)} 75%{transform:translate(3px,4px) scale(0.96) rotate(0.4deg)} 100%{transform:translate(0,0) scale(1)} }
+  @keyframes card-transcendent { 0%{transform:translate(-5px,3px) scale(1.03) rotate(-0.8deg); filter:hue-rotate(0deg) invert(0)} 25%{transform:translate(5px,-3px) scale(0.95) rotate(0.8deg); filter:hue-rotate(90deg) invert(0.15)} 50%{transform:translate(-4px,-5px) scale(1.05) rotate(-0.4deg); filter:hue-rotate(180deg) invert(0.05)} 75%{transform:translate(4px,5px) scale(0.93) rotate(0.5deg); filter:hue-rotate(270deg) invert(0.2)} 100%{transform:translate(0,0) scale(1); filter:hue-rotate(360deg) invert(0)} }
+
+  /* Persistent canvas filters applied via body class as tier escalates.
+     Applied only to the 3D canvas so the HUD stays readable. */
+  body.tier-6  #three-canvas { filter: saturate(1.25) brightness(1.08); }
+  body.tier-7  #three-canvas { animation: tier-sing 2.5s linear infinite; }
+  body.tier-8  #three-canvas { animation: tier-god 4s linear infinite; }
+  body.tier-9  #three-canvas { animation: tier-omni 1.2s linear infinite; }
+  body.tier-10 #three-canvas { animation: tier-tran 0.5s linear infinite; }
+  body.tier-11 #three-canvas { animation: tier-apoth 3s linear infinite; }
+  body.tier-12 #three-canvas { animation: tier-onek 1.8s linear infinite; }
+  body.tier-13 #three-canvas { filter: drop-shadow(3px 0 0 rgba(255,0,120,0.5)) drop-shadow(-3px 0 0 rgba(0,220,255,0.5)) saturate(1.5); animation: tier-rift-wobble 0.5s linear infinite; }
+  body.tier-14 #three-canvas { animation: tier-primo 5s linear infinite; }
+  body.tier-15 #three-canvas { animation: tier-heat 6s linear infinite; }
+  body.tier-16 #three-canvas { animation: tier-source 0.3s linear infinite; }
+  @keyframes tier-sing  { 0%,100%{filter:saturate(1.5) brightness(1.2)} 50%{filter:saturate(2) brightness(1.4) hue-rotate(30deg)} }
+  @keyframes tier-god   { 0%{filter:hue-rotate(0deg)   saturate(1.35)} 100%{filter:hue-rotate(360deg) saturate(1.35)} }
+  @keyframes tier-omni  { 0%{filter:hue-rotate(0deg)   saturate(1.6)  contrast(1.15)} 100%{filter:hue-rotate(360deg) saturate(1.6)  contrast(1.15)} }
+  @keyframes tier-tran  { 0%{filter:hue-rotate(0deg)   saturate(2.2)  invert(0)}    50%{filter:hue-rotate(180deg) saturate(3)    invert(0.12)} 100%{filter:hue-rotate(360deg) saturate(2.2) invert(0)} }
+  @keyframes tier-apoth { 0%,100%{filter:sepia(0.4) saturate(2) brightness(1.25) hue-rotate(-10deg)} 50%{filter:sepia(0.5) saturate(2.2) brightness(1.35) hue-rotate(5deg)} }
+  @keyframes tier-onek  { 0%{filter:sepia(0.55) saturate(2.4) brightness(1.45) hue-rotate(-5deg)} 100%{filter:sepia(0.55) saturate(2.4) brightness(1.45) hue-rotate(355deg)} }
+  @keyframes tier-rift-wobble { 0%,100%{transform:translate(0,0)} 50%{transform:translate(1px,-1px)} }
+  @keyframes tier-primo { 0%,100%{filter:saturate(0.55) contrast(1.7) brightness(0.72) hue-rotate(-20deg)} 50%{filter:saturate(0.4) contrast(1.9) brightness(0.65) hue-rotate(-30deg)} }
+  @keyframes tier-heat  { 0%{filter:saturate(0.35) contrast(0.85) brightness(0.78)} 50%{filter:saturate(0.1) contrast(0.75) brightness(0.65)} 100%{filter:saturate(0.35) contrast(0.85) brightness(0.78)} }
+  @keyframes tier-source{ 0%{filter:invert(0) hue-rotate(0deg) saturate(3) contrast(1.4)} 50%{filter:invert(0.4) hue-rotate(180deg) saturate(5) contrast(1.8)} 100%{filter:invert(0) hue-rotate(360deg) saturate(3) contrast(1.4)} }
+
+  /* New card tier styles. Colors follow the ladder progression:
+     APOTHEOSIS gold → ONE THOUSAND cream-gold → RIFT magenta+cyan split
+     → PRIMORDIAL dark red → HEAT DEATH grayscale → THE SOURCE white. */
+  .card[data-tier="11"] { border-color: #ffd76a; box-shadow: 0 0 240px rgba(255, 215, 106, 0.9), 0 28px 80px rgba(0,0,0,0.96); background: linear-gradient(180deg, rgba(80, 56, 14, 0.94), rgba(40, 28, 6, 0.94)); animation: card-godmode 6s linear infinite, card-godbeat 140ms linear infinite; }
+  .card[data-tier="11"] .big { color: #fff2c0; text-shadow: 0 0 40px #ffd76a, 0 0 96px #ffae20; font-size: 22px; letter-spacing: 0.22em; }
+  .card[data-tier="12"] { border-color: #fff4c8; box-shadow: 0 0 280px rgba(255, 244, 200, 1), 0 0 120px rgba(255, 215, 106, 0.9), 0 30px 90px rgba(0,0,0,0.98); background: linear-gradient(180deg, rgba(120, 90, 30, 0.96), rgba(60, 40, 10, 0.96)); animation: card-onek 3s linear infinite, card-godbeat 120ms linear infinite; }
+  .card[data-tier="12"] .big { color: #fffcf0; text-shadow: 0 0 48px #fff4c8, 0 0 112px #ffd76a, 0 0 180px #fff; font-size: 26px; letter-spacing: 0.2em; font-weight: 800; }
+  .card[data-tier="13"] { border-color: #ff00a0; box-shadow: 0 0 240px rgba(255, 0, 160, 0.9), 0 0 120px rgba(0, 255, 200, 0.7), 0 28px 80px rgba(0,0,0,0.98); background: linear-gradient(180deg, rgba(80, 4, 60, 0.96), rgba(20, 40, 50, 0.96)); animation: card-rift 80ms linear infinite; }
+  .card[data-tier="13"] .big { color: #ffcce8; text-shadow: 3px 0 0 rgba(255,0,100,0.8), -3px 0 0 rgba(0,255,220,0.8), 0 0 40px #ff00a0; font-size: 22px; letter-spacing: 0.26em; }
+  .card[data-tier="14"] { border-color: #8a2018; box-shadow: 0 0 200px rgba(138, 32, 24, 0.7), inset 0 0 60px rgba(0,0,0,0.8), 0 28px 90px rgba(0,0,0,1); background: linear-gradient(180deg, rgba(30, 12, 10, 0.98), rgba(10, 4, 4, 0.98)); animation: card-primo 8s linear infinite; }
+  .card[data-tier="14"] .big { color: #ca6050; text-shadow: 0 0 28px #802010, 0 0 80px #4a0808; font-size: 22px; letter-spacing: 0.3em; }
+  .card[data-tier="15"] { border-color: #707070; box-shadow: 0 0 180px rgba(100, 100, 100, 0.6), 0 24px 80px rgba(0,0,0,1); background: linear-gradient(180deg, rgba(30, 30, 30, 0.98), rgba(10, 10, 10, 0.98)); animation: card-heat 10s linear infinite; }
+  .card[data-tier="15"] .big { color: #a0a0a0; text-shadow: 0 0 32px #707070; font-size: 22px; letter-spacing: 0.32em; opacity: 0.8; }
+  .card[data-tier="16"] { border-color: #ffffff; box-shadow: 0 0 360px rgba(255, 255, 255, 1), 0 0 200px rgba(255, 180, 220, 0.8), 0 40px 120px rgba(0,0,0,1); background: linear-gradient(180deg, rgba(6, 6, 20, 0.99), rgba(2, 2, 6, 0.99)); animation: card-source 30ms linear infinite; }
+  .card[data-tier="16"] .big { color: #fff; text-shadow: 0 0 64px #fff, 0 0 128px #f0a0ff, 0 0 192px #40ffff, 0 0 256px #ffa040; font-size: 18px; letter-spacing: 0.4em; }
+  @keyframes card-onek       { 0%{transform:translate(0,0) rotate(0)} 50%{transform:translate(1px,-2px) rotate(0.2deg)} 100%{transform:translate(0,0) rotate(0)} }
+  @keyframes card-rift       { 0%{transform:translate(-3px,0)} 25%{transform:translate(3px,1px)} 50%{transform:translate(-2px,-1px)} 75%{transform:translate(2px,2px)} 100%{transform:translate(0,0)} }
+  @keyframes card-primo      { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(0,-1px) scale(0.995)} }
+  @keyframes card-heat       { 0%{opacity:0.85; transform:translate(0,0)} 50%{opacity:0.7; transform:translate(-1px,1px)} 100%{opacity:0.85; transform:translate(0,0)} }
+  @keyframes card-source     { 0%{transform:translate(-6px,4px) scale(1.05) rotate(-1deg); filter:hue-rotate(0deg) invert(0.1)} 25%{transform:translate(6px,-4px) scale(0.92) rotate(1deg); filter:hue-rotate(90deg) invert(0.3)} 50%{transform:translate(-5px,-6px) scale(1.08) rotate(-0.6deg); filter:hue-rotate(180deg) invert(0.15)} 75%{transform:translate(5px,6px) scale(0.9) rotate(0.8deg); filter:hue-rotate(270deg) invert(0.35)} 100%{transform:translate(0,0) scale(1); filter:hue-rotate(360deg) invert(0.1)} }
+
+  /* ── Overlays: splash & end screen ──────────────────────────── */
+  .overlay {
+    position: fixed; inset: 0; z-index: 20;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: rgba(4, 6, 14, 0.88); backdrop-filter: blur(12px);
+    opacity: 1; transition: opacity 0.3s;
+  }
+  .overlay.hidden { opacity: 0; pointer-events: none; }
+  .overlay h1 { font-size: 38px; letter-spacing: 0.24em; color: #fff; margin: 0 0 8px; }
+  .overlay h1 .accent { color: #ffd76a; }
+  .overlay .subtitle { font-size: 12px; color: #8892a8; letter-spacing: 0.2em; margin-bottom: 32px; }
+  .overlay .duration-picker { display: flex; gap: 14px; margin-bottom: 18px; }
+  .overlay .duration-picker button {
+    font: inherit; padding: 18px 28px; font-size: 14px; letter-spacing: 0.12em;
+    background: #101628; color: #ffd76a; cursor: pointer;
+    border: 1px solid #3a4468; border-radius: 10px;
+    min-width: 120px; text-align: center;
+    transition: all 0.2s;
+  }
+  .overlay .duration-picker button:hover { background: #1a2038; border-color: #5a7aa8; transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,0.4); }
+  .overlay .duration-picker .best { display: block; font-size: 10px; color: #6a7090; margin-top: 6px; letter-spacing: 0.18em; }
+  .overlay .tip { font-size: 10px; color: #5a6080; letter-spacing: 0.24em; margin-top: 18px; }
+
+  .overlay.end h1 { color: #ffd76a; letter-spacing: 0.32em; }
+  .overlay.end .score-big { font-size: 88px; font-weight: 700; color: #fff; letter-spacing: 0.04em; margin: 8px 0 4px; text-shadow: 0 0 40px rgba(255,215,106,0.6); }
+  .overlay.end .score-sub { font-size: 13px; color: #8892a8; letter-spacing: 0.16em; margin-bottom: 30px; }
+  .overlay.end .peak { color: #a0c8ff; }
+  .overlay.end .newbest { color: #ff80a0; font-size: 14px; letter-spacing: 0.24em; margin-top: 4px; }
+  .overlay.end .cps { color: #8ff0c0; font-size: 14px; }
+  .overlay.end .actions { display: flex; gap: 10px; margin-top: 24px; }
+  .overlay.end button {
+    font: inherit; padding: 14px 22px; font-size: 13px; letter-spacing: 0.12em;
+    background: #101628; color: #ffd76a; cursor: pointer;
+    border: 1px solid #3a4468; border-radius: 8px;
+  }
+  .overlay.end button:hover { background: #1a2038; }
+
+  /* ── Screen shake ───────────────────────────────────────────── */
+  @keyframes fx-shake-light { 0%,100%{transform:translate(0,0)} 10%{transform:translate(-3px,2px)} 25%{transform:translate(4px,-2px)} 40%{transform:translate(-2px,3px)} 55%{transform:translate(3px,1px)} 70%{transform:translate(-3px,-2px)} 85%{transform:translate(2px,2px)} }
+  @keyframes fx-shake-heavy { 0%,100%{transform:translate(0,0)} 8%{transform:translate(-12px,6px) rotate(-0.6deg)} 22%{transform:translate(13px,-7px) rotate(0.7deg)} 38%{transform:translate(-9px,9px) rotate(-0.5deg)} 54%{transform:translate(10px,4px) rotate(0.6deg)} 70%{transform:translate(-7px,-6px) rotate(-0.4deg)} 86%{transform:translate(6px,7px) rotate(0.3deg)} }
+  body.shaking       { animation: fx-shake-light 350ms cubic-bezier(.36,.07,.19,.97) both; }
+  body.shaking-heavy { animation: fx-shake-heavy 600ms cubic-bezier(.36,.07,.19,.97) both; }
+
+  /* ghost clone carries its own styles */
+  .ghost { margin: 0 !important; pointer-events: none !important; }
+</style>
+</head>
+<body>
+  <canvas id="three-canvas"></canvas>
+  <div id="bg"></div>
+
+  <div class="hud" id="hud" style="display: none;">
+    <div class="cell"><span class="lbl">score</span><span class="val score" id="score">0</span></div>
+    <div class="cell"><span class="lbl">tier</span><span class="val tier" id="tier">LOW</span></div>
+    <div class="cell"><span class="lbl">time</span><span class="val time" id="time">60.0</span></div>
+    <div class="cell"><span class="lbl">best</span><span class="val best" id="best">—</span></div>
+    <div class="cell auto-cell">
+      <label class="auto-toggle" title="toggle autoclicker (A)">
+        <input type="checkbox" id="auto">
+        <span class="val auto-label">AUTO</span>
+      </label>
+      <input type="range" id="autoRate" min="2" max="30" value="15" step="1" title="clicks per second">
+      <span class="val auto-rate" id="autoRateLabel">15</span>
+      <span class="lbl">cps</span>
+    </div>
+    <div class="cell sound-cell">
+      <label class="sound-toggle" title="toggle sound (S)">
+        <input type="checkbox" id="sound" checked>
+        <span class="val sound-label">SOUND</span>
+      </label>
+    </div>
+    <button id="hudEnd" class="hud-end" title="end game (Esc)">END</button>
+  </div>
+
+  <div class="card-wrap" id="card-wrap" style="display: none;">
+    <div class="card" id="card" data-tier="0" data-id="clicker-card">
+      <div class="big" id="cardText">CLICK ME</div>
+      <div class="sub" id="cardSub">press space or click</div>
+      <div class="fx-shadow"></div>
+      <div class="fx-burst"></div>
+      <div class="fx-badge"></div>
+      <div class="fx-strike"></div>
+    </div>
+  </div>
+
+  <!-- SPLASH -->
+  <div class="overlay" id="splash">
+    <h1>CLICK<span class="accent">·</span>CLICKER</h1>
+    <div class="subtitle">HOW FAST CAN YOU GO</div>
+    <div class="duration-picker">
+      <button data-duration="10">
+        10s
+        <span class="best" data-best-for="10">—</span>
+      </button>
+      <button data-duration="30">
+        30s
+        <span class="best" data-best-for="30">—</span>
+      </button>
+      <button data-duration="60">
+        60s
+        <span class="best" data-best-for="60">—</span>
+      </button>
+      <button data-duration="0" class="demo-btn">
+        ∞
+        <span class="best">AUTO DEMO</span>
+      </button>
+    </div>
+    <div class="tip">click the card · every hit escalates · ∞ runs the autoclicker</div>
+  </div>
+
+  <!-- END SCREEN -->
+  <div class="overlay end hidden" id="end">
+    <h1>TIME</h1>
+    <div class="score-big" id="endScore">0</div>
+    <div class="score-sub">
+      <span id="endCps" class="cps">0.0</span>&nbsp;cps&nbsp;·&nbsp;peak&nbsp;<span id="endPeak" class="peak">LOW</span>
+    </div>
+    <div class="newbest" id="endNewBest" style="display: none;">NEW PERSONAL BEST</div>
+    <div class="actions">
+      <button id="endAgain">RUN IT BACK</button>
+      <button id="endMenu">MENU</button>
+    </div>
+  </div>
+
+  <script type="importmap">
+  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+  </script>
+  <script src="../../dist/toto-fx.min.js"></script>
+  <script src="../../dist/plugins/cute.min.js"></script>
+  <script src="../../dist/plugins/thud.min.js"></script>
+  <script src="../../dist/plugins/death.min.js"></script>
+  <script type="module">
+    import * as THREE from 'three';
+
+    // ── TotoFX setup ──────────────────────────────────────────────
+    const engine = TotoFX.createEngine({
+      resolveElement: (key) => document.querySelector(`[data-id="${key}"]`),
+      debug: false,
+    });
+    engine.use(TotoFXCute);
+    engine.use(TotoFXThud);
+    engine.use(TotoFXDeath);
+
+    const grid = TotoFX.createDotgrid({
+      container: '#bg', dotSize: 26, fontSize: 15,
+      baseOpacity: 0.2, baseColor: [130, 150, 190],
+      densityDecay: 0.985, velDecay: 0.92,
+    });
+    grid.init();
+    TotoFX.FX.setDotgrid(grid);
+    engine.setDotgrid(grid);
+    engine.init();
+
+    // ── 8-bit WebAudio sound system ───────────────────────────────
+    // Single-module audio engine. Pure oscillator+filter+gain synthesis,
+    // no external samples. Exposes a small API consumed by the game
+    // hooks (onClick, onTierEnter, onMilestone, onOneThousand, onNuclear,
+    // onBlackFlash, onGameStart/End, stopAll). Default ON; master
+    // toggle via Sound.setEnabled(bool) / HUD checkbox / S key.
+    //
+    // Architecture:
+    //   - Shepard-tone click blip (3 oscillators an octave apart per
+    //     click, each with an amplitude window that fades in at the
+    //     bottom of its octave cycle and out at the top so the pitch
+    //     feels like it rises forever without ever leaving the
+    //     audible band).
+    //   - Click volume blends from full blip (tier 0-5) → near-silent
+    //     tick (tier 10+), with per-tier drone volume rising to match.
+    //   - Per-tier drone "chord": 2-4 sustained oscillators plus an
+    //     optional filter LFO; 400ms crossfade on tier change. Defined
+    //     as SOUND_PACKS.default.tierDrones[n] = { freqs, waveform,
+    //     filter, modulation, sub } so individual tiers are trivial to
+    //     swap via Sound.setTierDrone(n, cfg).
+    //   - Voice pool: a single click schedules ≤ 15 Hz via a ceiling
+    //     on perceived duplicates. Each blip creates short-lived
+    //     oscillator+gain nodes that are stopped + garbage-collected
+    //     on envelope end; at 30 cps the 15 Hz ceiling halves spawn
+    //     rate so GC doesn't stutter.
+    const SOUND_PACKS = {
+      default: {
+        // Tier drone config format:
+        //   {
+        //     freqs: [Hz, ...],          // 2-4 oscillators making the chord
+        //     waveform: 'square'|'triangle'|'sawtooth',
+        //     filter: { type, freq, Q } | null,  // BiquadFilter on the drone bus
+        //     modulation: { lfoFreq, lfoDepth } | null,  // filter cutoff LFO
+        //     sub: { freq, gain } | null,        // sub-bass oscillator
+        //     gain: 0..1,                         // overall drone level
+        //   }
+        // Swap any entry at runtime with Sound.setTierDrone(n, cfg).
+        tierDrones: [
+          // 0 LOW — barely present, a soft hum
+          { freqs: [110, 165], waveform: 'triangle', filter: { type: 'lowpass', freq: 800, Q: 2 }, modulation: null, sub: null, gain: 0.04 },
+          // 1 MEDIUM
+          { freqs: [110, 147, 220], waveform: 'triangle', filter: { type: 'lowpass', freq: 1200, Q: 2 }, modulation: null, sub: null, gain: 0.05 },
+          // 2 HIGH — warmer major
+          { freqs: [110, 139, 165, 220], waveform: 'triangle', filter: { type: 'lowpass', freq: 1600, Q: 3 }, modulation: null, sub: null, gain: 0.06 },
+          // 3 VERY HIGH — start introducing squares
+          { freqs: [110, 147, 220], waveform: 'square', filter: { type: 'lowpass', freq: 1400, Q: 4 }, modulation: { lfoFreq: 0.6, lfoDepth: 400 }, sub: null, gain: 0.05 },
+          // 4 INSANE — dissonant minor 2nd
+          { freqs: [110, 117, 220], waveform: 'sawtooth', filter: { type: 'lowpass', freq: 1200, Q: 5 }, modulation: { lfoFreq: 1.2, lfoDepth: 600 }, sub: null, gain: 0.06 },
+          // 5 INSANITY — sub-bass kicks in
+          { freqs: [110, 138, 220, 277], waveform: 'sawtooth', filter: { type: 'lowpass', freq: 1800, Q: 6 }, modulation: { lfoFreq: 2, lfoDepth: 800 }, sub: { freq: 55, gain: 0.08 }, gain: 0.08 },
+          // 6 BEYOND — violet chord, fatter
+          { freqs: [110, 130, 196, 261], waveform: 'sawtooth', filter: { type: 'lowpass', freq: 2200, Q: 6 }, modulation: { lfoFreq: 0.8, lfoDepth: 1000 }, sub: { freq: 50, gain: 0.10 }, gain: 0.09 },
+          // 7 SINGULARITY — wide open
+          { freqs: [110, 165, 220, 330], waveform: 'sawtooth', filter: { type: 'lowpass', freq: 2800, Q: 8 }, modulation: { lfoFreq: 0.3, lfoDepth: 1600 }, sub: { freq: 45, gain: 0.12 }, gain: 0.10 },
+          // 8 GOD MODE — hopeful perfect-5th + sub
+          { freqs: [110, 165, 220, 247], waveform: 'square', filter: { type: 'lowpass', freq: 2400, Q: 6 }, modulation: { lfoFreq: 1.6, lfoDepth: 900 }, sub: { freq: 55, gain: 0.13 }, gain: 0.12 },
+          // 9 OMNIPOTENT — magenta whole-tone
+          { freqs: [110, 123, 196, 247], waveform: 'sawtooth', filter: { type: 'lowpass', freq: 3000, Q: 8 }, modulation: { lfoFreq: 2.4, lfoDepth: 1400 }, sub: { freq: 42, gain: 0.14 }, gain: 0.13 },
+          // 10 TRANSCENDENT — huge stack
+          { freqs: [110, 165, 220, 293, 370], waveform: 'sawtooth', filter: { type: 'lowpass', freq: 3400, Q: 10 }, modulation: { lfoFreq: 3.2, lfoDepth: 2000 }, sub: { freq: 40, gain: 0.16 }, gain: 0.14 },
+          // 11 APOTHEOSIS — golden major 7th
+          { freqs: [110, 139, 165, 208], waveform: 'triangle', filter: { type: 'lowpass', freq: 3000, Q: 6 }, modulation: { lfoFreq: 0.6, lfoDepth: 800 }, sub: { freq: 55, gain: 0.14 }, gain: 0.14 },
+          // 12 ONE THOUSAND — bright major chord
+          { freqs: [110, 138, 165, 220, 277], waveform: 'sawtooth', filter: { type: 'lowpass', freq: 3600, Q: 8 }, modulation: { lfoFreq: 0.5, lfoDepth: 1200 }, sub: { freq: 55, gain: 0.16 }, gain: 0.16 },
+          // 13 RIFT — detuned, chromatic split
+          { freqs: [110, 116, 220, 233], waveform: 'sawtooth', filter: { type: 'bandpass', freq: 2200, Q: 6 }, modulation: { lfoFreq: 5, lfoDepth: 2000 }, sub: { freq: 40, gain: 0.14 }, gain: 0.14 },
+          // 14 PRIMORDIAL — low, ominous, wide
+          { freqs: [82, 110, 123], waveform: 'sawtooth', filter: { type: 'lowpass', freq: 1400, Q: 10 }, modulation: { lfoFreq: 0.25, lfoDepth: 600 }, sub: { freq: 38, gain: 0.18 }, gain: 0.15 },
+          // 15 HEAT DEATH — sparse, cold, near-silent
+          { freqs: [110, 220], waveform: 'triangle', filter: { type: 'lowpass', freq: 900, Q: 4 }, modulation: { lfoFreq: 0.15, lfoDepth: 300 }, sub: { freq: 45, gain: 0.08 }, gain: 0.08 },
+          // 16 THE SOURCE — all intervals at once
+          { freqs: [110, 139, 165, 196, 220, 247, 277], waveform: 'sawtooth', filter: { type: 'lowpass', freq: 4000, Q: 12 }, modulation: { lfoFreq: 4, lfoDepth: 3000 }, sub: { freq: 35, gain: 0.20 }, gain: 0.16 },
+        ],
+      },
+    };
+
+    const Sound = (function () {
+      let ctx = null;
+      let masterGain = null;
+      let droneBus = null;
+      let enabled = true;
+      let initialized = false;
+      let currentTier = -1;
+      let droneVoices = []; // [{osc, gain, filter, lfo, lfoGain, sub, subGain, stopAt}]
+      let lastBlipAt = 0;
+      const BLIP_MIN_INTERVAL = 1000 / 15; // 15 Hz ceiling — keeps GC quiet at 30 cps
+      let thousandPlayed = false;
+      let pack = SOUND_PACKS.default;
+
+      function now() { return ctx ? ctx.currentTime : 0; }
+
+      function ensureContext() {
+        if (ctx) return ctx;
+        try {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          ctx = new AC();
+          masterGain = ctx.createGain();
+          masterGain.gain.value = enabled ? 0.8 : 0.0;
+          masterGain.connect(ctx.destination);
+          droneBus = ctx.createGain();
+          droneBus.gain.value = 1.0;
+          droneBus.connect(masterGain);
+          initialized = true;
+        } catch (e) { ctx = null; }
+        return ctx;
+      }
+
+      function init() {
+        // Called on first user gesture. Resumes a suspended context if
+        // the browser created one in suspended state.
+        ensureContext();
+        if (ctx && ctx.state === 'suspended') ctx.resume();
+      }
+
+      function setEnabled(on) {
+        enabled = !!on;
+        if (!ctx || !masterGain) return;
+        const t = now();
+        masterGain.gain.cancelScheduledValues(t);
+        masterGain.gain.linearRampToValueAtTime(enabled ? 0.8 : 0.0, t + 0.08);
+      }
+
+      // ── Shepard tone click ─────────────────────────────────────
+      // Three oscillators one octave apart. Each has a window amplitude
+      // that fades in at the bottom of its cycle and out at the top, so
+      // as `score` increases the pitch appears to rise forever while the
+      // audible spectrum stays bounded (220-1760 Hz).
+      function shepardFreqs(score) {
+        const cycle = (score % 200) / 200; // 0..1 position within a cycle
+        const baseOctaves = [220, 440, 880, 1760];
+        const out = [];
+        for (let i = 0; i < baseOctaves.length; i++) {
+          // Each voice sweeps up by one octave over the cycle, then wraps.
+          const freq = baseOctaves[i] * Math.pow(2, cycle);
+          // Window: triangle across the cycle centered at 0.5
+          const w = Math.sin(Math.PI * cycle); // 0 at edges, 1 in middle
+          // Cross-fade between voices so the wrap is smooth: voices near
+          // the edges of the audible band are attenuated.
+          const bandBias = i === 0 ? (1 - cycle)
+                         : i === baseOctaves.length - 1 ? cycle
+                         : 1;
+          out.push({ freq, gain: 0.7 * w + 0.3 * bandBias });
+        }
+        return out;
+      }
+
+      function clickBlipVolume(tier) {
+        // tier 0-5: full, 6-9: blend down, 10+: subtle tick
+        const n = tier ? tier.n : 0;
+        if (n <= 5) return 1.0;
+        if (n >= 10) return 0.12;
+        // Linear blend 6-9 from 1.0 → 0.2
+        return 1.0 - (n - 5) * 0.2;
+      }
+
+      function onClick(score, tier) {
+        if (!enabled || !ctx) return;
+        const t = now();
+        if ((t - lastBlipAt) * 1000 < BLIP_MIN_INTERVAL) return;
+        lastBlipAt = t;
+
+        const blipVol = clickBlipVolume(tier);
+        const voices = shepardFreqs(score);
+
+        // Blip envelope — very short, 8-bit square character.
+        // Attack 4ms, decay 80ms so at 15 Hz voices barely overlap.
+        for (const v of voices) {
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.value = v.freq;
+          osc.connect(g);
+          g.connect(masterGain);
+          const peak = 0.06 * v.gain * blipVol;
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(peak, t + 0.004);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+          osc.start(t);
+          osc.stop(t + 0.09);
+        }
+
+        // At tier 10+ add a faint low tick for tactile feedback
+        if (tier && tier.n >= 10) {
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.value = 180;
+          osc.connect(g);
+          g.connect(masterGain);
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(0.05, t + 0.002);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
+          osc.start(t);
+          osc.stop(t + 0.05);
+        }
+      }
+
+      // ── Per-tier drone ──────────────────────────────────────────
+      function stopDroneVoices(fadeSec) {
+        const t = now();
+        for (const v of droneVoices) {
+          try {
+            v.gain.gain.cancelScheduledValues(t);
+            v.gain.gain.linearRampToValueAtTime(0.0001, t + fadeSec);
+            v.osc.stop(t + fadeSec + 0.02);
+            if (v.lfo) v.lfo.stop(t + fadeSec + 0.02);
+            if (v.sub) {
+              v.subGain.gain.cancelScheduledValues(t);
+              v.subGain.gain.linearRampToValueAtTime(0.0001, t + fadeSec);
+              v.sub.stop(t + fadeSec + 0.02);
+            }
+          } catch {}
+        }
+        droneVoices = [];
+      }
+
+      function startDroneForTier(tierN) {
+        if (!ctx) return;
+        const cfg = pack.tierDrones[Math.max(0, Math.min(pack.tierDrones.length - 1, tierN))];
+        if (!cfg) return;
+        const t = now();
+        const attack = 0.4;
+
+        // Per-drone filter on a shared sub-bus so the LFO modulates the
+        // whole chord together.
+        let node = droneBus;
+        let filter = null;
+        let lfo = null;
+        let lfoGain = null;
+        if (cfg.filter) {
+          filter = ctx.createBiquadFilter();
+          filter.type = cfg.filter.type;
+          filter.frequency.value = cfg.filter.freq;
+          filter.Q.value = cfg.filter.Q;
+          filter.connect(droneBus);
+          node = filter;
+          if (cfg.modulation) {
+            lfo = ctx.createOscillator();
+            lfo.type = 'sine';
+            lfo.frequency.value = cfg.modulation.lfoFreq;
+            lfoGain = ctx.createGain();
+            lfoGain.gain.value = cfg.modulation.lfoDepth;
+            lfo.connect(lfoGain);
+            lfoGain.connect(filter.frequency);
+            lfo.start(t);
+          }
+        }
+
+        const voiceGain = cfg.gain / Math.max(1, cfg.freqs.length);
+        const voices = [];
+        for (const freq of cfg.freqs) {
+          const osc = ctx.createOscillator();
+          osc.type = cfg.waveform;
+          osc.frequency.value = freq;
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(voiceGain, t + attack);
+          osc.connect(g);
+          g.connect(node);
+          osc.start(t);
+          voices.push({ osc, gain: g, filter, lfo, lfoGain });
+        }
+
+        // Sub-bass: not split per-voice — single oscillator into droneBus.
+        if (cfg.sub) {
+          const sub = ctx.createOscillator();
+          sub.type = 'sine'; // sine ok here — sub-bass, 8-bit rule is for mids
+          sub.frequency.value = cfg.sub.freq;
+          const sg = ctx.createGain();
+          sg.gain.setValueAtTime(0, t);
+          sg.gain.linearRampToValueAtTime(cfg.sub.gain, t + attack);
+          sub.connect(sg);
+          sg.connect(droneBus);
+          sub.start(t);
+          voices[0].sub = sub;
+          voices[0].subGain = sg;
+        }
+        droneVoices = voices;
+      }
+
+      function onTierEnter(tier) {
+        if (!enabled || !ctx || !tier) return;
+        if (tier.n === currentTier) return;
+        currentTier = tier.n;
+        stopDroneVoices(0.4);
+        startDroneForTier(tier.n);
+
+        // Short "tier-up" stinger: ascending 3-note square arp
+        const t = now();
+        const roots = [261.63, 329.63, 392.00]; // C E G
+        for (let i = 0; i < 3; i++) {
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.value = roots[i] * (1 + tier.n * 0.02);
+          osc.connect(g);
+          g.connect(masterGain);
+          const start = t + i * 0.08;
+          g.gain.setValueAtTime(0, start);
+          g.gain.linearRampToValueAtTime(0.08, start + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.0001, start + 0.18);
+          osc.start(start);
+          osc.stop(start + 0.2);
+        }
+      }
+
+      // ── Milestone arpeggios ─────────────────────────────────────
+      function playArpeggio(freqs, noteDur, startGain, wave) {
+        if (!enabled || !ctx) return;
+        const t = now();
+        const w = wave || 'square';
+        for (let i = 0; i < freqs.length; i++) {
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = w;
+          osc.frequency.value = freqs[i];
+          osc.connect(g);
+          g.connect(masterGain);
+          const start = t + i * noteDur;
+          g.gain.setValueAtTime(0, start);
+          g.gain.linearRampToValueAtTime(startGain, start + 0.006);
+          g.gain.exponentialRampToValueAtTime(0.0001, start + noteDur * 1.6);
+          osc.start(start);
+          osc.stop(start + noteDur * 1.7);
+        }
+      }
+
+      function onMilestone(score, kind) {
+        if (!enabled || !ctx) return;
+        // Major-third ascending C-scale flavors, varying length by kind.
+        const base = 523.25; // C5
+        if (kind === 'medium') {
+          // 5 notes, major third steps
+          const f = [base, base * 1.26, base * 1.5, base * 1.89, base * 2.0];
+          playArpeggio(f, 0.06, 0.10, 'square');
+        } else if (kind === 'big') {
+          // 7 notes, wider reach
+          const f = [base, base * 1.26, base * 1.5, base * 1.89, base * 2.0, base * 2.52, base * 3.0];
+          playArpeggio(f, 0.07, 0.11, 'square');
+          // low supporting thump
+          const t = now();
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = 'triangle'; osc.frequency.value = 110;
+          osc.connect(g); g.connect(masterGain);
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(0.18, t + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+          osc.start(t); osc.stop(t + 0.4);
+        } else {
+          // huge — held chord + fanfare
+          const t = now();
+          const chord = [261.63, 329.63, 392.0, 523.25];
+          for (const f of chord) {
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.value = f;
+            osc.connect(g); g.connect(masterGain);
+            g.gain.setValueAtTime(0, t);
+            g.gain.linearRampToValueAtTime(0.07, t + 0.02);
+            g.gain.linearRampToValueAtTime(0.04, t + 0.5);
+            g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+            osc.start(t); osc.stop(t + 1.0);
+          }
+          // ascending sweep on top
+          const sweep = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568.0];
+          playArpeggio(sweep, 0.08, 0.10, 'sawtooth');
+        }
+      }
+
+      // ── One Thousand fanfare ────────────────────────────────────
+      function onOneThousand() {
+        if (!enabled || !ctx) return;
+        if (thousandPlayed) return;
+        thousandPlayed = true;
+        const t = now();
+        // Held major chord with detuned octaves (C E G C up octave, detuned)
+        const notes = [130.81, 164.81, 196.0, 261.63, 329.63, 392.0, 523.25];
+        for (let i = 0; i < notes.length; i++) {
+          const f = notes[i];
+          const detunes = [0, 6, -6]; // cents
+          for (const d of detunes) {
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = i < 3 ? 'sawtooth' : 'square';
+            osc.frequency.value = f;
+            osc.detune.value = d;
+            osc.connect(g); g.connect(masterGain);
+            g.gain.setValueAtTime(0, t);
+            g.gain.linearRampToValueAtTime(0.05, t + 0.04);
+            g.gain.linearRampToValueAtTime(0.035, t + 1.2);
+            g.gain.exponentialRampToValueAtTime(0.0001, t + 1.9);
+            osc.start(t); osc.stop(t + 2.0);
+          }
+        }
+        // Rising Shepard-style sweep on top
+        const sweep = [];
+        for (let i = 0; i < 12; i++) sweep.push(523.25 * Math.pow(2, i / 12));
+        playArpeggio(sweep, 0.05, 0.08, 'square');
+        // Ringing crash — noise-like pitched cluster
+        const cluster = [1046.5, 1244.5, 1397.0, 1760.0, 2093.0];
+        setTimeout(() => {
+          if (!enabled || !ctx) return;
+          const t2 = now();
+          for (const f of cluster) {
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.value = f;
+            osc.connect(g); g.connect(masterGain);
+            g.gain.setValueAtTime(0, t2);
+            g.gain.linearRampToValueAtTime(0.04, t2 + 0.005);
+            g.gain.exponentialRampToValueAtTime(0.0001, t2 + 1.0);
+            osc.start(t2); osc.stop(t2 + 1.1);
+          }
+        }, 300);
+      }
+
+      // ── Black flash → low boom ─────────────────────────────────
+      function onBlackFlash() {
+        if (!enabled || !ctx) return;
+        const t = now();
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(80, t);
+        osc.frequency.exponentialRampToValueAtTime(30, t + 0.3);
+        osc.connect(g); g.connect(masterGain);
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.25, t + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+        osc.start(t); osc.stop(t + 0.45);
+      }
+
+      // ── Nuclear dotgrid → whoosh + impact ──────────────────────
+      function onNuclear(tier) {
+        if (!enabled || !ctx) return;
+        const t = now();
+        // Whoosh: filter sweep on white-noise-ish saw stack
+        const noise = ctx.createOscillator();
+        const ng = ctx.createGain();
+        const nf = ctx.createBiquadFilter();
+        noise.type = 'sawtooth';
+        noise.frequency.setValueAtTime(220, t);
+        noise.frequency.exponentialRampToValueAtTime(880, t + 0.25);
+        nf.type = 'bandpass';
+        nf.frequency.setValueAtTime(400, t);
+        nf.frequency.exponentialRampToValueAtTime(3000, t + 0.22);
+        nf.Q.value = 2;
+        noise.connect(nf); nf.connect(ng); ng.connect(masterGain);
+        ng.gain.setValueAtTime(0, t);
+        ng.gain.linearRampToValueAtTime(0.12, t + 0.05);
+        ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+        noise.start(t); noise.stop(t + 0.3);
+        // Impact: low boom after the whoosh
+        const impactAt = t + 0.22;
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(90, impactAt);
+        osc.frequency.exponentialRampToValueAtTime(40, impactAt + 0.4);
+        osc.connect(g); g.connect(masterGain);
+        g.gain.setValueAtTime(0, impactAt);
+        g.gain.linearRampToValueAtTime(0.28, impactAt + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, impactAt + 0.5);
+        osc.start(impactAt); osc.stop(impactAt + 0.55);
+      }
+
+      function onGameStart() {
+        if (!ctx) return;
+        thousandPlayed = false;
+        currentTier = -1;
+        // kick drone on with the base tier
+        stopDroneVoices(0.1);
+        startDroneForTier(0);
+        currentTier = 0;
+      }
+
+      function onGameEnd() {
+        if (!ctx) return;
+        stopDroneVoices(0.8);
+        currentTier = -1;
+      }
+
+      function stopAll() {
+        if (!ctx) return;
+        stopDroneVoices(0.2);
+        currentTier = -1;
+        thousandPlayed = false;
+      }
+
+      function setTierDrone(tierIdx, cfg) {
+        pack.tierDrones[tierIdx] = cfg;
+        if (currentTier === tierIdx) {
+          stopDroneVoices(0.2);
+          startDroneForTier(tierIdx);
+        }
+      }
+
+      return {
+        init, setEnabled,
+        onClick, onTierEnter, onMilestone, onOneThousand,
+        onBlackFlash, onNuclear, onGameStart, onGameEnd, stopAll,
+        setTierDrone,
+      };
+    })();
+
+    // ── Three.js arena ────────────────────────────────────────────
+    const canvas = document.getElementById('three-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight, false);
+    renderer.setClearColor(0x05060b, 1);
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x05060b, 0.012);
+
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 600);
+    camera.position.set(0, 10, 36);
+    camera.lookAt(0, 4, 0);
+
+    // starfield
+    {
+      const g = new THREE.BufferGeometry();
+      const N = 1800;
+      const pos = new Float32Array(N * 3);
+      for (let i = 0; i < N; i++) {
+        const r = 200 + Math.random() * 200;
+        const t = Math.random() * Math.PI * 2;
+        const p = Math.acos(2 * Math.random() - 1);
+        pos[i*3+0] = r * Math.sin(p) * Math.cos(t);
+        pos[i*3+1] = r * Math.sin(p) * Math.sin(t);
+        pos[i*3+2] = r * Math.cos(p);
+      }
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0xb0c0e0, size: 0.6, transparent: true, opacity: 0.7 })));
+    }
+
+    // ground + grid
+    scene.add(new THREE.Mesh(
+      new THREE.PlaneGeometry(300, 300),
+      new THREE.MeshStandardMaterial({ color: 0x0e1220, roughness: 0.95 })
+    )).rotation.x = -Math.PI / 2;
+    const gridHelper = new THREE.GridHelper(300, 60, 0x3a4070, 0x1a2038);
+    scene.add(gridHelper);
+
+    scene.add(new THREE.HemisphereLight(0x6080c0, 0x141828, 0.45));
+    const sceneKey = new THREE.DirectionalLight(0xfff4d8, 0.5);
+    sceneKey.position.set(16, 30, 18); scene.add(sceneKey);
+
+    // tier ring under the card — grows and color-shifts with tier
+    const arenaRing = new THREE.Mesh(
+      new THREE.RingGeometry(5, 5.4, 80),
+      new THREE.MeshBasicMaterial({ color: 0x4a80c0, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false })
+    );
+    arenaRing.rotation.x = -Math.PI / 2;
+    arenaRing.position.y = 0.02;
+    scene.add(arenaRing);
+
+    const arenaLight = new THREE.PointLight(0x4080ff, 2, 60, 2);
+    arenaLight.position.set(0, 6, 0);
+    scene.add(arenaLight);
+
+    // shockwave rings (spawn per click)
+    const shocks = [];
+    function spawnShock(intensity, colorHex) {
+      const g = new THREE.RingGeometry(0.4, 0.9, 64);
+      const m = new THREE.MeshBasicMaterial({
+        color: colorHex, transparent: true, opacity: 0.95,
+        side: THREE.DoubleSide, depthWrite: false,
+      });
+      const mesh = new THREE.Mesh(g, m);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(0, 0.06, 0);
+      scene.add(mesh);
+      shocks.push({ mesh, born: performance.now(), life: 700, max: 6 + intensity * 8 });
+    }
+    function updateShocks(now) {
+      for (let i = shocks.length - 1; i >= 0; i--) {
+        const s = shocks[i];
+        const t = (now - s.born) / s.life;
+        if (t >= 1) {
+          scene.remove(s.mesh); s.mesh.geometry.dispose(); s.mesh.material.dispose();
+          shocks.splice(i, 1); continue;
+        }
+        const sc = 1 + t * s.max;
+        s.mesh.scale.set(sc, sc, sc);
+        s.mesh.material.opacity = 0.95 * (1 - t);
+      }
+    }
+
+    // 3D debris / fire (tier 5+)
+    const debrisGroup = new THREE.Group();
+    scene.add(debrisGroup);
+    function spawnExplosion(intensity) {
+      const count = Math.round(40 * intensity);
+      const geo = new THREE.BufferGeometry();
+      const p = new Float32Array(count * 3);
+      const v = [];
+      for (let i = 0; i < count; i++) {
+        p[i*3+0] = 0; p[i*3+1] = 4; p[i*3+2] = 0;
+        const ang = Math.random() * Math.PI * 2;
+        const ph = Math.acos(2 * Math.random() - 1);
+        const sp = (6 + Math.random() * 16) * intensity;
+        v.push(new THREE.Vector3(
+          Math.sin(ph) * Math.cos(ang) * sp,
+          Math.abs(Math.cos(ph)) * sp + 3,
+          Math.sin(ph) * Math.sin(ang) * sp,
+        ));
+      }
+      geo.setAttribute('position', new THREE.BufferAttribute(p, 3));
+      const mat = new THREE.PointsMaterial({
+        color: 0xffa060, size: 1.4, transparent: true, opacity: 1,
+        depthWrite: false, blending: THREE.AdditiveBlending,
+      });
+      const pts = new THREE.Points(geo, mat);
+      pts.userData = { velocities: v, born: performance.now(), life: 1400 };
+      debrisGroup.add(pts);
+    }
+    function updateExplosions(dt, now) {
+      for (let i = debrisGroup.children.length - 1; i >= 0; i--) {
+        const pts = debrisGroup.children[i];
+        const age = now - pts.userData.born;
+        if (age > pts.userData.life) {
+          debrisGroup.remove(pts); pts.geometry.dispose(); pts.material.dispose(); continue;
+        }
+        const pos = pts.geometry.attributes.position.array;
+        const v = pts.userData.velocities;
+        for (let j = 0; j < v.length; j++) {
+          pos[j*3+0] += v[j].x * dt;
+          pos[j*3+1] += v[j].y * dt;
+          pos[j*3+2] += v[j].z * dt;
+          v[j].y -= 24 * dt;
+          v[j].multiplyScalar(0.985);
+        }
+        pts.geometry.attributes.position.needsUpdate = true;
+        pts.material.opacity = 1 - age / pts.userData.life;
+      }
+    }
+
+    // black anime flash overlay
+    const blackFrame = document.createElement('div');
+    blackFrame.style.cssText = 'position:fixed;inset:0;z-index:9;background:#000;opacity:0;pointer-events:none';
+    document.body.appendChild(blackFrame);
+    function blackFlash(ms) {
+      Sound.onBlackFlash();
+      blackFrame.style.transition = 'opacity 30ms linear';
+      blackFrame.style.opacity = '1';
+      setTimeout(() => {
+        blackFrame.style.transition = 'opacity 140ms ease-out';
+        blackFrame.style.opacity = '0';
+      }, ms);
+    }
+
+    // ── Tier system ───────────────────────────────────────────────
+    // Tiers escalate by click count. Thresholds were tuned against:
+    //   10s mode @ 8-10 cps → can reach tier 4-5 (INSANE / INSANITY)
+    //   30s mode @ 6-8  cps → can reach tier 6-7 (BEYOND / SINGULARITY)
+    //   60s mode @ 5-7  cps → can reach tier 8-10 (GOD MODE / OMNIPOTENT / TRANSCENDENT)
+    // A variant in a tier's `variants` array can be either:
+    //   - a string "variant-name" (uses the tier's default `style`)
+    //   - { style, variant } object (lets a tier mix styles across variants —
+    //     e.g. TRANSCENDENT cycles destroy/* + thud/nuclear + cute/fireworks)
+    const TIERS = [
+      // 0-99: user's original five tiers + the 100+ INSANITY floor.
+      // Low/mid tiers now cycle more cute/thud variants so clicks within a
+      // tier feel less repetitive before you climb out.
+      { n: 0,  label: 'LOW',          min:   0, max:   5, style: 'cute',    variants: ['sparkle', 'confetti', 'flowers', 'hearts', 'shooting-star'],                                         ringColor: 0x4a80c0, arenaColor: 0x4080ff, rippleRadius: 120, ripplePush: 6,  ripplePalette: '#7fa8ff', particles: 18,  shake: null,    flash: false, blackFlashEvery: 0,  nuclearEvery: 0,  ghostStack: 1 },
+      { n: 1,  label: 'MEDIUM',       min:   5, max:  15, style: 'thud',    variants: ['anime-slam', 'low-bounce', 'stratosphere'],                                                          ringColor: 0xffd76a, arenaColor: 0xffb040, rippleRadius: 180, ripplePush: 10, ripplePalette: '#ffd76a', particles: 26,  shake: 'light', flash: false, blackFlashEvery: 0,  nuclearEvery: 0,  ghostStack: 1 },
+      { n: 2,  label: 'HIGH',         min:  15, max:  40, style: 'thud',    variants: ['crater', 'deep-crater', 'orbit-slam'],                                                               ringColor: 0xff9050, arenaColor: 0xff8040, rippleRadius: 240, ripplePush: 14, ripplePalette: '#ff9050', particles: 40,  shake: 'light', flash: false, blackFlashEvery: 0,  nuclearEvery: 0,  ghostStack: 1 },
+      { n: 3,  label: 'VERY HIGH',    min:  40, max:  70, style: 'thud',    variants: ['meteor', 'detonation', 'shatter'],                                                                  ringColor: 0xff5030, arenaColor: 0xff4020, rippleRadius: 300, ripplePush: 20, ripplePalette: '#ff6040', particles: 60,  shake: 'heavy', flash: true,  blackFlashEvery: 0,  nuclearEvery: 0,  ghostStack: 1 },
+      // INSANE is the thud→destroy bridge. thud/nuclear gets pulled up here
+      // as the peak thud crossover, mixed with early destroy variants.
+      { n: 4,  label: 'INSANE',       min:  70, max: 100, style: 'destroy', variants: [{ style: 'thud', variant: 'nuclear' }, 'explode', 'heartbeat', 'incinerate'],                          ringColor: 0xff2010, arenaColor: 0xff1800, rippleRadius: 360, ripplePush: 28, ripplePalette: '#ff3020', particles: 90,  shake: 'heavy', flash: true,  blackFlashEvery: 0,  nuclearEvery: 0,  ghostStack: 1 },
+      { n: 5,  label: 'INSANITY',     min: 100, max: 150, style: 'destroy', variants: ['explode', 'incinerate', 'lightning', 'heartbeat', 'guillotine'],                                     ringColor: 0xffffff, arenaColor: 0xffffff, rippleRadius: 480, ripplePush: 38, ripplePalette: '#ffffff', particles: 140, shake: 'heavy', flash: true,  blackFlashEvery: 10, nuclearEvery: 0,  ghostStack: 1 },
+      // 150+: NEW tiers. Wider variant rotations so long runs don't repeat.
+      { n: 6,  label: 'BEYOND',       min: 150, max: 200, style: 'destroy', variants: ['lightning', 'shredder', 'guillotine', 'eaten', 'sniper', 'heartbeat'],                               ringColor: 0xc040ff, arenaColor: 0x9020ff, rippleRadius: 540, ripplePush: 46, ripplePalette: '#c060ff', particles: 180, shake: 'heavy', flash: true,  blackFlashEvery: 8,  nuclearEvery: 0,  ghostStack: 1 },
+      // Rebalanced for very-high tiers: fewer per-click ghosts/flashes/nukes,
+      // reserve particle budget for milestone bursts (every 25 / 50 / 100)
+      // and let the persistent canvas filter + ambient chaos carry the vibe.
+      { n: 7,  label: 'SINGULARITY',  min: 200, max: 300, style: 'destroy', variants: ['woodchipper', 'piranhas', 'steamroller', 'guillotine', 'eaten', 'shredder'],                         ringColor: 0x40ffc8, arenaColor: 0x20ffa0, rippleRadius: 620, ripplePush: 56, ripplePalette: '#40ffc8', particles: 180, shake: 'heavy', flash: true,  blackFlashEvery: 8,  nuclearEvery: 25, ghostStack: 1 },
+      { n: 8,  label: 'GOD MODE',     min: 300, max: 450, style: 'destroy', variants: ['explode', 'lightning', 'incinerate', 'heartbeat', 'sniper', 'guillotine', 'shredder'],               ringColor: 0xffae20, arenaColor: 0xff8000, rippleRadius: 720, ripplePush: 68, ripplePalette: 'rainbow', particles: 200, shake: 'heavy', flash: true,  blackFlashEvery: 10, nuclearEvery: 20, ghostStack: 2 },
+      // canvasOnly flag: at tier 9+ we skip plugin/ghost DOM dispatch entirely
+      // and render the "slam" visual as canvas shockrings (option 2 in perf
+      // ladder). At these tiers the ghost blur + persistent CSS filter already
+      // dominate the read, so losing plugin card physics is invisible.
+      { n: 9,  label: 'OMNIPOTENT',   min: 450, max: 700, style: 'destroy', variants: ['explode', 'lightning', 'shredder', 'incinerate', 'piranhas', 'woodchipper', 'steamroller', 'guillotine', 'eaten'], ringColor: 0xff20c0, arenaColor: 0xff00ff, rippleRadius: 820, ripplePush: 82, ripplePalette: 'rainbow', particles: 240, shake: 'heavy', flash: true, blackFlashEvery: 8, nuclearEvery: 15, ghostStack: 2, canvasOnly: true },
+      // TRANSCENDENT = every destroy variant PLUS thud/nuclear and cute/fireworks
+      // mixed in so the ceiling keeps surprising you even at 20+cps indefinitely.
+      { n: 10, label: 'TRANSCENDENT', min: 700, max: 900, style: 'destroy',
+        variants: [
+          'explode', 'lightning', 'shredder', 'incinerate', 'steamroller', 'woodchipper',
+          'piranhas', 'sniper', 'eaten', 'guillotine', 'heartbeat',
+          { style: 'thud', variant: 'nuclear' },
+          { style: 'thud', variant: 'shatter' },
+          { style: 'cute', variant: 'fireworks' },
+        ],
+        ringColor: 0xffffff, arenaColor: 0xffffff, rippleRadius: 960, ripplePush: 100, ripplePalette: 'rainbow',
+        particles: 280, shake: 'heavy', flash: true, blackFlashEvery: 5, nuclearEvery: 10, ghostStack: 2, canvasOnly: true },
+      // ── 1000+ ladder ─────────────────────────────────────────────
+      // APOTHEOSIS is the golden-hour lead-in; all clicks bleed warm gold.
+      // ONE THOUSAND is the major pivot — bright, celebratory, cute variants
+      // woven into the destroy rotation so it reads as *achievement* rather
+      // than punishment. Beyond 1000 the aesthetic turns mythic/cosmic:
+      // RIFT (chromatic split) → PRIMORDIAL (ancient/dim) → HEAT DEATH
+      // (fading color) → THE SOURCE (the endpoint; inversions + max chaos).
+      { n: 11, label: 'APOTHEOSIS', min: 900, max: 1000, style: 'destroy',
+        variants: [
+          'lightning', 'incinerate', 'explode',
+          { style: 'cute', variant: 'rainbow' },
+          { style: 'cute', variant: 'fireworks' },
+          { style: 'thud', variant: 'nuclear' },
+        ],
+        ringColor: 0xffd76a, arenaColor: 0xffc040, rippleRadius: 1040, ripplePush: 110, ripplePalette: '#ffd76a',
+        particles: 300, shake: 'heavy', flash: true, blackFlashEvery: 7, nuclearEvery: 8, ghostStack: 2, canvasOnly: true },
+      { n: 12, label: 'ONE THOUSAND', min: 1000, max: 1300, style: 'destroy',
+        variants: [
+          'explode', 'lightning', 'incinerate',
+          { style: 'cute', variant: 'rainbow' },
+          { style: 'cute', variant: 'fireworks' },
+          { style: 'cute', variant: 'hearts' },
+          { style: 'cute', variant: 'butterflies' },
+          { style: 'cute', variant: 'flowers' },
+          { style: 'thud', variant: 'nuclear' },
+        ],
+        ringColor: 0xfff2c0, arenaColor: 0xffe080, rippleRadius: 1120, ripplePush: 120, ripplePalette: 'rainbow',
+        particles: 340, shake: 'heavy', flash: true, blackFlashEvery: 5, nuclearEvery: 6, ghostStack: 2, canvasOnly: true },
+      { n: 13, label: 'RIFT', min: 1300, max: 1700, style: 'destroy',
+        variants: ['shredder', 'guillotine', 'sniper', 'woodchipper', 'lightning', 'eaten',
+                   { style: 'thud', variant: 'shatter' }],
+        ringColor: 0xff00a0, arenaColor: 0x00ffc0, rippleRadius: 1180, ripplePush: 130, ripplePalette: 'rainbow',
+        particles: 360, shake: 'heavy', flash: true, blackFlashEvery: 4, nuclearEvery: 5, ghostStack: 2, canvasOnly: true },
+      { n: 14, label: 'PRIMORDIAL', min: 1700, max: 2200, style: 'destroy',
+        variants: ['explode', 'steamroller', 'piranhas', 'eaten', 'heartbeat',
+                   { style: 'thud', variant: 'shatter' },
+                   { style: 'thud', variant: 'nuclear' }],
+        ringColor: 0x802018, arenaColor: 0x601010, rippleRadius: 1260, ripplePush: 140, ripplePalette: '#a03020',
+        particles: 400, shake: 'heavy', flash: true, blackFlashEvery: 3, nuclearEvery: 4, ghostStack: 2, canvasOnly: true },
+      { n: 15, label: 'HEAT DEATH', min: 2200, max: 2800, style: 'destroy',
+        variants: ['explode', 'lightning', 'shredder', 'incinerate', 'steamroller', 'woodchipper',
+                   'piranhas', 'sniper', 'eaten', 'guillotine', 'heartbeat'],
+        ringColor: 0x606060, arenaColor: 0x404040, rippleRadius: 1340, ripplePush: 150, ripplePalette: '#909090',
+        particles: 440, shake: 'heavy', flash: true, blackFlashEvery: 3, nuclearEvery: 4, ghostStack: 2, canvasOnly: true },
+      { n: 16, label: 'THE SOURCE', min: 2800, max: Infinity, style: 'destroy',
+        variants: [
+          'explode', 'lightning', 'shredder', 'incinerate', 'steamroller', 'woodchipper',
+          'piranhas', 'sniper', 'eaten', 'guillotine', 'heartbeat',
+          { style: 'thud', variant: 'nuclear' },
+          { style: 'thud', variant: 'shatter' },
+          { style: 'cute', variant: 'fireworks' },
+          { style: 'cute', variant: 'rainbow' },
+          { style: 'cute', variant: 'butterflies' },
+        ],
+        ringColor: 0xffffff, arenaColor: 0xffffff, rippleRadius: 1440, ripplePush: 160, ripplePalette: 'rainbow',
+        particles: 500, shake: 'heavy', flash: true, blackFlashEvery: 2, nuclearEvery: 3, ghostStack: 2, canvasOnly: true },
+    ];
+
+    // Resolve a variant entry (string or {style,variant}) into the dispatch pair.
+    function pickVariant(tier, i) {
+      const entry = tier.variants[i % tier.variants.length];
+      if (typeof entry === 'string') return { style: tier.style, variant: entry };
+      return { style: entry.style, variant: entry.variant };
+    }
+
+    function getTier(score) {
+      for (let i = TIERS.length - 1; i >= 0; i--) {
+        if (score >= TIERS[i].min) return TIERS[i];
+      }
+      return TIERS[0];
+    }
+
+    // rainbow helper — score drives hue so the color keeps moving through palette tiers
+    function scoreHueHex(score, sat = 100, light = 60) {
+      const hue = (score * 13) % 360;
+      return `hsl(${hue}, ${sat}%, ${light}%)`;
+    }
+    function resolvePalette(tier, score) {
+      return tier.ripplePalette === 'rainbow' ? scoreHueHex(score) : tier.ripplePalette;
+    }
+
+    // Card text ladder per tier — more urgent / deranged as you climb
+    const TEXT_BY_TIER = {
+      0:  ['CLICK ME', 'nice', 'faster', 'go', 'more'],
+      1:  ['good.', 'keep going', 'warming up', 'not bad', 'warmer'],
+      2:  ['HEATING UP', 'NOW WE COOK', 'KEEP GOING', 'FASTER'],
+      3:  ['UNSTOPPABLE', 'GO GO GO', "DON'T STOP", 'MAD MAN'],
+      4:  ['DESTROY MODE', 'OBLITERATE', 'MAXIMUM FURY', 'ANNIHILATE'],
+      5:  ['INSANITY', '!!!', 'WHAT ARE YOU', 'CALM DOWN', '👁 👁', 'BEYOND HUMAN'],
+      6:  ['BEYOND', 'VIOLATING PHYSICS', 'ERROR 404', 'REALITY.EXE', 'WTF'],
+      7:  ['SINGULARITY', 'EVENT HORIZON', 'SPAGHETTIFY', 'COLLAPSE', '∞', 'NO RETURN'],
+      8:  ['GOD MODE', 'ASCENDED', 'OMNIPRESENT', 'YOU ARE LIGHT', '✨', 'CHOSEN ONE'],
+      9:  ['OMNIPOTENT', 'ALL IS ONE', '🌌', 'THE UNIVERSE', 'ENLIGHTENED', 'REWRITE REALITY'],
+      10: ['TRANSCENDENT', 'COSMIC ERROR', 'beyond time', 'existence.crash()', '🤯', 'YOU BROKE IT', 'CONGRATULATIONS'],
+      11: ['APOTHEOSIS', 'ASCENDING', 'NEAR THE TOP', 'ENLIGHTENMENT', 'ALMOST', '✨ ✨ ✨'],
+      12: ['1000', 'ONE THOUSAND', 'ELITE', 'LEGEND', 'IMMORTAL', 'ICON', '👑'],
+      13: ['RIFT', 'DIMENSION TORN', 'FRACTAL', 'SPLIT', 'DIVIDE BY ZERO', '▓▒░'],
+      14: ['PRIMORDIAL', 'BEFORE TIME', 'ORIGIN', 'ANCIENT', 'FIRST CAUSE', 'Δ'],
+      15: ['HEAT DEATH', 'ENTROPY', 'FADING', 'COLDER', '∅', 'silence'],
+      16: ['THE SOURCE', '—', '∞', '☯', 'beyond language', 'you found it', ''],
+    };
+    function textForScore(score, tier) {
+      if (score === 0) return 'CLICK ME';
+      const bucket = TEXT_BY_TIER[tier.n];
+      return bucket[score % bucket.length];
+    }
+
+    // ── Game state ────────────────────────────────────────────────
+    const card = document.getElementById('card');
+    const cardText = document.getElementById('cardText');
+    const cardSub = document.getElementById('cardSub');
+    const cardWrap = document.getElementById('card-wrap');
+    const hud = document.getElementById('hud');
+    const scoreEl = document.getElementById('score');
+    const tierEl = document.getElementById('tier');
+    const timeEl = document.getElementById('time');
+    const bestEl = document.getElementById('best');
+    const splash = document.getElementById('splash');
+    const endScreen = document.getElementById('end');
+    const endScore = document.getElementById('endScore');
+    const endCps = document.getElementById('endCps');
+    const endPeak = document.getElementById('endPeak');
+    const endNewBest = document.getElementById('endNewBest');
+
+    const state = {
+      playing: false,
+      score: 0,
+      duration: 60,
+      endAt: 0,
+      peakTier: 0,
+    };
+
+    function setTierVisuals(tier) {
+      card.setAttribute('data-tier', tier.n);
+      // For rainbow tiers, modulate arena colors from score on each frame; here
+      // we just seed with a reasonable starting hex.
+      arenaRing.material.color.setHex(tier.ringColor);
+      arenaLight.color.setHex(tier.arenaColor);
+
+      // Toggle the body.tier-N class for persistent canvas filters.
+      for (let i = 6; i <= 16; i++) document.body.classList.remove('tier-' + i);
+      if (tier.n >= 6) document.body.classList.add('tier-' + tier.n);
+    }
+
+    // ── High scores (localStorage) ────────────────────────────────
+    const BEST_KEY = 'toto-fx-clicker-best';
+    function readBest() {
+      try { return JSON.parse(localStorage.getItem(BEST_KEY) || '{}'); }
+      catch { return {}; }
+    }
+    function writeBest(bests) {
+      try { localStorage.setItem(BEST_KEY, JSON.stringify(bests)); } catch {}
+    }
+    function updateSplashBests() {
+      const bests = readBest();
+      for (const el of document.querySelectorAll('[data-best-for]')) {
+        const d = el.getAttribute('data-best-for');
+        el.textContent = bests[d] ? `best ${bests[d]}` : '—';
+      }
+    }
+    updateSplashBests();
+
+    // ── Click handling ────────────────────────────────────────────
+    function doClick() {
+      if (!state.playing) return;
+      state.score++;
+      const tier = getTier(state.score);
+      if (tier.n > state.peakTier) {
+        state.peakTier = tier.n;
+        // tier-up flash
+        tierFlash(tier);
+      }
+
+      // HUD update
+      scoreEl.textContent = state.score;
+      tierEl.textContent = tier.label;
+      cardText.textContent = textForScore(state.score, tier);
+      cardSub.textContent = state.score + ' hits';
+
+      setTierVisuals(tier);
+
+      // Resolve the variant rotation for this click. pickVariant handles both
+      // string entries (use tier.style) and {style,variant} entries (explicit),
+      // letting a tier mix styles — e.g. INSANE folds thud/nuclear into destroy.
+      const rect = card.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const FX = TotoFX.FX;
+      const palette = resolvePalette(tier, state.score);
+
+      // (3) Track the click timestamp for rolling-CPS throttle decisions.
+      _clickTimes.push(performance.now());
+      const cps = recentCps();
+
+      // (5) Decide if this click gets to fire heavy canvas ops or if another
+      // click in this frame already claimed them.
+      const heavyOk = claimHeavyFxFrame();
+
+      // (2) Canvas-only path at tier 9-10: skip ghost/DOM entirely, draw
+      // shockrings on the FX canvas to carry the "slam" read. Two rings at
+      // different radii/durations give the visual depth a single ring can't.
+      if (tier.canvasOnly) {
+        canvasShockRing(cx, cy, palette, { maxRadius: 280, duration: 520, lineWidth: 6 });
+        canvasShockRing(cx, cy, palette, { maxRadius: 160, duration: 340, lineWidth: 3 });
+      } else {
+        // (3) Mid-tier throttle: at tier 5-8 with observed CPS > 18, fire
+        // playGhost on alternating clicks only. Score still increments every
+        // click; the dropped ghosts weren't visually legible at that rate
+        // anyway (they'd overlap each other in-flight).
+        const throttle = tier.n >= 5 && cps > 18 ? 2 : 1;
+        if (state.score % throttle === 0) {
+          for (let i = 0; i < tier.ghostStack; i++) {
+            const { style, variant } = pickVariant(tier, state.score + i);
+            playGhost(style, variant);
+          }
+        }
+      }
+
+      // Real card gets a CSS bounce so it still feels reactive.
+      pulseCardBounce();
+
+      // Destroy tier adds a 3D explosion on top; intensity ramps with tier number.
+      if (tier.style === 'destroy') {
+        spawnExplosion(0.9 + tier.n * 0.25);
+      }
+
+      // Also guarantee the real card's inline styles are clear (belt & suspenders).
+      clearCardInlineFX();
+
+      // Dotgrid ripple per tier — (5) coalesced to once per frame. A second
+      // click in the same 16ms frame would overwrite the fluid-sim field at
+      // the same screen coords anyway, so duplicate calls are pure waste.
+      if (heavyOk) {
+        FX.doDotgridRipple(cx, cy, {
+          radius: tier.rippleRadius,
+          push: tier.ripplePush,
+          density: 0.65,
+          color: palette,
+        });
+      }
+
+      // Tier-appropriate particle sprinkle. Taper the per-click count at very
+      // high tiers — at 15-25 cps the plugin's own particles + the ghost stack
+      // already saturate the screen, so smaller per-click bursts keep frames
+      // cheap and reserve budget for the milestone bursts below.
+      if (tier.n >= 2) {
+        const perClickFactor =
+          tier.n >= 9 ? 0.14 :   // OMNIPOTENT / TRANSCENDENT — sip from budget
+          tier.n >= 7 ? 0.22 :   // SINGULARITY / GOD MODE
+          tier.n >= 5 ? 0.32 :   // INSANITY / BEYOND
+          0.40;                  // low-to-mid tiers keep the original density
+        FX.spawnParticles(cx, cy, {
+          count: Math.round(tier.particles * perClickFactor), spread: 10, upBias: 2,
+          gravity: 0.18, life: 70,
+          color: tier.n < 4 ? [255, 200, 120]
+               : tier.n < 6 ? [255, 120, 80]
+               : tier.n === 6 ? [220, 120, 255]
+               : tier.n === 7 ? [80, 255, 200]
+               : tier.n === 8 ? [255, 200, 100]
+               : tier.n === 9 ? [255, 120, 220]
+               : [255, 255, 255],
+          chars: tier.n >= 8 ? ['■', '▓', '✦', '+'] : ['*', '+', '·', '✦', '✧', '◆'],
+        });
+      }
+
+      // Speed lines — fire on a stride that gets larger at high tiers so they
+      // don't overlap into a smear (they last 400-1000ms so back-to-back
+      // calls at 20 cps already overlap). Also gated by heavyOk: a second
+      // call within the same frame would restart the state machine from zero
+      // and wipe the previous call's progress.
+      const speedLinesEvery = tier.n >= 9 ? 4 : tier.n >= 7 ? 3 : tier.n >= 5 ? 2 : 1;
+      if (heavyOk && tier.n >= 3 && state.score % speedLinesEvery === 0) {
+        FX.startSpeedLines(cx, cy, 'outward', 380 + tier.n * 70);
+      }
+
+      // Shake
+      if (tier.shake === 'light') FX.doScreenShake(false);
+      else if (tier.shake === 'heavy') FX.doScreenShake(true);
+
+      // Flash cadence: low/mid — don't flash; INSANE+ flash on even clicks;
+      // INSANITY+ every click.
+      if (tier.flash) {
+        if (tier.n >= 5 || state.score % 2 === 0) {
+          FX.doImpactFlash(tier.n >= 5);
+        }
+      }
+
+      // Black anime-flash cadence — per tier.blackFlashEvery.
+      // User's original rule: INSANITY (tier 5) fires every 10 clicks.
+      // Higher tiers fire more often: BEYOND every 8, SINGULARITY every 6,
+      // GOD MODE every 5, OMNIPOTENT every 3, TRANSCENDENT every 2.
+      if (tier.blackFlashEvery > 0 && state.score % tier.blackFlashEvery === 0) {
+        blackFlash(tier.n >= 9 ? 70 : 90);
+        FX.spawnParticles(cx, cy, {
+          count: Math.round(60 + tier.n * 12), spread: 20, upBias: 0, gravity: 0, life: 100,
+          color: [255, 255, 255], chars: ['/', '\\', '|', '—'],
+        });
+      }
+
+      // Dotgrid NUCLEAR cadence — SINGULARITY+ fire periodic nukes to keep
+      // the whole dotgrid actively ripping. Gated by heavyOk because nuclear
+      // is the single most expensive fluid-sim op in the library.
+      if (heavyOk && tier.nuclearEvery > 0 && state.score % tier.nuclearEvery === 0) {
+        FX.doDotgridNuclear(cx, cy, { blastRadius: 320 + tier.n * 40, color: palette });
+        Sound.onNuclear(tier);
+      }
+
+      // TRANSCENDENT: flash a tier color every 4 clicks (not every click — at
+      // 20cps every-click is 50 flashes/sec which is epilepsy territory and
+      // eats the budget) so individual clicks still read distinctly.
+      if (tier.n === 10 && state.score % 4 === 0) {
+        FX.flashColor(palette, 120);
+      }
+
+      // ── Milestone bursts ────────────────────────────────────────
+      // Once past the 100-click INSANITY threshold, reserve the saved budget
+      // for BIG one-shot celebrations at round milestones. These punctuate
+      // the chaos with distinct visible moments that otherwise can't stand
+      // out against the constant FX flow at 15-25 cps.
+      if (state.score >= 100) {
+        const isHuge    = state.score % 100 === 0;
+        const isBig     = state.score % 50  === 0;
+        const isMedium  = state.score % 25  === 0;
+        if (isHuge || isBig || isMedium) {
+          const scale = isHuge ? 3 : isBig ? 2 : 1;
+          const milestoneColor = isHuge ? '#ffffff' : palette;
+          Sound.onMilestone(state.score, isHuge ? 'huge' : isBig ? 'big' : 'medium');
+          // big centered nuclear dotgrid
+          FX.doDotgridNuclear(window.innerWidth / 2, window.innerHeight / 2, {
+            blastRadius: 380 * scale, color: milestoneColor,
+          });
+          // chunky particle burst at the card
+          FX.spawnParticles(cx, cy, {
+            count: 120 * scale, spread: 18, upBias: 3, gravity: 0.08, life: 160,
+            color: isHuge ? [255, 255, 255] : [255, 200, 120],
+            chars: isHuge ? ['█', '▓', '■', '◆', '✦'] : ['✦', '✶', '✧', '◆'],
+          });
+          // radial speed lines
+          FX.startSpeedLines(window.innerWidth / 2, window.innerHeight / 2, 'outward', 900);
+          if (isBig || isHuge) blackFlash(120);
+          if (isHuge) {
+            // huge milestone — show the score as floating text for a moment
+            showMilestoneBanner(state.score);
+            spawnExplosion(3.5);
+          }
+        }
+      }
+
+      // 3D shockwave under the card — color uses ring color; rainbow tiers
+      // pull a per-score hue so the ring pulses a new color per click.
+      const shockColor = tier.ripplePalette === 'rainbow'
+        ? new THREE.Color().setHSL(((state.score * 13) % 360) / 360, 1, 0.55).getHex()
+        : tier.ringColor;
+      spawnShock(1 + tier.n * 0.3, shockColor);
+      if (tier.ripplePalette === 'rainbow') {
+        arenaRing.material.color.setHex(shockColor);
+        arenaLight.color.setHex(shockColor);
+      }
+
+      // Sound hook: last thing in doClick so it sees the final tier.
+      Sound.onClick(state.score, tier);
+    }
+
+    function pulseCardBounce() {
+      // quick scale bounce on the real card for destroy-tier clicks
+      card.animate(
+        [
+          { transform: 'scale(1)' },
+          { transform: 'scale(1.12)' },
+          { transform: 'scale(0.94)' },
+          { transform: 'scale(1)' },
+        ],
+        { duration: 220, easing: 'cubic-bezier(.36,.07,.19,.97)' }
+      );
+    }
+
+    // ── FX cost control ladder ────────────────────────────────────
+    // Perf optimizations, ordered by impact. Each one composes cleanly with
+    // the others; interactions are noted inline where they matter.
+    //
+    //   (1) cleanupCard + ghost cap — kills zombie DOM wrappers from
+    //       promoteCard, caps concurrent ghosts. Base layer; others layer on.
+    //   (2) canvasOnly tiers 9-10 — replace the plugin/ghost DOM path with
+    //       canvas shockrings. Biggest perf win at the tiers that stress it.
+    //       Supersedes (3) at those tiers; ghosts never dispatched there.
+    //   (3) CPS-aware ghost throttle — at tier 5-8, when rolling CPS > 18
+    //       fire playGhost on alternating clicks. (2) short-circuits this at
+    //       tier 9-10 since no ghosts dispatch.
+    //   (4) Cleanup jitter — randomize cleanup timeout in a 2.4-2.8s window
+    //       so a burst of clicks doesn't create a burst of cleanups 2.4s
+    //       later. Invisible; compounds with (1) ghost cap.
+    //   (5) Frame coalesce — merge multiple clicks landing in the same RAF
+    //       frame into one dotgrid ripple / speed-line wave. Score still
+    //       increments on every click; just drops duplicate-in-same-frame
+    //       heavy canvas ops that would overwrite each other anyway.
+
+    const GHOST_MAX = 28;
+    let _activeGhosts = 0;
+
+    // (3) Rolling CPS window — actual observed click rate over the last second.
+    // Drives the mid-tier throttle. Cheap: trim old entries from the head.
+    const _clickTimes = [];
+    function recentCps() {
+      const now = performance.now();
+      while (_clickTimes.length && now - _clickTimes[0] > 1000) _clickTimes.shift();
+      return _clickTimes.length;
+    }
+
+    // (5) Frame coalesce gate — rounded-down RAF frame index. If two clicks
+    // hit the same frame, the second one skips the heavy canvas ops.
+    let _lastHeavyFxFrame = -1;
+    function claimHeavyFxFrame() {
+      const f = Math.floor(performance.now() / 16);
+      if (f === _lastHeavyFxFrame) return false;
+      _lastHeavyFxFrame = f;
+      return true;
+    }
+
+    // (2) Canvas shockring — the DOM-free replacement for a plugin-driven
+    // "slam" at tier 9-10. Registers a draw callback that renders an
+    // expanding ring on the unified FX canvas for ~500ms, then deregisters
+    // itself. No DOM touched, no layout, no paint — it rides the particle
+    // pool's already-running RAF tick.
+    let _ringCounter = 0;
+    function canvasShockRing(cx, cy, color, opts) {
+      opts = opts || {};
+      const id = 'clicker-ring-' + (_ringCounter++);
+      const born = performance.now();
+      const duration = opts.duration || 500;
+      const maxRadius = opts.maxRadius || 240;
+      const ringColor = color || '#ffffff';
+      const lineWidth = opts.lineWidth || 5;
+      TotoFX.FX.registerFxDraw(id, function (ctx, now) {
+        const t = (now - born) / duration;
+        if (t >= 1) { TotoFX.FX.deregisterFxDraw(id); return; }
+        const r = 20 + t * maxRadius;
+        const alpha = Math.pow(1 - t, 1.5);
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = ringColor;
+        ctx.lineWidth = lineWidth * (1 - t * 0.6);
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      });
+    }
+
+    function playGhost(style, variant) {
+      if (_activeGhosts >= GHOST_MAX) return;
+      _activeGhosts++;
+
+      const rect = card.getBoundingClientRect();
+      const ghost = card.cloneNode(true);
+      ghost.classList.add('ghost');
+      ghost.removeAttribute('data-id');
+      // Ghost sits BEHIND the real card (z:2 vs card-wrap z:3) so the real
+      // card remains visible on top. Plugin transforms that lift / scale the
+      // ghost still show above the real card's footprint.
+      ghost.style.position = 'fixed';
+      ghost.style.left = rect.left + 'px';
+      ghost.style.top = rect.top + 'px';
+      ghost.style.width = rect.width + 'px';
+      ghost.style.height = rect.height + 'px';
+      ghost.style.margin = '0';
+      ghost.style.zIndex = '2';
+      document.body.appendChild(ghost);
+
+      engine.play('action', ghost, {
+        params: { style, variant },
+      });
+
+      // Cleanup via FX.cleanupCard — this removes the plugin's body-level
+      // perspective wrapper (`_animStage`) and placeholder in addition to the
+      // ghost itself. A naive `ghost.parentNode.removeChild(ghost)` only
+      // detaches the ghost from the wrapper, leaving wrapper + placeholder as
+      // zombies on body. At 25+ cps that leaks ~100 nodes/sec.
+      //
+      // (4) Jitter the timeout in a 2.4-2.8s window so that a burst of
+      // simultaneous ghost spawns doesn't yield a synchronous cleanup burst
+      // 2.4s later that lands in one frame.
+      const cleanupDelay = 2400 + Math.random() * 400;
+      setTimeout(() => {
+        TotoFX.FX.cleanupCard(ghost);
+        _activeGhosts = Math.max(0, _activeGhosts - 1);
+      }, cleanupDelay);
+    }
+
+    // Defensive — if a plugin mutation somehow leaks onto the real card,
+    // reset inline transform/opacity so the card never vanishes.
+    function clearCardInlineFX() {
+      const s = card.style;
+      if (s.opacity !== '' || s.transform !== '' || s.visibility !== '' || s.display !== '') {
+        s.opacity = '';
+        s.transform = '';
+        s.visibility = '';
+        s.display = '';
+      }
+    }
+
+    // Milestone banner — huge score number briefly floats over the screen at
+    // every 100-click milestone past 100. One-DOM-element pool, animated via
+    // WAAPI so there's no memory churn during long runs.
+    const milestoneBanner = document.createElement('div');
+    milestoneBanner.style.cssText = [
+      'position:fixed','left:50%','top:36%','transform:translate(-50%,-50%)',
+      'z-index:15','font-size:160px','font-weight:800','letter-spacing:0.05em',
+      'color:#fff','text-shadow:0 0 60px #fff, 0 0 120px #ffd76a',
+      'pointer-events:none','opacity:0','font-family:ui-monospace,Menlo,monospace',
+    ].join(';');
+    document.body.appendChild(milestoneBanner);
+    function showMilestoneBanner(score) {
+      milestoneBanner.textContent = score;
+      milestoneBanner.animate(
+        [
+          { opacity: 0, transform: 'translate(-50%,-50%) scale(0.6)' },
+          { opacity: 1, transform: 'translate(-50%,-50%) scale(1.1)', offset: 0.2 },
+          { opacity: 1, transform: 'translate(-50%,-50%) scale(1.0)', offset: 0.7 },
+          { opacity: 0, transform: 'translate(-50%,-50%) scale(1.3)' },
+        ],
+        { duration: 1100, easing: 'cubic-bezier(.36,.07,.19,.97)' }
+      );
+    }
+
+    function tierFlash(tier) {
+      Sound.onTierEnter(tier);
+      // Fire the ONE THOUSAND fanfare when we first cross into tier 12
+      // (peakTier bumps to 12 exactly once thanks to the doClick guard).
+      if (tier.n === 12) Sound.onOneThousand();
+      // Full-screen color flash on tier-up, matching tier palette. Gets
+      // progressively longer / louder at higher tiers.
+      const color = resolvePalette(tier, state.score);
+      const dur = 220 + Math.min(tier.n, 10) * 30;
+      TotoFX.FX.flashColor(color, dur);
+      // Higher tiers also fire a big dotgrid nuclear + shock on tier-up.
+      if (tier.n >= 6) {
+        const rect = card.getBoundingClientRect();
+        TotoFX.FX.doDotgridNuclear(rect.left + rect.width / 2, rect.top + rect.height / 2, {
+          blastRadius: 420 + tier.n * 40, color,
+        });
+        spawnExplosion(1.6 + tier.n * 0.18);
+      }
+    }
+
+    // ── Autoclicker ───────────────────────────────────────────────
+    // Demo/utility toggle: fires doClick at a user-chosen rate (cps) so you
+    // can watch the tier progression without manual clicking. A duration of 0
+    // means "endless" — no timer, just keep going until you press END.
+    const autoEl = document.getElementById('auto');
+    const autoRateEl = document.getElementById('autoRate');
+    const autoRateLabel = document.getElementById('autoRateLabel');
+    let autoInterval = null;
+    function startAuto() {
+      stopAuto();
+      const cps = Number(autoRateEl.value);
+      autoInterval = setInterval(() => {
+        if (state.playing) doClick();
+      }, Math.max(16, 1000 / cps));
+    }
+    function stopAuto() {
+      if (autoInterval) { clearInterval(autoInterval); autoInterval = null; }
+    }
+    autoEl.addEventListener('change', () => {
+      if (autoEl.checked && state.playing) startAuto();
+      else stopAuto();
+    });
+    autoRateEl.addEventListener('input', () => {
+      autoRateLabel.textContent = autoRateEl.value;
+      if (autoEl.checked && state.playing) startAuto();
+    });
+
+    // Sound master toggle — mirrors the AUTO checkbox wiring.
+    const soundEl = document.getElementById('sound');
+    soundEl.addEventListener('change', () => { Sound.setEnabled(soundEl.checked); });
+
+    // ── Game flow ─────────────────────────────────────────────────
+    function startGame(duration) {
+      state.playing = true;
+      state.score = 0;
+      state.duration = duration;
+      state.endless = duration === 0;
+      state.endAt = state.endless ? Infinity : performance.now() + duration * 1000;
+      state.peakTier = 0;
+
+      scoreEl.textContent = '0';
+      tierEl.textContent = 'LOW';
+      timeEl.textContent = state.endless ? '∞' : duration.toFixed(1);
+      cardText.textContent = 'CLICK ME';
+      cardSub.textContent = 'GO';
+      setTierVisuals(TIERS[0]);
+
+      const bests = readBest();
+      bestEl.textContent = bests[duration] ?? '—';
+
+      splash.classList.add('hidden');
+      endScreen.classList.add('hidden');
+      hud.style.display = 'flex';
+      cardWrap.style.display = 'block';
+
+      // In endless / demo mode, default autoclicker ON so the user can just
+      // watch the tier progression. Otherwise honor whatever the checkbox was.
+      if (state.endless) {
+        autoEl.checked = true;
+        startAuto();
+      } else if (autoEl.checked) {
+        startAuto();
+      }
+
+      Sound.onGameStart();
+    }
+
+    function endGame() {
+      state.playing = false;
+      stopAuto();
+      Sound.onGameEnd();
+      // Endless runs don't post to the leaderboard and skip the result screen;
+      // just return to the splash with the final number as a flourish.
+      if (state.endless) {
+        // brief celebratory burst, then menu
+        TotoFX.FX.flashColor('#8ff0c0', 260);
+        backToMenu();
+        // clear any persistent body classes
+        for (let i = 6; i <= 16; i++) document.body.classList.remove('tier-' + i);
+        return;
+      }
+
+      endScore.textContent = state.score;
+      endCps.textContent = (state.score / state.duration).toFixed(1);
+      endPeak.textContent = TIERS[state.peakTier].label;
+
+      // update best
+      const bests = readBest();
+      const prev = bests[state.duration] || 0;
+      const isBest = state.score > prev;
+      if (isBest) {
+        bests[state.duration] = state.score;
+        writeBest(bests);
+        updateSplashBests();
+      }
+      endNewBest.style.display = isBest ? 'block' : 'none';
+
+      cardWrap.style.display = 'none';
+      hud.style.display = 'none';
+      endScreen.classList.remove('hidden');
+
+      // clear persistent high-tier canvas filters
+      for (let i = 6; i <= 16; i++) document.body.classList.remove('tier-' + i);
+
+      // celebratory burst on end
+      TotoFX.FX.flashColor('#ffd76a', 180);
+      TotoFX.FX.spawnParticles(window.innerWidth / 2, window.innerHeight / 2, {
+        count: 80, spread: 14, upBias: 3, gravity: 0.1, life: 180,
+        color: [255, 215, 106], chars: ['*', '+', '·', '✦', '♥'],
+      });
+    }
+
+    function backToMenu() {
+      stopAuto();
+      Sound.stopAll();
+      endScreen.classList.add('hidden');
+      splash.classList.remove('hidden');
+      hud.style.display = 'none';
+      cardWrap.style.display = 'none';
+      updateSplashBests();
+    }
+
+    // ── Input ─────────────────────────────────────────────────────
+    card.addEventListener('pointerdown', (e) => { e.preventDefault(); doClick(); });
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'KeyA' && state.playing) {
+        // toggle autoclicker
+        autoEl.checked = !autoEl.checked;
+        if (autoEl.checked) startAuto(); else stopAuto();
+        return;
+      }
+      if (e.code === 'KeyS' && state.playing) {
+        // toggle sound
+        soundEl.checked = !soundEl.checked;
+        Sound.setEnabled(soundEl.checked);
+        return;
+      }
+      if (e.code === 'Escape' && state.playing) {
+        e.preventDefault();
+        endGame();
+        return;
+      }
+      if (!state.playing) return;
+      if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); doClick(); }
+    });
+
+    for (const btn of splash.querySelectorAll('[data-duration]')) {
+      btn.addEventListener('click', () => {
+        // Attach AudioContext resume to the first user gesture
+        // (browser autoplay policy). All later audio hooks are no-ops
+        // until this runs.
+        Sound.init();
+        startGame(Number(btn.getAttribute('data-duration')));
+      });
+    }
+    document.getElementById('endAgain').addEventListener('click', () => startGame(state.duration));
+    document.getElementById('endMenu').addEventListener('click', backToMenu);
+    document.getElementById('hudEnd').addEventListener('click', endGame);
+
+    // ── Frame loop ────────────────────────────────────────────────
+    let lastNow = performance.now();
+    function frame(now) {
+      const dt = Math.min(0.05, (now - lastNow) / 1000);
+      lastNow = now;
+
+      if (state.playing) {
+        const remaining = Math.max(0, (state.endAt - now) / 1000);
+        timeEl.textContent = remaining.toFixed(1);
+        if (remaining <= 0) endGame();
+
+        // arena ring slowly pulses
+        const pulse = 1 + Math.sin(now * 0.004) * 0.02;
+        arenaRing.scale.set(pulse, pulse, pulse);
+      }
+
+      // camera subtle drift
+      camera.position.x = Math.sin(now * 0.0001) * 2;
+      camera.lookAt(0, 4, 0);
+
+      updateShocks(now);
+      updateExplosions(dt, now);
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight, false);
+    });
+  </script>
+</body>
+</html>

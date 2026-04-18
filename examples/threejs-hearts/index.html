@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>TotoFX × Three.js — Hearts</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { height: 100%; }
+  body { margin: 0; overflow: hidden; background: #1a0818; font-family: ui-monospace, "JetBrains Mono", Menlo, monospace; color: #ffd0e0; }
+  #three-canvas { position: fixed; inset: 0; z-index: 0; display: block; width: 100%; height: 100%; }
+  #bg { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+  .hud {
+    position: fixed; top: 16px; left: 16px; z-index: 10;
+    padding: 14px 16px; border: 1px solid #3a1a2a;
+    background: rgba(24, 8, 18, 0.82); border-radius: 10px;
+    backdrop-filter: blur(6px); font-size: 12px; line-height: 1.5; max-width: 280px;
+  }
+  .hud h1 { margin: 0 0 4px; font-size: 13px; letter-spacing: 0.1em; color: #ff80a8; }
+  .hud p { margin: 0; color: #a878a0; }
+  .hud .key { color: #ffc0d0; }
+  .hud button {
+    margin-top: 8px; padding: 8px 12px;
+    background: #2a0c1c; color: #ffa0c0;
+    border: 1px solid #5a1a3a; border-radius: 6px;
+    font: inherit; cursor: pointer;
+  }
+  .hud button:hover { background: #3a1228; }
+  .hud label { display: flex; align-items: center; gap: 6px; color: #b890a8; }
+  .counter { color: #ff80a8; font-size: 14px; letter-spacing: 0.1em; }
+  .fps { position: fixed; bottom: 12px; right: 14px; z-index: 10; font-size: 11px; color: #5a3848; letter-spacing: 0.08em; }
+
+  @keyframes fx-shake-light { 0%,100%{transform:translate(0,0)} 20%{transform:translate(-1.5px,1px)} 50%{transform:translate(1.5px,-1px)} 80%{transform:translate(-1px,1.5px)} }
+  @keyframes fx-shake-heavy { 0%,100%{transform:translate(0,0)} 20%{transform:translate(-3px,2px)} 50%{transform:translate(3px,-2px)} 80%{transform:translate(-2px,3px)} }
+  body.shaking       { animation: fx-shake-light 350ms ease-out both; }
+  body.shaking-heavy { animation: fx-shake-heavy 450ms ease-out both; }
+</style>
+</head>
+<body>
+  <canvas id="three-canvas"></canvas>
+  <div id="bg"></div>
+  <div class="hud">
+    <h1>♥ HEART BURST</h1>
+    <p>Love on impact. Hearts float up.</p>
+    <p><span class="key">space</span> / click — love</p>
+    <p>loves: <span class="counter" id="loves">0</span></p>
+    <button id="strike">SEND LOVE</button>
+    <label><input id="auto" type="checkbox" checked /> auto-loop</label>
+  </div>
+  <div class="fps" id="fps">—</div>
+
+  <script type="importmap">
+  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+  </script>
+  <script src="../../dist/toto-fx.min.js"></script>
+  <script type="module">
+    import * as THREE from 'three';
+
+    const engine = TotoFX.createEngine({ debug: false });
+    const grid = TotoFX.createDotgrid({
+      container: '#bg', dotSize: 24, fontSize: 14,
+      baseOpacity: 0.18, baseColor: [230, 150, 180],
+    });
+    grid.init();
+    TotoFX.FX.setDotgrid(grid);
+    engine.setDotgrid(grid);
+    engine.init();
+
+    const canvas = document.getElementById('three-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight, false);
+    renderer.setClearColor(0x1a0818, 1);
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x1a0818, 0.02);
+
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 200);
+    camera.position.set(0, 2, 10);
+    camera.lookAt(0, 2, 0);
+
+    scene.add(new THREE.HemisphereLight(0xff80b0, 0x200820, 0.6));
+    const k = new THREE.DirectionalLight(0xffc0d8, 0.8);
+    k.position.set(5, 10, 5); scene.add(k);
+
+    // build a 3D heart shape via ExtrudeGeometry from a 2D Shape
+    function makeHeart(size = 1) {
+      const shape = new THREE.Shape();
+      const x = 0, y = 0;
+      shape.moveTo(x, y + size * 0.25);
+      shape.bezierCurveTo(x, y + size * 0.25, x - size * 0.5, y + size, x - size, y + size * 0.25);
+      shape.bezierCurveTo(x - size * 1.6, y - size * 0.7, x, y - size * 1.2, x, y - size * 0.6);
+      shape.bezierCurveTo(x, y - size * 1.2, x + size * 1.6, y - size * 0.7, x + size, y + size * 0.25);
+      shape.bezierCurveTo(x + size * 0.5, y + size, x, y + size * 0.25, x, y + size * 0.25);
+      const geo = new THREE.ExtrudeGeometry(shape, {
+        depth: size * 0.4, bevelEnabled: true,
+        bevelThickness: size * 0.12, bevelSize: size * 0.12,
+        bevelSegments: 4, steps: 1,
+      });
+      geo.center();
+      return geo;
+    }
+
+    const heartMat = new THREE.MeshStandardMaterial({
+      color: 0xff3060, emissive: 0xff2060, emissiveIntensity: 1.2,
+      roughness: 0.3, metalness: 0.2,
+    });
+
+    // main big heart
+    const bigHeart = new THREE.Mesh(makeHeart(1.2), heartMat);
+    bigHeart.position.set(0, 2.4, 0);
+    bigHeart.rotation.z = Math.PI; // Three.js shape y-axis vs visual up
+    scene.add(bigHeart);
+
+    const heartLight = new THREE.PointLight(0xff4080, 3, 14, 2);
+    heartLight.position.set(0, 2.4, 1);
+    scene.add(heartLight);
+
+    // flying hearts pool
+    const flyingHearts = [];
+    const HEART_POOL = 80;
+    const smallHeartGeo = makeHeart(0.3);
+    for (let i = 0; i < HEART_POOL; i++) {
+      const m = new THREE.Mesh(smallHeartGeo, heartMat.clone());
+      m.visible = false;
+      m.rotation.z = Math.PI;
+      scene.add(m);
+      flyingHearts.push({
+        mesh: m, v: new THREE.Vector3(), wiggleAmp: 0, wiggleFreq: 0,
+        born: 0, life: 2400, baseX: 0, tilt: 0,
+      });
+    }
+
+    // background floating hearts (ambient)
+    const ambientHearts = [];
+    for (let i = 0; i < 12; i++) {
+      const mat = heartMat.clone();
+      mat.transparent = true;
+      mat.opacity = 0.3;
+      mat.emissiveIntensity = 0.5;
+      const m = new THREE.Mesh(smallHeartGeo, mat);
+      m.rotation.z = Math.PI;
+      m.position.set((Math.random() - 0.5) * 16, (Math.random() - 0.5) * 8, -4 - Math.random() * 8);
+      scene.add(m);
+      ambientHearts.push({ mesh: m, phase: Math.random() * Math.PI * 2, baseY: m.position.y });
+    }
+
+    let loveCount = 0;
+    const lovesEl = document.getElementById('loves');
+
+    function burst() {
+      const pos = bigHeart.position.clone();
+      const screen = worldToScreen(pos);
+      const FX = TotoFX.FX;
+
+      loveCount++;
+      lovesEl.textContent = loveCount;
+
+      // 2D FX — cute/hearts character: pink, soft, warm
+      FX.flashColor('#ff80a8', 140);
+      FX.doScreenShake(false);
+      FX.doDotgridRipple(screen.x, screen.y, { radius: 280, push: 10, density: 0.55, color: '#ff6090' });
+      FX.spawnParticles(screen.x, screen.y, {
+        count: 40, spread: 8, upBias: 3, gravity: -0.08, life: 180,
+        color: [255, 100, 160], chars: ['♥', '♡', '❤', '♥', '♡'],
+      });
+      FX.spawnParticles(screen.x, screen.y, {
+        count: 18, spread: 3, upBias: 1, gravity: -0.02, life: 240,
+        color: [255, 200, 220], chars: ['·', '✦', '♥'],
+      });
+
+      // big heart pulse
+      bigHeart.scale.set(1.4, 1.4, 1.4);
+
+      // spawn 3D flying hearts
+      let spawned = 0;
+      for (const h of flyingHearts) {
+        if (h.mesh.visible) continue;
+        if (spawned++ >= 18) break;
+        h.mesh.position.copy(pos);
+        h.mesh.visible = true;
+        const ang = Math.random() * Math.PI * 2;
+        const sp = 1.5 + Math.random() * 2.5;
+        h.v.set(
+          Math.cos(ang) * sp,
+          2 + Math.random() * 3,
+          (Math.random() - 0.3) * 1.5
+        );
+        h.wiggleAmp = 0.4 + Math.random() * 0.6;
+        h.wiggleFreq = 1.5 + Math.random() * 2;
+        h.baseX = h.mesh.position.x;
+        h.tilt = (Math.random() - 0.5) * 0.6;
+        h.born = performance.now();
+        h.life = 2400 + Math.random() * 1200;
+        h.mesh.material = heartMat.clone();
+        h.mesh.material.emissiveIntensity = 1.2;
+      }
+    }
+
+    function worldToScreen(v) {
+      const p = v.clone().project(camera);
+      return { x: (p.x * 0.5 + 0.5) * window.innerWidth, y: (-p.y * 0.5 + 0.5) * window.innerHeight };
+    }
+
+    document.getElementById('strike').addEventListener('click', burst);
+    window.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); burst(); } });
+    canvas.addEventListener('click', burst);
+
+    const autoEl = document.getElementById('auto');
+    let lastAuto = 0;
+
+    let lastNow = performance.now();
+    const fpsEl = document.getElementById('fps');
+    let fpsFrames = 0, fpsAccum = 0, fpsTime = 0;
+
+    function frame(now) {
+      const dt = Math.min(0.05, (now - lastNow) / 1000);
+      lastNow = now;
+
+      // big heart breathing
+      const breath = 1 + Math.sin(now * 0.006) * 0.08;
+      const tgt = Math.max(breath, 1);
+      bigHeart.scale.lerp(new THREE.Vector3(tgt, tgt, tgt), 0.08);
+      bigHeart.rotation.y = Math.sin(now * 0.001) * 0.4;
+      heartLight.intensity = 2.5 + Math.sin(now * 0.006) * 1;
+
+      // flying hearts: rise with wiggle
+      for (const h of flyingHearts) {
+        if (!h.mesh.visible) continue;
+        const age = now - h.born;
+        if (age > h.life) {
+          h.mesh.visible = false;
+          continue;
+        }
+        h.mesh.position.addScaledVector(h.v, dt);
+        // horizontal wiggle
+        h.mesh.position.x = h.baseX + Math.sin((now - h.born) * 0.004 * h.wiggleFreq) * h.wiggleAmp;
+        h.baseX += h.v.x * dt;
+        // gravity (negative — balloons)
+        h.v.y += 1.5 * dt;
+        h.v.x *= 0.98;
+        h.v.z *= 0.98;
+        h.mesh.rotation.y += dt * 1.5;
+        h.mesh.rotation.x = h.tilt;
+        // fade near end
+        const fade = 1 - age / h.life;
+        h.mesh.material.opacity = fade;
+        h.mesh.material.transparent = true;
+        h.mesh.scale.setScalar(1 + (1 - fade) * 0.5);
+      }
+
+      // ambient hearts drift
+      for (const a of ambientHearts) {
+        a.mesh.position.y = a.baseY + Math.sin(now * 0.001 + a.phase) * 0.4;
+        a.mesh.rotation.y = Math.sin(now * 0.0006 + a.phase) * 0.3;
+      }
+
+      // camera parallax
+      camera.position.x = Math.sin(now * 0.0002) * 0.8;
+      camera.lookAt(0, 2.4, 0);
+
+      if (autoEl.checked && now - lastAuto > 1600) { lastAuto = now; burst(); }
+
+      renderer.render(scene, camera);
+      fpsFrames++; fpsAccum += dt;
+      if (now - fpsTime > 500) {
+        fpsEl.textContent = Math.round(fpsFrames / fpsAccum) + ' fps';
+        fpsFrames = 0; fpsAccum = 0; fpsTime = now;
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight, false);
+    });
+
+    setTimeout(burst, 500);
+  </script>
+</body>
+</html>
