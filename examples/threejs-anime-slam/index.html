@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>TotoFX × Three.js — Anime Slam (Katana & Bamboo)</title>
+<style>
+  :root { color-scheme: light; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; overflow: hidden; background: #f3ece0;
+    font-family: ui-monospace, "JetBrains Mono", Menlo, monospace;
+    color: #2a1a14;
+    cursor: none;
+  }
+  #three-canvas { position: fixed; inset: 0; z-index: 0; display: block; width: 100%; height: 100%; }
+  #bg { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+
+  .hud {
+    position: fixed; top: 16px; left: 16px; z-index: 10;
+    padding: 14px 16px; border: 1px solid #bfa98c;
+    background: rgba(248, 240, 224, 0.88); border-radius: 10px;
+    backdrop-filter: blur(6px);
+    font-size: 12px; line-height: 1.5; max-width: 300px;
+    cursor: default;
+    color: #2a1a14;
+    box-shadow: 0 4px 24px rgba(60, 30, 10, 0.08);
+  }
+  .hud h1 { margin: 0 0 4px; font-size: 13px; letter-spacing: 0.1em; color: #b8364a; }
+  .hud p { margin: 0; color: #6a5040; }
+  .hud .key { color: #b8364a; }
+  .hud button {
+    margin-top: 8px; padding: 8px 12px;
+    background: #2a1a14; color: #f5e6c8;
+    border: 1px solid #5a3a28; border-radius: 6px;
+    font: inherit; cursor: pointer;
+  }
+  .hud button:hover { background: #3a2418; }
+  .hud .stats { color: #b8364a; font-size: 11px; letter-spacing: 0.05em; }
+
+  .fps { position: fixed; bottom: 12px; right: 14px; z-index: 10; font-size: 11px; color: #8a6a50; letter-spacing: 0.08em; cursor: default; }
+  .instr { position: fixed; bottom: 14px; left: 16px; z-index: 10; font-size: 11px; color: #8a6a50; letter-spacing: 0.06em; cursor: default; }
+
+  @keyframes fx-shake-light { 0%,100%{transform:translate(0,0)} 10%{transform:translate(-3px,2px)} 25%{transform:translate(4px,-2px)} 40%{transform:translate(-2px,3px)} 55%{transform:translate(3px,1px)} 70%{transform:translate(-3px,-2px)} 85%{transform:translate(2px,2px)} }
+  @keyframes fx-shake-heavy { 0%,100%{transform:translate(0,0)} 8%{transform:translate(-11px,6px) rotate(-0.5deg)} 22%{transform:translate(12px,-7px) rotate(0.6deg)} 38%{transform:translate(-8px,8px) rotate(-0.4deg)} 54%{transform:translate(9px,4px) rotate(0.5deg)} 70%{transform:translate(-7px,-6px) rotate(-0.3deg)} 86%{transform:translate(6px,7px) rotate(0.2deg)} }
+  body.shaking       { animation: fx-shake-light 450ms cubic-bezier(.36,.07,.19,.97) both; }
+  body.shaking-heavy { animation: fx-shake-heavy 600ms cubic-bezier(.36,.07,.19,.97) both; }
+</style>
+</head>
+<body>
+  <canvas id="three-canvas"></canvas>
+  <div id="bg"></div>
+
+  <div class="hud">
+    <h1>⚔ 竹 · KATANA × BAMBOO</h1>
+    <p><span class="key">move the mouse</span> — the blade follows your cursor</p>
+    <p>Touch the bamboo to slice. Each pass cuts a fresh piece.</p>
+    <p class="stats">cuts <span id="cuts">0</span> · pieces <span id="pieces">0</span></p>
+    <button id="regrow">REGROW BAMBOO</button>
+  </div>
+
+  <div class="instr">no clicking — the blade cuts on contact</div>
+  <div class="fps" id="fps">—</div>
+
+  <script type="importmap">
+  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+  </script>
+  <script src="../../dist/toto-fx.min.js"></script>
+
+  <script type="module">
+    import * as THREE from 'three';
+
+    // ── TotoFX ────────────────────────────────────────────────────
+    const engine = TotoFX.createEngine({ debug: false });
+    const grid = TotoFX.createDotgrid({
+      container: '#bg', dotSize: 24, fontSize: 15,
+      baseOpacity: 0.14, baseColor: [120, 90, 70],
+    });
+    grid.init();
+    TotoFX.FX.setDotgrid(grid);
+    engine.setDotgrid(grid);
+    engine.init();
+
+    // ── Three.js ──────────────────────────────────────────────────
+    const canvas = document.getElementById('three-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight, false);
+    renderer.setClearColor(0xf3ece0, 1);
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0xf3ece0, 0.012);
+
+    // slight offset camera so scene reads as 3D, not a flat image
+    const camera = new THREE.PerspectiveCamera(44, window.innerWidth / window.innerHeight, 0.1, 200);
+    camera.position.set(2.5, 5, 12);
+    camera.lookAt(0, 4, 0);
+
+    // ── Lighting (warm, serene dojo) ──────────────────────────────
+    // soft warm ambient + hemisphere
+    scene.add(new THREE.HemisphereLight(0xfff0d8, 0xc8b090, 0.85));
+    // key light: simulates sun coming through the back shoji
+    const back = new THREE.DirectionalLight(0xfff2d4, 1.4);
+    back.position.set(-2, 10, -12);
+    scene.add(back);
+    // soft warm fill from camera side
+    const fill = new THREE.DirectionalLight(0xffe8c0, 0.55);
+    fill.position.set(6, 8, 10);
+    scene.add(fill);
+    // subtle rim
+    const rim = new THREE.DirectionalLight(0xffc890, 0.3);
+    rim.position.set(-8, 4, 6);
+    scene.add(rim);
+
+    // ── Dojo: shoji paper walls ───────────────────────────────────
+    // build a shoji panel (off-white paper with dark wood frame grid)
+    function makeShoji(width, height, cols = 4, rows = 4) {
+      const group = new THREE.Group();
+      // paper plane (slightly translucent look via emissive)
+      const paper = new THREE.Mesh(
+        new THREE.PlaneGeometry(width, height),
+        new THREE.MeshStandardMaterial({
+          color: 0xf8ecd4,
+          emissive: 0xfff1d0,
+          emissiveIntensity: 0.35,
+          roughness: 0.95,
+          side: THREE.DoubleSide,
+        })
+      );
+      group.add(paper);
+      const frameMat = new THREE.MeshStandardMaterial({ color: 0x2a1a10, roughness: 0.75 });
+      const frameT = 0.06;
+      const frameD = 0.05;
+      // outer frame (top/bottom/left/right)
+      const outerH = new THREE.BoxGeometry(width, frameT, frameD);
+      const outerV = new THREE.BoxGeometry(frameT, height, frameD);
+      const top = new THREE.Mesh(outerH, frameMat);    top.position.set(0,  height / 2, 0.03); group.add(top);
+      const bot = new THREE.Mesh(outerH, frameMat);    bot.position.set(0, -height / 2, 0.03); group.add(bot);
+      const lef = new THREE.Mesh(outerV, frameMat);    lef.position.set(-width / 2, 0, 0.03); group.add(lef);
+      const rig = new THREE.Mesh(outerV, frameMat);    rig.position.set( width / 2, 0, 0.03); group.add(rig);
+      // inner lattice
+      const innerT = 0.035;
+      for (let c = 1; c < cols; c++) {
+        const x = -width / 2 + (c / cols) * width;
+        const v = new THREE.Mesh(new THREE.BoxGeometry(innerT, height - frameT, frameD * 0.8), frameMat);
+        v.position.set(x, 0, 0.03);
+        group.add(v);
+      }
+      for (let r = 1; r < rows; r++) {
+        const y = -height / 2 + (r / rows) * height;
+        const h = new THREE.Mesh(new THREE.BoxGeometry(width - frameT, innerT, frameD * 0.8), frameMat);
+        h.position.set(0, y, 0.03);
+        group.add(h);
+      }
+      return group;
+    }
+
+    // back wall of shoji (spans wide)
+    const backWall = new THREE.Group();
+    for (let i = -2; i <= 2; i++) {
+      const panel = makeShoji(5, 9, 3, 5);
+      panel.position.set(i * 5, 4.5, -8);
+      backWall.add(panel);
+    }
+    scene.add(backWall);
+
+    // left wall (angled slightly toward camera)
+    const leftWall = new THREE.Group();
+    for (let i = 0; i < 3; i++) {
+      const panel = makeShoji(5, 9, 3, 5);
+      panel.position.set(0, 4.5, i * -5);
+      leftWall.add(panel);
+    }
+    leftWall.rotation.y = Math.PI / 2;
+    leftWall.position.set(-12, 0, 2);
+    scene.add(leftWall);
+
+    // right wall
+    const rightWall = new THREE.Group();
+    for (let i = 0; i < 3; i++) {
+      const panel = makeShoji(5, 9, 3, 5);
+      panel.position.set(0, 4.5, i * 5);
+      rightWall.add(panel);
+    }
+    rightWall.rotation.y = -Math.PI / 2;
+    rightWall.position.set(12, 0, -12);
+    scene.add(rightWall);
+
+    // ── Dojo: tatami floor ────────────────────────────────────────
+    function makeTatamiTexture() {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 256;
+      const ctx = c.getContext('2d');
+      // base mat color (soft tan/straw with a hint of green)
+      ctx.fillStyle = '#d4c088';
+      ctx.fillRect(0, 0, 256, 256);
+      // subtle horizontal weave lines
+      ctx.strokeStyle = 'rgba(120, 100, 70, 0.12)';
+      ctx.lineWidth = 1;
+      for (let y = 0; y < 256; y += 3) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(256, y); ctx.stroke();
+      }
+      // darker borders (two panels per tile, cut vertically down middle — tatami pairs)
+      ctx.fillStyle = '#3a2818';
+      ctx.fillRect(0, 0, 256, 4);
+      ctx.fillRect(0, 252, 256, 4);
+      ctx.fillRect(0, 0, 4, 256);
+      ctx.fillRect(252, 0, 4, 256);
+      // center divider
+      ctx.fillRect(126, 0, 4, 256);
+      // slight green-ish tint noise
+      for (let i = 0; i < 400; i++) {
+        ctx.fillStyle = `rgba(${90 + Math.random()*40}, ${110 + Math.random()*30}, ${60 + Math.random()*20}, ${0.05 + Math.random()*0.06})`;
+        ctx.fillRect(Math.random()*256, Math.random()*256, 2, 2);
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(6, 6);
+      tex.anisotropy = 4;
+      return tex;
+    }
+    const tatamiTex = makeTatamiTexture();
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(50, 50),
+      new THREE.MeshStandardMaterial({ map: tatamiTex, roughness: 0.92 })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = 0;
+    scene.add(floor);
+
+    // ── Dojo: wooden ceiling beams ────────────────────────────────
+    const beamMat = new THREE.MeshStandardMaterial({ color: 0x3a2416, roughness: 0.8 });
+    // longitudinal beams running front-to-back
+    for (let i = -2; i <= 2; i++) {
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.45, 28), beamMat);
+      beam.position.set(i * 3.2, 9.6, -2);
+      scene.add(beam);
+    }
+    // one cross beam up high
+    const cross1 = new THREE.Mesh(new THREE.BoxGeometry(24, 0.55, 0.5), beamMat);
+    cross1.position.set(0, 10.0, -6);
+    scene.add(cross1);
+    const cross2 = new THREE.Mesh(new THREE.BoxGeometry(24, 0.55, 0.5), beamMat);
+    cross2.position.set(0, 10.0, 4);
+    scene.add(cross2);
+
+    // a simple dark wood skirting board along the back
+    const skirting = new THREE.Mesh(new THREE.BoxGeometry(26, 0.4, 0.15), beamMat);
+    skirting.position.set(0, 0.2, -7.95);
+    scene.add(skirting);
+
+    // ── Bamboo (single centered stalk) ────────────────────────────
+    const BAMBOO_R = 0.34;
+    const bamboos = [];
+
+    const bambooMat = new THREE.MeshStandardMaterial({
+      color: 0x8fbf6a, roughness: 0.55, metalness: 0.0,
+      emissive: 0x2a4a18, emissiveIntensity: 0.18,
+    });
+    const bambooDarkMat = new THREE.MeshStandardMaterial({
+      color: 0x3a5a28, roughness: 0.6, emissive: 0x0e2008, emissiveIntensity: 0.2,
+    });
+
+    function makeSegmentMesh(height) {
+      const g = new THREE.CylinderGeometry(BAMBOO_R, BAMBOO_R, height, 20, 1, false);
+      return new THREE.Mesh(g, bambooMat);
+    }
+
+    function spawnBamboo(x, z, height) {
+      const bamboo = { x, z, radius: BAMBOO_R * 1.3, segments: [], joints: [] };
+      const mesh = makeSegmentMesh(height);
+      mesh.position.set(x, height / 2, z);
+      scene.add(mesh);
+      // decorative dark joint rings
+      for (let y = 1.0; y < height; y += 1.3 + Math.random() * 0.5) {
+        const joint = new THREE.Mesh(
+          new THREE.TorusGeometry(BAMBOO_R * 1.08, 0.04, 10, 22),
+          bambooDarkMat
+        );
+        joint.rotation.x = Math.PI / 2;
+        joint.position.set(x, y, z);
+        bamboo.joints.push(joint);
+        scene.add(joint);
+      }
+      bamboo.segments.push({
+        y0: 0, y1: height, mesh,
+        falling: false, v: new THREE.Vector3(), av: new THREE.Vector3(),
+        born: 0, anchored: true,
+      });
+      bamboos.push(bamboo);
+      return bamboo;
+    }
+
+    function clearAllBamboo() {
+      for (const b of bamboos) {
+        for (const s of b.segments) {
+          scene.remove(s.mesh);
+          if (s.mesh.geometry) s.mesh.geometry.dispose();
+        }
+        for (const j of b.joints || []) {
+          scene.remove(j);
+          if (j.geometry) j.geometry.dispose();
+        }
+      }
+      bamboos.length = 0;
+      // also clear falling pieces
+      for (const p of pieces) {
+        scene.remove(p.mesh);
+        if (p.mesh.geometry) p.mesh.geometry.dispose();
+      }
+      pieces.length = 0;
+    }
+
+    function regrowAll() {
+      clearAllBamboo();
+      // one tall stalk centered at origin, slight z offset so camera offset reads 3D
+      spawnBamboo(0, 0, 8.5);
+      cutCount = 0;
+      updateStats();
+    }
+
+    // ── 8-bit voxel katana ────────────────────────────────────────
+    // Build from cubes. Layout (in local coords, +Y = blade direction):
+    //   handle (dark brown) at bottom
+    //   tsuba/guard (gold) in the middle
+    //   blade (white/silver w/ emissive edge) extending upward
+    // bladeTip sits at the TOP of the blade — users will drive the tip into the bamboo.
+    const katana = new THREE.Group();
+    const VX = 0.18; // voxel size
+
+    function addVoxel(parent, x, y, z, w, h, d, matOrColor, opts = {}) {
+      const mat = matOrColor instanceof THREE.Material
+        ? matOrColor
+        : new THREE.MeshStandardMaterial({
+            color: matOrColor,
+            roughness: opts.roughness ?? 0.55,
+            metalness: opts.metalness ?? 0.0,
+            emissive: opts.emissive ?? 0x000000,
+            emissiveIntensity: opts.emissiveIntensity ?? 0,
+          });
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+      m.position.set(x, y, z);
+      parent.add(m);
+      return m;
+    }
+
+    // Materials
+    const matHandleDark   = new THREE.MeshStandardMaterial({ color: 0x2a1810, roughness: 0.85 });
+    const matHandleWrap   = new THREE.MeshStandardMaterial({ color: 0x5a3222, roughness: 0.8 });
+    const matPommel       = new THREE.MeshStandardMaterial({ color: 0x1a0e08, roughness: 0.8 });
+    const matTsubaGold    = new THREE.MeshStandardMaterial({
+      color: 0xf2c14e, roughness: 0.35, metalness: 0.8,
+      emissive: 0x7a4a10, emissiveIntensity: 0.4,
+    });
+    const matTsubaDark    = new THREE.MeshStandardMaterial({
+      color: 0x8a5a18, roughness: 0.5, metalness: 0.7,
+    });
+    const matBlade        = new THREE.MeshStandardMaterial({
+      color: 0xeef4ff, roughness: 0.22, metalness: 0.85,
+      emissive: 0xaaccff, emissiveIntensity: 0.35,
+    });
+    const matBladeEdge    = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const matBladeShadow  = new THREE.MeshStandardMaterial({ color: 0x8a9ab0, roughness: 0.45, metalness: 0.7 });
+
+    // Handle: 7 voxels tall, 1 wide (alternating wrap), pommel cube at very bottom
+    // Bottom pommel
+    addVoxel(katana, 0, -1.1 * VX * 4.0, 0, VX * 1.3, VX * 0.6, VX * 1.3, matPommel);
+    // Handle column (7 stacked voxels with alternating wrap pattern)
+    const handleYStart = -VX * 3.6;
+    for (let i = 0; i < 7; i++) {
+      const y = handleYStart + i * VX;
+      const mat = (i % 2 === 0) ? matHandleDark : matHandleWrap;
+      addVoxel(katana, 0, y, 0, VX, VX, VX, mat);
+    }
+
+    // Tsuba (guard) — 3 wide x 1 tall x 3 deep arrangement at top of handle
+    const tsubaY = handleYStart + 7 * VX + VX * 0.5;
+    // center disc (slightly wider than handle)
+    addVoxel(katana, 0, tsubaY, 0, VX * 3, VX * 0.8, VX * 3, matTsubaGold);
+    // decorative corner darker caps
+    addVoxel(katana, -VX, tsubaY + VX * 0.5, 0, VX, VX * 0.2, VX * 3, matTsubaDark);
+    addVoxel(katana,  VX, tsubaY + VX * 0.5, 0, VX, VX * 0.2, VX * 3, matTsubaDark);
+
+    // Blade — 18 voxels tall, 1 wide, slight depth taper drawn with main column + edge highlight
+    const bladeBaseY = tsubaY + VX * 0.9;
+    const BLADE_LEN = 18;
+    for (let i = 0; i < BLADE_LEN; i++) {
+      const y = bladeBaseY + i * VX + VX * 0.5;
+      // main blade column
+      addVoxel(katana, 0, y, 0, VX, VX, VX * 0.7, matBlade);
+      // back side shadow pixel (slightly offset behind)
+      addVoxel(katana, -VX * 0.55, y, 0, VX * 0.12, VX, VX * 0.7, matBladeShadow);
+      // front edge: bright white highlight running along the cutting edge
+      addVoxel(katana, VX * 0.55, y, 0, VX * 0.12, VX, VX * 0.7, matBladeEdge);
+    }
+    // Blade tip — taper off with a single smaller voxel at the very top
+    const tipY = bladeBaseY + BLADE_LEN * VX + VX * 0.5;
+    addVoxel(katana, 0, tipY, 0, VX * 0.7, VX * 0.8, VX * 0.6, matBlade);
+    addVoxel(katana, VX * 0.35, tipY, 0, VX * 0.12, VX * 0.8, VX * 0.6, matBladeEdge);
+
+    // Invisible marker for the blade tip (world-space target for hit detection)
+    const bladeTip = new THREE.Object3D();
+    bladeTip.position.set(0, tipY + VX * 0.5, 0);
+    katana.add(bladeTip);
+    // Invisible marker for the blade base (guard top) — used as cut-segment endpoint
+    const bladeBase = new THREE.Object3D();
+    bladeBase.position.set(0, bladeBaseY, 0);
+    katana.add(bladeBase);
+
+    // Render order: keep katana on top so it always reads as "cursor"
+    katana.traverse((o) => {
+      if (o.isMesh) { o.renderOrder = 999; if (o.material && o.material.depthTest !== undefined) { /* keep default */ } }
+    });
+
+    scene.add(katana);
+
+    // ── Katana rendering — always billboard to camera, positioned near camera ──
+    // Place katana in a plane close to the camera so it reads at ~1/3 screen height.
+    // We'll keep it on the same "cut plane" the mouse projects to, but bias toward camera
+    // via a rendering trick: keep the model at the mouse's world position but make the
+    // blade large enough that it covers roughly 1/3 of the vertical FOV at that depth.
+    //
+    // The voxel build above gives us ~ (18 + 7 + padding) * VX ≈ 4.8 units of total height.
+    // At z=0 with camera at (2.5, 5, 12) and fov 44°, visible height ≈ 2 * 12 * tan(22°) ≈ 9.7 units.
+    // So the katana is ~4.8/9.7 ≈ 49% of screen height — a bit much. Scale to ~65% of that.
+    katana.scale.setScalar(0.72);
+
+    // ── Swing state / cursor tracking ─────────────────────────────
+    let mouseWorld = new THREE.Vector3(0, 4, 0);
+    let prevMouseWorld = new THREE.Vector3(0, 4, 0);
+    let mouseMoving = false;
+    let lastMoveTime = 0;
+    const SWING_CUT_PLANE_Z = 0; // bamboo lives at z=0
+
+    // project screen (clientX, clientY) onto a vertical plane at z = SWING_CUT_PLANE_Z
+    const _raycaster = new THREE.Raycaster();
+    const _cutPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -SWING_CUT_PLANE_Z);
+    function screenToPlane(x, y) {
+      const ndc = new THREE.Vector2((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
+      _raycaster.setFromCamera(ndc, camera);
+      const hit = new THREE.Vector3();
+      const ok = _raycaster.ray.intersectPlane(_cutPlane, hit);
+      return ok ? hit : null;
+    }
+
+    canvas.addEventListener('mousemove', (e) => {
+      const p = screenToPlane(e.clientX, e.clientY);
+      if (!p) return;
+      mouseWorld.copy(p);
+      mouseMoving = true;
+      lastMoveTime = performance.now();
+    });
+
+    // touch support (optional)
+    canvas.addEventListener('touchstart', (e) => {
+      if (!e.touches[0]) return;
+      const p = screenToPlane(e.touches[0].clientX, e.touches[0].clientY);
+      if (p) { mouseWorld.copy(p); mouseMoving = true; lastMoveTime = performance.now(); }
+      e.preventDefault();
+    }, { passive: false });
+    canvas.addEventListener('touchmove', (e) => {
+      if (!e.touches[0]) return;
+      const p = screenToPlane(e.touches[0].clientX, e.touches[0].clientY);
+      if (p) { mouseWorld.copy(p); mouseMoving = true; lastMoveTime = performance.now(); }
+      e.preventDefault();
+    }, { passive: false });
+
+    document.getElementById('regrow').addEventListener('click', (e) => { e.stopPropagation(); regrowAll(); });
+
+    // ── Cutting ───────────────────────────────────────────────────
+    const pieces = []; // falling bamboo pieces
+    let cutCount = 0;
+    const cutsEl = document.getElementById('cuts');
+    const piecesEl = document.getElementById('pieces');
+    function updateStats() {
+      cutsEl.textContent = cutCount;
+      piecesEl.textContent = pieces.length;
+    }
+
+    // Given a blade segment from A to B in world space, find the Y at
+    // which this segment passes closest to bamboo axis (x, z). If within
+    // radius and 0 ≤ t ≤ 1, return cutY; otherwise null.
+    function bladeIntersectsBamboo(a, b, bamboo) {
+      const dx = b.x - a.x;
+      const dz = b.z - a.z;
+      const denom = dx * dx + dz * dz;
+      if (denom < 1e-6) {
+        const d = Math.hypot(a.x - bamboo.x, a.z - bamboo.z);
+        return d <= bamboo.radius ? a.y : null;
+      }
+      const t = ((bamboo.x - a.x) * dx + (bamboo.z - a.z) * dz) / denom;
+      if (t < 0 || t > 1) return null;
+      const nx = a.x + t * dx;
+      const nz = a.z + t * dz;
+      const d = Math.hypot(nx - bamboo.x, nz - bamboo.z);
+      if (d > bamboo.radius) return null;
+      return a.y + t * (b.y - a.y);
+    }
+
+    function cutBamboo(bamboo, y) {
+      const seg = bamboo.segments.find(s => s.anchored && !s.falling && s.y0 < y && s.y1 > y);
+      if (!seg) return null;
+      const upperY0 = y;
+      const upperY1 = seg.y1;
+      const newHeight = y - seg.y0;
+      if (newHeight < 0.3) return null;
+      const upperHeight = upperY1 - upperY0;
+      if (upperHeight < 0.3) return null;
+
+      // shrink lower (anchored) segment
+      seg.mesh.geometry.dispose();
+      seg.mesh.geometry = new THREE.CylinderGeometry(BAMBOO_R, BAMBOO_R, newHeight, 20, 1, false);
+      seg.mesh.position.set(bamboo.x, seg.y0 + newHeight / 2, bamboo.z);
+      seg.y1 = y;
+
+      // new upper (falling) piece
+      const upperMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(BAMBOO_R, BAMBOO_R, upperHeight, 20, 1, false),
+        bambooMat
+      );
+      upperMesh.position.set(bamboo.x, upperY0 + upperHeight / 2, bamboo.z);
+      scene.add(upperMesh);
+
+      // cut faces
+      const capMat = new THREE.MeshStandardMaterial({ color: 0xc8b07a, roughness: 0.6 });
+      const capTop = new THREE.Mesh(new THREE.CircleGeometry(BAMBOO_R, 20), capMat);
+      capTop.rotation.x = -Math.PI / 2;
+      capTop.position.set(0, newHeight / 2 + 0.002, 0);
+      seg.mesh.add(capTop);
+      const capBottom = new THREE.Mesh(new THREE.CircleGeometry(BAMBOO_R, 20), capMat);
+      capBottom.rotation.x = Math.PI / 2;
+      capBottom.position.set(0, -upperHeight / 2 - 0.002, 0);
+      upperMesh.add(capBottom);
+
+      const upperSeg = {
+        y0: upperY0, y1: upperY1, mesh: upperMesh,
+        falling: true, anchored: false,
+        v: new THREE.Vector3(
+          (Math.random() - 0.3) * 2 + 0.5,
+          0.6 + Math.random() * 0.9,
+          (Math.random() - 0.5) * 2
+        ),
+        av: new THREE.Vector3(
+          (Math.random() - 0.5) * 6,
+          (Math.random() - 0.5) * 2,
+          (Math.random() - 0.5) * 6
+        ),
+        born: performance.now(), life: 4500,
+      };
+      pieces.push(upperSeg);
+      bamboo.segments.push(upperSeg);
+
+      cutCount++;
+      updateStats();
+
+      return y;
+    }
+
+    function onAnyCut(cutWorldPos) {
+      const screen = worldToScreen(cutWorldPos);
+      const FX = TotoFX.FX;
+      // No flashes — preserve the serene dojo read. Impact still sells via
+      // shake + speed lines + dotgrid ripple/crater + particles.
+      FX.doScreenShake(true);
+      FX.startSpeedLines(screen.x, screen.y, 'outward', 650);
+      FX.doDotgridRipple(screen.x, screen.y, { radius: 260, push: 14, density: 0.7, color: '#ff2840' });
+      FX.doDotgridCrater(screen.x, screen.y, 90, 1, { cracks: 6, crackLength: 220 });
+      FX.spawnParticles(screen.x, screen.y, {
+        count: 44, spread: 12, upBias: 2, gravity: 0.18, life: 80,
+        color: [255, 240, 230], chars: ['/', '\\', '|', '—', '*'],
+      });
+      FX.spawnParticles(screen.x, screen.y, {
+        count: 22, spread: 6, upBias: 0, gravity: -0.02, life: 140,
+        color: [255, 80, 100], chars: ['✦', '✧', '✶'],
+      });
+      chromaBurst();
+    }
+
+    function worldToScreen(v) {
+      const p = v.clone().project(camera);
+      return { x: (p.x * 0.5 + 0.5) * window.innerWidth, y: (-p.y * 0.5 + 0.5) * window.innerHeight };
+    }
+
+    // anime impact frame: black overlay
+    const blackFrame = document.createElement('div');
+    blackFrame.style.cssText = 'position:fixed;inset:0;z-index:9;background:#000;opacity:0;pointer-events:none';
+    document.body.appendChild(blackFrame);
+    function blackFlash(ms) {
+      blackFrame.style.transition = 'opacity 30ms linear';
+      blackFrame.style.opacity = '1';
+      setTimeout(() => {
+        blackFrame.style.transition = 'opacity 140ms ease-out';
+        blackFrame.style.opacity = '0';
+      }, ms);
+    }
+    function chromaBurst() {
+      canvas.style.filter = 'drop-shadow(2px 0 0 rgba(255,60,80,0.65)) drop-shadow(-2px 0 0 rgba(60,200,255,0.65))';
+      setTimeout(() => { canvas.style.filter = ''; }, 260);
+    }
+
+    // ── Init world ────────────────────────────────────────────────
+    regrowAll();
+
+    // ── Frame ────────────────────────────────────────────────────
+    let lastNow = performance.now();
+    const fpsEl = document.getElementById('fps');
+    let fpsFrames = 0, fpsAccum = 0, fpsTime = 0;
+
+    // per-segment cut debounce: keyed by segment object to prevent spam
+    const lastCutAt = new WeakMap();
+
+    // previous blade tip / base world positions (for swept-segment hit test)
+    const prevBladeTipWorld = new THREE.Vector3();
+    const prevBladeBaseWorld = new THREE.Vector3();
+    let prevBladeValid = false;
+
+    function frame(now) {
+      const dt = Math.min(0.05, (now - lastNow) / 1000);
+      lastNow = now;
+
+      // ── position the katana at the cursor ──────────────────────
+      // the tsuba sits at local y=tsubaY; we want the tsuba near the cursor,
+      // and the blade extending up from there. So the group origin is placed
+      // such that cursor ≈ tsuba world position.
+      // Group origin is at local y=0, the tsuba is near y=0 already (tsubaY is
+      // roughly 0 with small offset). Offset the katana so its tsuba lines up.
+      const desiredX = mouseWorld.x;
+      const desiredY = mouseWorld.y - 0.6; // anchor tsuba slightly below cursor so tip leads upward toward cursor hover
+      const desiredZ = mouseWorld.z + 0.5; // bias slightly toward camera so it reads on top of bamboo
+
+      // smooth follow
+      katana.position.x += (desiredX - katana.position.x) * 0.35;
+      katana.position.y += (desiredY - katana.position.y) * 0.35;
+      katana.position.z += (desiredZ - katana.position.z) * 0.35;
+
+      // billboard to camera (katana always faces viewer)
+      katana.quaternion.copy(camera.quaternion);
+
+      // idle bob/sway when mouse hasn't moved in a while
+      const idle = (now - lastMoveTime) > 120;
+      if (idle) {
+        katana.position.y += Math.sin(now * 0.004) * 0.06;
+        // gentle tilt back and forth
+        const idleTilt = Math.sin(now * 0.002) * 0.08;
+        const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), idleTilt);
+        katana.quaternion.multiply(q);
+      } else {
+        // lean the katana slightly in direction of motion for anime feel
+        const vx = mouseWorld.x - prevMouseWorld.x;
+        const vy = mouseWorld.y - prevMouseWorld.y;
+        const lean = THREE.MathUtils.clamp(-vx * 0.4, -0.35, 0.35);
+        const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), lean);
+        katana.quaternion.multiply(q);
+      }
+
+      // force update world matrices so we can read tip / base positions
+      katana.updateMatrixWorld(true);
+
+      // blade endpoints in world space
+      const tipWorld = new THREE.Vector3();
+      const baseWorld = new THREE.Vector3();
+      bladeTip.getWorldPosition(tipWorld);
+      bladeBase.getWorldPosition(baseWorld);
+
+      // ── cut detection (no drag required) ───────────────────────
+      // Hit-test: if current blade segment OR swept segment (prev tip -> current tip)
+      // intersects a bamboo cylinder, cut it.
+      // We use two tests to avoid missed hits on fast moves:
+      //   (1) current blade base -> current blade tip
+      //   (2) prev tip -> current tip (swept path)
+      if (prevBladeValid) {
+        const cutPoints = [];
+        for (const bamboo of bamboos) {
+          // debounce: per-segment, not per-stalk (so multiple passes make multiple pieces)
+          // find candidate anchored segment first, then debounce on that segment
+          let cutY = bladeIntersectsBamboo(baseWorld, tipWorld, bamboo);
+          if (cutY === null) {
+            cutY = bladeIntersectsBamboo(prevBladeTipWorld, tipWorld, bamboo);
+          }
+          if (cutY === null) continue;
+          // find segment that would be cut
+          const seg = bamboo.segments.find(s => s.anchored && !s.falling && s.y0 < cutY && s.y1 > cutY);
+          if (!seg) continue;
+          const last = lastCutAt.get(seg) || 0;
+          if (now - last < 130) continue;
+          const y = cutBamboo(bamboo, cutY);
+          if (y === null) continue;
+          lastCutAt.set(seg, now);
+          cutPoints.push(new THREE.Vector3(bamboo.x, y, bamboo.z));
+        }
+        if (cutPoints.length > 0) {
+          const c = new THREE.Vector3();
+          for (const p of cutPoints) c.add(p);
+          c.multiplyScalar(1 / cutPoints.length);
+          onAnyCut(c);
+        }
+      }
+
+      prevBladeTipWorld.copy(tipWorld);
+      prevBladeBaseWorld.copy(baseWorld);
+      prevBladeValid = true;
+
+      // ── falling-piece physics ──────────────────────────────────
+      for (let i = pieces.length - 1; i >= 0; i--) {
+        const p = pieces[i];
+        const age = now - p.born;
+        p.mesh.position.addScaledVector(p.v, dt);
+        p.v.y -= 9 * dt;
+        p.v.multiplyScalar(0.995);
+        p.mesh.rotation.x += p.av.x * dt;
+        p.mesh.rotation.y += p.av.y * dt;
+        p.mesh.rotation.z += p.av.z * dt;
+        // bounce on ground
+        if (p.mesh.position.y < 0.3 && p.v.y < 0) {
+          p.v.y = Math.abs(p.v.y) * 0.35;
+          p.v.x *= 0.6;
+          p.v.z *= 0.6;
+          p.av.multiplyScalar(0.6);
+          p.mesh.position.y = 0.3;
+        }
+        if (age > p.life) {
+          scene.remove(p.mesh);
+          p.mesh.geometry.dispose();
+          pieces.splice(i, 1);
+          updateStats();
+        }
+      }
+
+      // subtle camera breathing (very gentle)
+      camera.position.x = 2.5 + Math.sin(now * 0.00015) * 0.25;
+      camera.position.y = 5 + Math.sin(now * 0.00012) * 0.12;
+      camera.lookAt(0, 4, 0);
+
+      prevMouseWorld.copy(mouseWorld);
+
+      renderer.render(scene, camera);
+
+      fpsFrames++; fpsAccum += dt;
+      if (now - fpsTime > 500) {
+        fpsEl.textContent = Math.round(fpsFrames / fpsAccum) + ' fps';
+        fpsFrames = 0; fpsAccum = 0; fpsTime = now;
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight, false);
+    });
+  </script>
+</body>
+</html>

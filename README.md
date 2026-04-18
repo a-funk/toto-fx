@@ -1050,6 +1050,23 @@ import { DOMObserver } from 'toto-fx';
 
 Type definitions ship at `types/index.d.ts` and are referenced in `package.json`. TypeScript and IDE autocompletion works automatically after `npm install toto-fx`.
 
+## Examples
+
+- [examples/index.html](examples/index.html) — Minimal getting-started page with three cards and the thud plugin
+
+### Three.js compatibility demos
+
+TotoFX's 2D FX layer composites cleanly over a Three.js WebGL scene via the body/overlay pattern — see [examples/threejs-meteor/](examples/threejs-meteor/) for the blueprint. Every demo below is a single HTML file with no build step; open any folder's `index.html` over a static server.
+
+- [examples/threejs-meteor/](examples/threejs-meteor/) — **Blueprint.** Meteor falls from 3D space, hand-wired `FX.*` helpers fire on impact (dotgrid ripple, speed lines, flash, shake, particles) while WebGL handles the 3D shockwave, debris, and scorch decals.
+- [examples/threejs-anime-slam/](examples/threejs-anime-slam/) — **Katana × bamboo.** Click-and-drag the katana to slice through bamboo stalks; each cut splits the stalk at the blade's intersection height. Anime impact frame (black flash → white burst) fires on every contact.
+- [examples/threejs-nuke/](examples/threejs-nuke/) — **Nuke drop.** Missile falls on a grid of buildings; detonation radially launches buildings outward with physics while TotoFX runs `doDotgridNuclear`, white-out flash, heavy shake, mushroom-cloud particles.
+- [examples/threejs-explode/](examples/threejs-explode/) — **Red barrel.** Explosive barrel detonates into shrapnel, 3D fireball, scorch decal; FX tuned to the `destroy/explode` variant (orange flash, cracks, debris glyphs).
+- [examples/threejs-sniper/](examples/threejs-sniper/) — **Long-range shot.** FPS scope view with reticle + vignette and natural breath sway; `raycast` from center of camera picks the target. Hits fire pinpoint FX (inward speed lines, small ripple, red flash), misses dust.
+- [examples/threejs-hearts/](examples/threejs-hearts/) — **Heart burst.** 3D extruded heart pulses at center; clicking scatters a cloud of floating 3D hearts upward while `cute/hearts` character FX overlay (pink ripple, ♥/♡ particles).
+- [examples/threejs-fireworks/](examples/threejs-fireworks/) — **Click-to-launch.** Mortar ascends from the ground to where you clicked in the sky, detonates into a 3D particle burst; TotoFX matches with colored flash, gentle ripple, and palette-tinted character particles.
+- [examples/threejs-clicker/](examples/threejs-clicker/) — **Game.** A speed-clicker where every click fires a tier-appropriate TotoFX variant. Tiers escalate `cute/sparkle` → `thud/anime-slam` → `thud/crater` → `thud/meteor` → `destroy/explode` → INSANITY (black anime-flash every 10 clicks past 100). 10s / 30s / 60s modes with per-duration best-score persistence in `localStorage`. Uses a ghost-card technique so `destroy` variants can fire without removing the real clickable card.
+
 ## Further Reading
 
 - [docs/variant-cheatsheet.md](docs/variant-cheatsheet.md) -- All 59 animation variants with descriptions

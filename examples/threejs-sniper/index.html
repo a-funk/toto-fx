@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>TotoFX × Three.js — Sniper</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { height: 100%; }
+  body { margin: 0; overflow: hidden; background: #050808; font-family: ui-monospace, "JetBrains Mono", Menlo, monospace; color: #c8d8d0; cursor: none; }
+  #three-canvas { position: fixed; inset: 0; z-index: 0; display: block; width: 100%; height: 100%; }
+  #bg { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+
+  /* scope vignette */
+  #scope {
+    position: fixed; inset: 0; z-index: 3; pointer-events: none;
+    background:
+      radial-gradient(circle at center, transparent 20%, rgba(0,0,0,0.45) 40%, rgba(0,0,0,0.95) 65%);
+  }
+  /* reticle */
+  #reticle {
+    position: fixed; left: 50%; top: 50%; z-index: 4;
+    width: 180px; height: 180px; transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  #reticle::before, #reticle::after {
+    content: ''; position: absolute;
+    background: #8fc89b; box-shadow: 0 0 2px #8fc89b;
+  }
+  #reticle::before { left: 50%; top: 0; width: 1px; height: 100%; transform: translateX(-0.5px); }
+  #reticle::after  { top: 50%; left: 0; height: 1px; width: 100%; transform: translateY(-0.5px); }
+  #reticle .ring {
+    position: absolute; inset: 0; border-radius: 50%;
+    border: 1px solid rgba(143, 200, 155, 0.6);
+  }
+  #reticle .ring2 { inset: 40%; border: 1px solid rgba(143, 200, 155, 0.9); border-radius: 50%; }
+  #reticle .tick {
+    position: absolute; left: 50%; background: #8fc89b; width: 1px; height: 8px;
+  }
+  #reticle .t-top    { top: 15px; }
+  #reticle .t-bot    { bottom: 15px; }
+  #reticle .t-lft    { left: 15px; top: 50%; width: 8px; height: 1px; transform: translateY(-0.5px); }
+  #reticle .t-rgt    { right: 15px; top: 50%; left: auto; width: 8px; height: 1px; transform: translateY(-0.5px); }
+
+  .hud {
+    position: fixed; top: 16px; left: 16px; z-index: 10;
+    padding: 14px 16px; border: 1px solid #1a3028;
+    background: rgba(6, 10, 8, 0.82); border-radius: 10px;
+    backdrop-filter: blur(6px); font-size: 12px; line-height: 1.5; max-width: 280px;
+  }
+  .hud h1 { margin: 0 0 4px; font-size: 13px; letter-spacing: 0.12em; color: #8fc89b; }
+  .hud p { margin: 0; color: #6e8c7e; }
+  .hud .key { color: #d0f0c0; }
+  .hud button {
+    margin-top: 8px; padding: 8px 12px;
+    background: #0e1a14; color: #8fc89b;
+    border: 1px solid #2a5038; border-radius: 6px;
+    font: inherit; cursor: pointer;
+  }
+  .hud button:hover { background: #14261c; }
+  .hud label { display: flex; align-items: center; gap: 6px; color: #7fa089; }
+  .range { color: #8fc89b; }
+  .fps { position: fixed; bottom: 12px; right: 14px; z-index: 10; font-size: 11px; color: #3a5a48; letter-spacing: 0.08em; }
+
+  @keyframes fx-shake-light { 0%,100%{transform:translate(0,0)} 10%{transform:translate(-2px,1px)} 40%{transform:translate(1px,-2px)} 70%{transform:translate(-2px,1px)} }
+  @keyframes fx-shake-heavy { 0%,100%{transform:translate(0,0)} 10%{transform:translate(-3px,2px)} 40%{transform:translate(3px,-2px)} 70%{transform:translate(-2px,2px)} }
+  body.shaking       { animation: fx-shake-light 280ms cubic-bezier(.36,.07,.19,.97) both; }
+  body.shaking-heavy { animation: fx-shake-heavy 360ms cubic-bezier(.36,.07,.19,.97) both; }
+</style>
+</head>
+<body>
+  <canvas id="three-canvas"></canvas>
+  <div id="bg"></div>
+  <div id="scope"></div>
+  <div id="reticle">
+    <div class="ring"></div>
+    <div class="ring2"></div>
+    <div class="tick t-top"></div>
+    <div class="tick t-bot"></div>
+    <div class="tick t-lft"></div>
+    <div class="tick t-rgt"></div>
+  </div>
+
+  <div class="hud">
+    <h1>⦿ SNIPER</h1>
+    <p>Aim, hold breath, one shot.</p>
+    <p><span class="key">click</span> / space — fire</p>
+    <p>range <span class="range" id="range">—</span></p>
+    <button id="strike">FIRE</button>
+    <label><input id="auto" type="checkbox" checked /> auto-fire</label>
+  </div>
+  <div class="fps" id="fps">—</div>
+
+  <script type="importmap">
+  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+  </script>
+  <script src="../../dist/toto-fx.min.js"></script>
+  <script type="module">
+    import * as THREE from 'three';
+
+    const engine = TotoFX.createEngine({ debug: false });
+    const grid = TotoFX.createDotgrid({
+      container: '#bg', dotSize: 22, fontSize: 13,
+      baseOpacity: 0.12, baseColor: [120, 160, 135],
+    });
+    grid.init();
+    TotoFX.FX.setDotgrid(grid);
+    engine.setDotgrid(grid);
+    engine.init();
+
+    const canvas = document.getElementById('three-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight, false);
+    renderer.setClearColor(0x050808, 1);
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x050808, 0.006);
+
+    // first-person scope view: camera is "the scope"
+    const camera = new THREE.PerspectiveCamera(18, window.innerWidth / window.innerHeight, 0.1, 800);
+    camera.position.set(0, 1.7, 0);
+    camera.lookAt(0, 1.7, -50);
+
+    // ground
+    scene.add(new THREE.Mesh(
+      new THREE.PlaneGeometry(600, 600),
+      new THREE.MeshStandardMaterial({ color: 0x0f1614, roughness: 0.95 })
+    )).rotation.x = -Math.PI / 2;
+    const gh = new THREE.GridHelper(600, 120, 0x1a2a20, 0x0c1410);
+    gh.position.y = 0.01; scene.add(gh);
+
+    scene.add(new THREE.HemisphereLight(0x405060, 0x0a0c08, 0.35));
+    const moon = new THREE.DirectionalLight(0xa0c8c0, 0.35);
+    moon.position.set(-40, 60, 30); scene.add(moon);
+
+    // some distant pillars for parallax / depth
+    for (let i = 0; i < 10; i++) {
+      const p = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, 6 + Math.random() * 6, 0.5),
+        new THREE.MeshStandardMaterial({ color: 0x141c1a, emissive: 0x0a1010, emissiveIntensity: 0.3, roughness: 0.9 })
+      );
+      p.position.set(
+        (Math.random() - 0.5) * 80,
+        3,
+        -40 - Math.random() * 120
+      );
+      scene.add(p);
+    }
+
+    // targets: humanoid silhouettes (box with spherical head) at various distances
+    const targets = [];
+    function spawnTarget() {
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(0.9, 2.2, 0.4),
+        new THREE.MeshStandardMaterial({ color: 0x1a201c, emissive: 0x203028, emissiveIntensity: 0.6, roughness: 0.7 })
+      );
+      body.position.y = 1.3;
+      g.add(body);
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.38, 16, 12),
+        new THREE.MeshStandardMaterial({ color: 0x252d28, emissive: 0x253830, emissiveIntensity: 0.7, roughness: 0.6 })
+      );
+      head.position.y = 2.65;
+      g.add(head);
+      // backlight so target reads against dark bg
+      const bg = new THREE.Mesh(
+        new THREE.PlaneGeometry(4, 5),
+        new THREE.MeshBasicMaterial({ color: 0x101410, transparent: true, opacity: 0.2 })
+      );
+      bg.position.set(0, 1.5, -0.3);
+      g.add(bg);
+      // pick a distance and lateral offset
+      const dist = 60 + Math.random() * 120;
+      const lat = (Math.random() - 0.5) * 32;
+      g.position.set(lat, 0, -dist);
+      scene.add(g);
+      const moveSpeed = (Math.random() - 0.5) * 2.5;
+      targets.push({
+        group: g, body, head, dist, alive: true,
+        move: moveSpeed, phase: Math.random() * Math.PI * 2,
+        falling: false, v: new THREE.Vector3(),
+        av: new THREE.Vector3((Math.random() - 0.5) * 4, 0, (Math.random() - 0.5) * 4),
+      });
+    }
+    for (let i = 0; i < 5; i++) spawnTarget();
+
+    // bullet trail — line from camera forward
+    const trailGeo = new THREE.BufferGeometry();
+    const trailPos = new Float32Array(2 * 3);
+    trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPos, 3));
+    const trailMat = new THREE.LineBasicMaterial({ color: 0xfff0c8, transparent: true, opacity: 0, blending: THREE.AdditiveBlending });
+    const trailLine = new THREE.Line(trailGeo, trailMat);
+    scene.add(trailLine);
+
+    // raycast to pick a target at crosshair
+    const raycaster = new THREE.Raycaster();
+
+    function fire() {
+      const ndc = new THREE.Vector2(0, 0); // dead center
+      raycaster.setFromCamera(ndc, camera);
+
+      // collect meshes of all alive targets
+      const meshes = [];
+      const idxOf = new Map();
+      for (const t of targets) {
+        if (!t.alive || t.falling) continue;
+        meshes.push(t.body); idxOf.set(t.body, t);
+        meshes.push(t.head); idxOf.set(t.head, t);
+      }
+      const hits = raycaster.intersectObjects(meshes, false);
+      const muzzleEnd = camera.position.clone().add(raycaster.ray.direction.clone().multiplyScalar(300));
+      let hitTarget = null, hitPoint = muzzleEnd;
+      if (hits.length > 0) {
+        hitPoint = hits[0].point;
+        hitTarget = idxOf.get(hits[0].object);
+      }
+
+      // draw bullet trail briefly
+      const muzzle = camera.position.clone().add(raycaster.ray.direction.clone().multiplyScalar(1.5));
+      trailPos[0] = muzzle.x; trailPos[1] = muzzle.y - 0.1; trailPos[2] = muzzle.z;
+      trailPos[3] = hitPoint.x; trailPos[4] = hitPoint.y; trailPos[5] = hitPoint.z;
+      trailGeo.attributes.position.needsUpdate = true;
+      trailMat.opacity = 1;
+      setTimeout(() => { trailMat.opacity = 0; }, 120);
+
+      // range readout
+      document.getElementById('range').textContent = hitTarget
+        ? `${Math.round(hitTarget.dist)}m · HIT`
+        : `${Math.round(camera.position.distanceTo(hitPoint))}m · MISS`;
+
+      // FX — pinpoint, sharp, red
+      const screen = worldToScreen(hitPoint);
+      const FX = TotoFX.FX;
+
+      if (hitTarget) {
+        FX.flashColor('#ff3030', 120);
+        FX.doScreenShake(false);
+        FX.startSpeedLines(screen.x, screen.y, 'inward', 300);
+        FX.doDotgridRipple(screen.x, screen.y, { radius: 140, push: 8, density: 0.7, color: '#ff4040' });
+        FX.spawnParticles(screen.x, screen.y, {
+          count: 20, spread: 5, upBias: 1, gravity: 0.18, life: 55,
+          color: [255, 80, 80], chars: ['·', '+', '*'],
+        });
+        FX.spawnParticles(screen.x, screen.y, {
+          count: 10, spread: 2.5, upBias: 0, gravity: -0.02, life: 110,
+          color: [200, 60, 60], chars: ['✦'],
+        });
+
+        // 3D: target falls
+        hitTarget.alive = false;
+        hitTarget.falling = true;
+        hitTarget.v.set(
+          (Math.random() - 0.5) * 2,
+          1 + Math.random() * 2,
+          Math.random() * 3
+        );
+      } else {
+        // miss — dust puff, no shake
+        FX.flashColor('#202a28', 60);
+        FX.spawnParticles(screen.x, screen.y, {
+          count: 10, spread: 3, upBias: 1, gravity: 0.15, life: 60,
+          color: [180, 180, 170], chars: ['·'],
+        });
+      }
+    }
+
+    function worldToScreen(v) {
+      const p = v.clone().project(camera);
+      return { x: (p.x * 0.5 + 0.5) * window.innerWidth, y: (-p.y * 0.5 + 0.5) * window.innerHeight };
+    }
+
+    window.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); fire(); } });
+    window.addEventListener('click', fire);
+    document.getElementById('strike').addEventListener('click', e => { e.stopPropagation(); fire(); });
+
+    const autoEl = document.getElementById('auto');
+    let lastAuto = 0;
+
+    // scope sway — natural breathing wobble
+    let swayX = 0, swayY = 0;
+
+    let lastNow = performance.now();
+    const fpsEl = document.getElementById('fps');
+    let fpsFrames = 0, fpsAccum = 0, fpsTime = 0;
+
+    function frame(now) {
+      const dt = Math.min(0.05, (now - lastNow) / 1000);
+      lastNow = now;
+
+      // breath sway
+      swayX = Math.sin(now * 0.0011) * 0.015 + Math.sin(now * 0.00037) * 0.01;
+      swayY = Math.cos(now * 0.00092) * 0.009 + Math.sin(now * 0.00042) * 0.005;
+      camera.rotation.y = swayX;
+      camera.rotation.x = swayY;
+
+      // target behavior
+      for (const t of targets) {
+        if (!t.falling && t.alive) {
+          t.phase += dt * 0.4;
+          t.group.position.x += t.move * dt;
+          if (Math.abs(t.group.position.x) > 20) t.move *= -1;
+          // bob
+          t.group.position.y = Math.abs(Math.sin(t.phase * 2)) * 0.15;
+        } else if (t.falling) {
+          t.group.position.addScaledVector(t.v, dt);
+          t.v.y -= 9 * dt;
+          t.group.rotation.x += t.av.x * dt;
+          t.group.rotation.z += t.av.z * dt;
+          if (t.group.position.y < -4) {
+            // respawn at new distance
+            scene.remove(t.group);
+            const i = targets.indexOf(t);
+            targets.splice(i, 1);
+            spawnTarget();
+          }
+        }
+      }
+
+      if (autoEl.checked && now - lastAuto > 1400) { lastAuto = now; fire(); }
+
+      renderer.render(scene, camera);
+      fpsFrames++; fpsAccum += dt;
+      if (now - fpsTime > 500) {
+        fpsEl.textContent = Math.round(fpsFrames / fpsAccum) + ' fps';
+        fpsFrames = 0; fpsAccum = 0; fpsTime = now;
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight, false);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>TotoFX × Three.js — Explode</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { height: 100%; }
+  body { margin: 0; overflow: hidden; background: #080604; font-family: ui-monospace, "JetBrains Mono", Menlo, monospace; color: #e8dcc8; }
+  #three-canvas { position: fixed; inset: 0; z-index: 0; display: block; width: 100%; height: 100%; }
+  #bg { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+  .hud {
+    position: fixed; top: 16px; left: 16px; z-index: 10;
+    padding: 14px 16px; border: 1px solid #3a2a18;
+    background: rgba(12, 8, 4, 0.82); border-radius: 10px;
+    backdrop-filter: blur(6px); font-size: 12px; line-height: 1.5; max-width: 280px;
+  }
+  .hud h1 { margin: 0 0 4px; font-size: 13px; letter-spacing: 0.08em; color: #ffa040; }
+  .hud p { margin: 0; color: #8a7a62; }
+  .hud .key { color: #ffb878; }
+  .hud button {
+    margin-top: 8px; padding: 8px 12px;
+    background: #2a1808; color: #ffb060;
+    border: 1px solid #6a3810; border-radius: 6px;
+    font: inherit; cursor: pointer;
+  }
+  .hud button:hover { background: #3a2010; }
+  .hud label { display: flex; align-items: center; gap: 6px; color: #a49278; }
+  .fps { position: fixed; bottom: 12px; right: 14px; z-index: 10; font-size: 11px; color: #5a4838; letter-spacing: 0.08em; }
+
+  @keyframes fx-shake-light { 0%,100%{transform:translate(0,0)} 10%{transform:translate(-3px,2px)} 25%{transform:translate(4px,-2px)} 40%{transform:translate(-2px,3px)} 55%{transform:translate(3px,1px)} 70%{transform:translate(-3px,-2px)} 85%{transform:translate(2px,2px)} }
+  @keyframes fx-shake-heavy { 0%,100%{transform:translate(0,0)} 8%{transform:translate(-10px,5px) rotate(-0.5deg)} 22%{transform:translate(11px,-6px) rotate(0.6deg)} 38%{transform:translate(-8px,7px) rotate(-0.4deg)} 54%{transform:translate(8px,3px) rotate(0.4deg)} 70%{transform:translate(-6px,-5px) rotate(-0.3deg)} 86%{transform:translate(5px,6px) rotate(0.2deg)} }
+  body.shaking       { animation: fx-shake-light 450ms cubic-bezier(.36,.07,.19,.97) both; }
+  body.shaking-heavy { animation: fx-shake-heavy 600ms cubic-bezier(.36,.07,.19,.97) both; }
+</style>
+</head>
+<body>
+  <canvas id="three-canvas"></canvas>
+  <div id="bg"></div>
+  <div class="hud">
+    <h1>💥 EXPLODE</h1>
+    <p>Barrel shatters. Fire belches. Dots ripple.</p>
+    <p><span class="key">space</span> / click — detonate</p>
+    <button id="strike">DETONATE</button>
+    <label><input id="auto" type="checkbox" checked /> auto-loop</label>
+  </div>
+  <div class="fps" id="fps">—</div>
+
+  <script type="importmap">
+  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+  </script>
+  <script src="../../dist/toto-fx.min.js"></script>
+  <script type="module">
+    import * as THREE from 'three';
+
+    const engine = TotoFX.createEngine({ debug: false });
+    const grid = TotoFX.createDotgrid({
+      container: '#bg', dotSize: 26, fontSize: 15,
+      baseOpacity: 0.22, baseColor: [180, 150, 110],
+    });
+    grid.init();
+    TotoFX.FX.setDotgrid(grid);
+    engine.setDotgrid(grid);
+    engine.init();
+
+    const canvas = document.getElementById('three-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight, false);
+    renderer.setClearColor(0x080604, 1);
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x080604, 0.02);
+
+    const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 200);
+    camera.position.set(0, 5, 14);
+    camera.lookAt(0, 2, 0);
+
+    // ground
+    scene.add(new THREE.Mesh(
+      new THREE.PlaneGeometry(80, 80),
+      new THREE.MeshStandardMaterial({ color: 0x1e1810, roughness: 0.95 })
+    )).rotation.x = -Math.PI / 2;
+    const gh = new THREE.GridHelper(80, 40, 0x3a2818, 0x1a1208);
+    gh.position.y = 0.01; scene.add(gh);
+
+    scene.add(new THREE.HemisphereLight(0x6a5a40, 0x18120a, 0.45));
+    const key = new THREE.DirectionalLight(0xffd8a0, 0.6);
+    key.position.set(8, 16, 8); scene.add(key);
+
+    // target: red explosive barrel
+    const barrel = new THREE.Group();
+    const body = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.8, 0.8, 2, 24),
+      new THREE.MeshStandardMaterial({ color: 0xa8281a, emissive: 0x401008, emissiveIntensity: 0.3, roughness: 0.55, metalness: 0.3 })
+    );
+    barrel.add(body);
+    const band1 = new THREE.Mesh(
+      new THREE.TorusGeometry(0.82, 0.05, 8, 32),
+      new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.3, metalness: 0.8 })
+    );
+    band1.rotation.x = Math.PI / 2; band1.position.y = 0.5; barrel.add(band1);
+    const band2 = band1.clone(); band2.position.y = -0.5; barrel.add(band2);
+    const top = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.85, 0.85, 0.1, 24),
+      new THREE.MeshStandardMaterial({ color: 0xffc040, emissive: 0xff6010, emissiveIntensity: 0.5, roughness: 0.4 })
+    );
+    top.position.y = 1.05; barrel.add(top);
+    barrel.position.set(0, 1, 0);
+    scene.add(barrel);
+
+    const barrelLight = new THREE.PointLight(0xff6040, 1.5, 12, 2);
+    barrelLight.position.set(0, 1.5, 0);
+    scene.add(barrelLight);
+
+    // shrapnel shards
+    const shards = [];
+    const shardMat = new THREE.MeshStandardMaterial({ color: 0x883010, emissive: 0xff5020, emissiveIntensity: 0.8, roughness: 0.7 });
+    for (let i = 0; i < 28; i++) {
+      const s = new THREE.Mesh(
+        new THREE.TetrahedronGeometry(0.25 + Math.random() * 0.35, 0),
+        shardMat.clone()
+      );
+      s.visible = false;
+      scene.add(s);
+      shards.push({ mesh: s, v: new THREE.Vector3(), av: new THREE.Vector3(), born: 0, life: 1400 });
+    }
+
+    // fireball (expanding sphere)
+    const fireball = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 20, 16),
+      new THREE.MeshBasicMaterial({ color: 0xffa040, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })
+    );
+    scene.add(fireball);
+
+    // fire particles (additive, 3D)
+    const fireGroup = new THREE.Group();
+    scene.add(fireGroup);
+    function spawnFire(x, y, z) {
+      const count = 90;
+      const geo = new THREE.BufferGeometry();
+      const p = new Float32Array(count * 3);
+      const v = [];
+      for (let i = 0; i < count; i++) {
+        p[i*3+0] = x; p[i*3+1] = y; p[i*3+2] = z;
+        const ang = Math.random() * Math.PI * 2;
+        const ph = Math.acos(2 * Math.random() - 1);
+        const sp = 5 + Math.random() * 14;
+        v.push(new THREE.Vector3(
+          Math.sin(ph) * Math.cos(ang) * sp,
+          Math.abs(Math.cos(ph)) * sp + 2,
+          Math.sin(ph) * Math.sin(ang) * sp
+        ));
+      }
+      geo.setAttribute('position', new THREE.BufferAttribute(p, 3));
+      const mat = new THREE.PointsMaterial({
+        color: 0xff8040, size: 1.3, transparent: true, opacity: 1,
+        depthWrite: false, blending: THREE.AdditiveBlending,
+      });
+      const pts = new THREE.Points(geo, mat);
+      pts.userData = { velocities: v, born: performance.now(), life: 1200 };
+      fireGroup.add(pts);
+    }
+    function updateFire(dt, now) {
+      for (let i = fireGroup.children.length - 1; i >= 0; i--) {
+        const pts = fireGroup.children[i];
+        const age = now - pts.userData.born;
+        if (age > pts.userData.life) {
+          fireGroup.remove(pts); pts.geometry.dispose(); pts.material.dispose(); continue;
+        }
+        const pos = pts.geometry.attributes.position.array;
+        const v = pts.userData.velocities;
+        for (let j = 0; j < v.length; j++) {
+          pos[j*3+0] += v[j].x * dt;
+          pos[j*3+1] += v[j].y * dt;
+          pos[j*3+2] += v[j].z * dt;
+          v[j].y -= 20 * dt;
+          v[j].multiplyScalar(0.98);
+        }
+        pts.geometry.attributes.position.needsUpdate = true;
+        pts.material.opacity = 1 - age / pts.userData.life;
+      }
+    }
+
+    // shock ring
+    const rings = [];
+    function spawnShockRing(x, z) {
+      const g = new THREE.RingGeometry(0.3, 0.8, 64);
+      const m = new THREE.MeshBasicMaterial({ color: 0xffa060, transparent: true, opacity: 0.95, side: THREE.DoubleSide, depthWrite: false });
+      const mesh = new THREE.Mesh(g, m);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(x, 0.05, z);
+      scene.add(mesh);
+      rings.push({ mesh, born: performance.now(), life: 900, max: 40 });
+    }
+    function updateRings(now) {
+      for (let i = rings.length - 1; i >= 0; i--) {
+        const r = rings[i];
+        const t = (now - r.born) / r.life;
+        if (t >= 1) { scene.remove(r.mesh); r.mesh.geometry.dispose(); r.mesh.material.dispose(); rings.splice(i, 1); continue; }
+        const s = 1 + t * r.max;
+        r.mesh.scale.set(s, s, s);
+        r.mesh.material.opacity = 0.95 * (1 - t);
+      }
+    }
+
+    // scorch decal
+    const scorches = [];
+    function leaveScorch(x, z, radius) {
+      const g = new THREE.CircleGeometry(radius, 40);
+      const m = new THREE.MeshBasicMaterial({ color: 0x0a0805, transparent: true, opacity: 0.85, depthWrite: false });
+      const mesh = new THREE.Mesh(g, m);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(x, 0.02, z);
+      scene.add(mesh);
+      scorches.push(mesh);
+      if (scorches.length > 5) {
+        const o = scorches.shift();
+        scene.remove(o); o.geometry.dispose(); o.material.dispose();
+      }
+    }
+
+    function detonate() {
+      if (!barrel.visible) return;
+      const pos = barrel.position.clone();
+      const screen = worldToScreen(new THREE.Vector3(pos.x, pos.y + 0.5, pos.z));
+      const FX = TotoFX.FX;
+
+      // 2D FX — explode character (orange, heavy, debris)
+      FX.doImpactFlash(false);
+      FX.flashColor('#ff7030', 180);
+      FX.doScreenShake(true);
+      FX.startSpeedLines(screen.x, screen.y, 'outward', 500);
+      FX.doDotgridRipple(screen.x, screen.y, { radius: 320, push: 18, density: 0.75, color: '#ff6020' });
+      FX.doDotgridCrater(screen.x, screen.y, 130, 1.3, { cracks: 9, crackLength: 300 });
+      FX.spawnParticles(screen.x, screen.y, {
+        count: 70, spread: 16, upBias: 4, gravity: 0.2, life: 90,
+        color: [255, 140, 60], chars: ['*', '+', '·', '✦', '◆', '▲'],
+      });
+      FX.spawnParticles(screen.x, screen.y, {
+        count: 18, spread: 4, upBias: 1, gravity: -0.04, life: 160,
+        color: [180, 180, 180], chars: ['○', '◌', '·'],
+      });
+      FX.spawnSmoke(screen.x, screen.y, 14);
+
+      // 3D: hide barrel, spawn shrapnel + fire + fireball
+      barrel.visible = false;
+      for (const s of shards) {
+        s.mesh.position.copy(pos).add(new THREE.Vector3(0, 0.5, 0));
+        const dir = new THREE.Vector3(
+          (Math.random() - 0.5),
+          Math.random() * 0.8 + 0.2,
+          (Math.random() - 0.5)
+        ).normalize();
+        s.v.copy(dir).multiplyScalar(8 + Math.random() * 14);
+        s.av.set((Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20);
+        s.mesh.visible = true;
+        s.born = performance.now();
+      }
+      fireball.position.copy(pos).setY(pos.y + 0.3);
+      fireball.scale.setScalar(0.5);
+      fireball.material.opacity = 1;
+      fireball.userData = { born: performance.now(), life: 500 };
+
+      spawnFire(pos.x, pos.y + 0.5, pos.z);
+      spawnShockRing(pos.x, pos.z);
+      leaveScorch(pos.x, pos.z, 2.2 + Math.random() * 0.4);
+    }
+
+    function respawn() {
+      barrel.visible = true;
+      barrel.position.set((Math.random() - 0.5) * 6, 1, (Math.random() - 0.5) * 4);
+      barrel.scale.set(0.01, 0.01, 0.01);
+    }
+
+    function worldToScreen(v) {
+      const p = v.clone().project(camera);
+      return { x: (p.x * 0.5 + 0.5) * window.innerWidth, y: (-p.y * 0.5 + 0.5) * window.innerHeight };
+    }
+
+    document.getElementById('strike').addEventListener('click', detonate);
+    window.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); detonate(); } });
+    canvas.addEventListener('click', detonate);
+
+    const autoEl = document.getElementById('auto');
+    let lastAuto = 0;
+    let respawnAt = 0;
+
+    let lastNow = performance.now();
+    const fpsEl = document.getElementById('fps');
+    let fpsFrames = 0, fpsAccum = 0, fpsTime = 0;
+
+    function frame(now) {
+      const dt = Math.min(0.05, (now - lastNow) / 1000);
+      lastNow = now;
+
+      // barrel idle
+      if (barrel.visible && barrel.scale.x < 1) {
+        barrel.scale.addScalar(dt * 3);
+        if (barrel.scale.x > 1) barrel.scale.setScalar(1);
+      }
+      if (barrel.visible && barrel.scale.x >= 1) {
+        barrel.rotation.y += dt * 0.3;
+        barrel.position.y = 1 + Math.sin(now * 0.003) * 0.04;
+        const pulse = 0.3 + Math.sin(now * 0.01) * 0.15;
+        barrelLight.intensity = pulse * 4;
+      }
+
+      // schedule respawn after detonation
+      if (!barrel.visible && respawnAt === 0) respawnAt = now + 2400;
+      if (respawnAt > 0 && now > respawnAt) { respawn(); respawnAt = 0; }
+
+      // shard physics
+      for (const s of shards) {
+        if (!s.mesh.visible) continue;
+        const age = now - s.born;
+        if (age > s.life) { s.mesh.visible = false; continue; }
+        s.mesh.position.addScaledVector(s.v, dt);
+        s.v.y -= 18 * dt;
+        s.v.multiplyScalar(0.98);
+        s.mesh.rotation.x += s.av.x * dt;
+        s.mesh.rotation.y += s.av.y * dt;
+        s.mesh.rotation.z += s.av.z * dt;
+        if (s.mesh.position.y < 0.1) { s.v.y = Math.abs(s.v.y) * 0.4; s.mesh.position.y = 0.1; }
+      }
+
+      // fireball expand
+      if (fireball.userData.born) {
+        const age = now - fireball.userData.born;
+        const t = age / fireball.userData.life;
+        if (t < 1) {
+          fireball.scale.setScalar(0.5 + t * 6);
+          fireball.material.opacity = (1 - t) * 0.9;
+        } else {
+          fireball.material.opacity = 0;
+        }
+      }
+
+      updateFire(dt, now);
+      updateRings(now);
+
+      // camera drift
+      camera.position.x = Math.sin(now * 0.0001) * 2;
+      camera.lookAt(0, 2, 0);
+
+      if (autoEl.checked && barrel.visible && now - lastAuto > 3600) {
+        lastAuto = now;
+        detonate();
+      }
+
+      renderer.render(scene, camera);
+      fpsFrames++; fpsAccum += dt;
+      if (now - fpsTime > 500) {
+        fpsEl.textContent = Math.round(fpsFrames / fpsAccum) + ' fps';
+        fpsFrames = 0; fpsAccum = 0; fpsTime = now;
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight, false);
+    });
+
+    setTimeout(detonate, 800);
+  </script>
+</body>
+</html>
