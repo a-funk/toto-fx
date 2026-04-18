@@ -62,3 +62,8 @@ export { DEFAULTS } from './defaults.js';
 
 // Plugin loader (for IIFE/script-tag usage)
 export { PluginLoader } from './plugin-loader.js';
+
+// Audio engine (parallel to the animation engine — `use(pack)` / `fire(name)`
+// / `setAmbient(channel, variant)` dispatch symmetric with the animation
+// engine. Soundpacks ship separately under audio-packs/*.)
+export { createAudioEngine } from './audio-engine.js';
