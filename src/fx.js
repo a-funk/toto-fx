@@ -1038,7 +1038,13 @@ export function promoteCard(card) {
   // Create body-level perspective wrapper
   const wrapper = document.createElement('div');
   wrapper.className = _classes.stage;
-  wrapper.style.cssText = 'position:fixed;inset:0;z-index:9997;pointer-events:none;perspective:1200px;perspective-origin:' + rect.left + 'px ' + (rect.top + rect.height / 2) + 'px;';
+  // Perspective origin must sit at the CENTER of the card, not its left edge.
+  // If x is rect.left, the whole card lies to the right of the vanishing point
+  // and translateZ(+peakZ) scales rightward as it grows — the card appears to
+  // slide sideways while rising. Centering the origin makes it rise toward the
+  // viewer (forward) as intended. This fix applies to every plugin that goes
+  // through promoteCard(): thud, death (destroy), cute.
+  wrapper.style.cssText = 'position:fixed;inset:0;z-index:9997;pointer-events:none;perspective:1200px;perspective-origin:' + (rect.left + rect.width / 2) + 'px ' + (rect.top + rect.height / 2) + 'px;';
   document.body.appendChild(wrapper);
 
   // Move card into wrapper, positioned at its original screen location.
