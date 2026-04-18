@@ -292,6 +292,7 @@
   <script src="../../dist/plugins/cute.min.js"></script>
   <script src="../../dist/plugins/thud.min.js"></script>
   <script src="../../dist/plugins/death.min.js"></script>
+  <script src="../../dist/audio-packs/chiptune.min.js"></script>
   <script type="module">
     import * as THREE from 'three';
 
@@ -313,513 +314,49 @@
     TotoFX.FX.setDotgrid(grid);
     engine.setDotgrid(grid);
     engine.init();
+    // ── Audio (chiptune soundpack via createAudioEngine) ─────────
+    // The audio engine is a parallel plugin surface to the animation
+    // engine — swap in any soundpack that exports `oneshots` + `ambients`.
+    // The chiptune pack (loaded via <script src=audio-packs/chiptune.min.js>)
+    // exposes a 17-tier drone registry and Shepard-tone click blip.
+    // Runtime remix surface:
+    //   TotoFXAudioChiptune.chiptunePack.tierDrones[n] = { ... };
+    //   audio.setAmbient('tier', n);  // re-fire to pick it up
+    const audio = TotoFX.createAudioEngine();
+    audio.use(TotoFXAudioChiptune.chiptunePack);
 
-    // ── 8-bit WebAudio sound system ───────────────────────────────
-    // Single-module audio engine. Pure oscillator+filter+gain synthesis,
-    // no external samples. Exposes a small API consumed by the game
-    // hooks (onClick, onTierEnter, onMilestone, onOneThousand, onNuclear,
-    // onBlackFlash, onGameStart/End, stopAll). Default ON; master
-    // toggle via Sound.setEnabled(bool) / HUD checkbox / S key.
-    //
-    // Architecture:
-    //   - Shepard-tone click blip (3 oscillators an octave apart per
-    //     click, each with an amplitude window that fades in at the
-    //     bottom of its octave cycle and out at the top so the pitch
-    //     feels like it rises forever without ever leaving the
-    //     audible band).
-    //   - Click volume blends from full blip (tier 0-5) → near-silent
-    //     tick (tier 10+), with per-tier drone volume rising to match.
-    //   - Per-tier drone "chord": 2-4 sustained oscillators plus an
-    //     optional filter LFO; 400ms crossfade on tier change. Defined
-    //     as SOUND_PACKS.default.tierDrones[n] = { freqs, waveform,
-    //     filter, modulation, sub } so individual tiers are trivial to
-    //     swap via Sound.setTierDrone(n, cfg).
-    //   - Voice pool: a single click schedules ≤ 15 Hz via a ceiling
-    //     on perceived duplicates. Each blip creates short-lived
-    //     oscillator+gain nodes that are stopped + garbage-collected
-    //     on envelope end; at 30 cps the 15 Hz ceiling halves spawn
-    //     rate so GC doesn't stutter.
-    const SOUND_PACKS = {
-      default: {
-        // Tier drone config format:
-        //   {
-        //     freqs: [Hz, ...],          // 2-4 oscillators making the chord
-        //     waveform: 'square'|'triangle'|'sawtooth',
-        //     filter: { type, freq, Q } | null,  // BiquadFilter on the drone bus
-        //     modulation: { lfoFreq, lfoDepth } | null,  // filter cutoff LFO
-        //     sub: { freq, gain } | null,        // sub-bass oscillator
-        //     gain: 0..1,                         // overall drone level
-        //   }
-        // Swap any entry at runtime with Sound.setTierDrone(n, cfg).
-        tierDrones: [
-          // 0 LOW — barely present, a soft hum
-          { freqs: [110, 165], waveform: 'triangle', filter: { type: 'lowpass', freq: 800, Q: 2 }, modulation: null, sub: null, gain: 0.04 },
-          // 1 MEDIUM
-          { freqs: [110, 147, 220], waveform: 'triangle', filter: { type: 'lowpass', freq: 1200, Q: 2 }, modulation: null, sub: null, gain: 0.05 },
-          // 2 HIGH — warmer major
-          { freqs: [110, 139, 165, 220], waveform: 'triangle', filter: { type: 'lowpass', freq: 1600, Q: 3 }, modulation: null, sub: null, gain: 0.06 },
-          // 3 VERY HIGH — start introducing squares
-          { freqs: [110, 147, 220], waveform: 'square', filter: { type: 'lowpass', freq: 1400, Q: 4 }, modulation: { lfoFreq: 0.6, lfoDepth: 400 }, sub: null, gain: 0.05 },
-          // 4 INSANE — dissonant minor 2nd
-          { freqs: [110, 117, 220], waveform: 'sawtooth', filter: { type: 'lowpass', freq: 1200, Q: 5 }, modulation: { lfoFreq: 1.2, lfoDepth: 600 }, sub: null, gain: 0.06 },
-          // 5 INSANITY — sub-bass kicks in
-          { freqs: [110, 138, 220, 277], waveform: 'sawtooth', filter: { type: 'lowpass', freq: 1800, Q: 6 }, modulation: { lfoFreq: 2, lfoDepth: 800 }, sub: { freq: 55, gain: 0.08 }, gain: 0.08 },
-          // 6 BEYOND — violet chord, fatter
-          { freqs: [110, 130, 196, 261], waveform: 'sawtooth', filter: { type: 'lowpass', freq: 2200, Q: 6 }, modulation: { lfoFreq: 0.8, lfoDepth: 1000 }, sub: { freq: 50, gain: 0.10 }, gain: 0.09 },
-          // 7 SINGULARITY — wide open
-          { freqs: [110, 165, 220, 330], waveform: 'sawtooth', filter: { type: 'lowpass', freq: 2800, Q: 8 }, modulation: { lfoFreq: 0.3, lfoDepth: 1600 }, sub: { freq: 45, gain: 0.12 }, gain: 0.10 },
-          // 8 GOD MODE — hopeful perfect-5th + sub
-          { freqs: [110, 165, 220, 247], waveform: 'square', filter: { type: 'lowpass', freq: 2400, Q: 6 }, modulation: { lfoFreq: 1.6, lfoDepth: 900 }, sub: { freq: 55, gain: 0.13 }, gain: 0.12 },
-          // 9 OMNIPOTENT — magenta whole-tone
-          { freqs: [110, 123, 196, 247], waveform: 'sawtooth', filter: { type: 'lowpass', freq: 3000, Q: 8 }, modulation: { lfoFreq: 2.4, lfoDepth: 1400 }, sub: { freq: 42, gain: 0.14 }, gain: 0.13 },
-          // 10 TRANSCENDENT — huge stack
-          { freqs: [110, 165, 220, 293, 370], waveform: 'sawtooth', filter: { type: 'lowpass', freq: 3400, Q: 10 }, modulation: { lfoFreq: 3.2, lfoDepth: 2000 }, sub: { freq: 40, gain: 0.16 }, gain: 0.14 },
-          // 11 APOTHEOSIS — golden major 7th
-          { freqs: [110, 139, 165, 208], waveform: 'triangle', filter: { type: 'lowpass', freq: 3000, Q: 6 }, modulation: { lfoFreq: 0.6, lfoDepth: 800 }, sub: { freq: 55, gain: 0.14 }, gain: 0.14 },
-          // 12 ONE THOUSAND — bright major chord
-          { freqs: [110, 138, 165, 220, 277], waveform: 'sawtooth', filter: { type: 'lowpass', freq: 3600, Q: 8 }, modulation: { lfoFreq: 0.5, lfoDepth: 1200 }, sub: { freq: 55, gain: 0.16 }, gain: 0.16 },
-          // 13 RIFT — detuned, chromatic split
-          { freqs: [110, 116, 220, 233], waveform: 'sawtooth', filter: { type: 'bandpass', freq: 2200, Q: 6 }, modulation: { lfoFreq: 5, lfoDepth: 2000 }, sub: { freq: 40, gain: 0.14 }, gain: 0.14 },
-          // 14 PRIMORDIAL — low, ominous, wide
-          { freqs: [82, 110, 123], waveform: 'sawtooth', filter: { type: 'lowpass', freq: 1400, Q: 10 }, modulation: { lfoFreq: 0.25, lfoDepth: 600 }, sub: { freq: 38, gain: 0.18 }, gain: 0.15 },
-          // 15 HEAT DEATH — sparse, cold, near-silent
-          { freqs: [110, 220], waveform: 'triangle', filter: { type: 'lowpass', freq: 900, Q: 4 }, modulation: { lfoFreq: 0.15, lfoDepth: 300 }, sub: { freq: 45, gain: 0.08 }, gain: 0.08 },
-          // 16 THE SOURCE — all intervals at once
-          { freqs: [110, 139, 165, 196, 220, 247, 277], waveform: 'sawtooth', filter: { type: 'lowpass', freq: 4000, Q: 12 }, modulation: { lfoFreq: 4, lfoDepth: 3000 }, sub: { freq: 35, gain: 0.20 }, gain: 0.16 },
-        ],
+    // Thin `Sound.*` adapter so the existing call sites (onClick,
+    // onTierEnter, etc.) keep working without touching every hook.
+    let _thousandPlayed = false;
+    const Sound = {
+      init:          () => audio.init(),
+      setEnabled:    (on) => audio.setEnabled(on),
+      onClick:       (score, tier) => audio.fire('click', { score, tier }),
+      onTierEnter:   (tier) => {
+        audio.setAmbient('tier', tier.n);
+        audio.fire('tier-stinger', { tier });
+      },
+      onMilestone:   (_score, kind) => audio.fire('milestone', { kind }),
+      onOneThousand: () => {
+        if (_thousandPlayed) return;
+        _thousandPlayed = true;
+        audio.fire('one-thousand');
+      },
+      onBlackFlash:  () => audio.fire('black-flash'),
+      onNuclear:     (tier) => audio.fire('nuclear', { tier }),
+      onGameStart:   () => {
+        _thousandPlayed = false;
+        audio.setAmbient('tier', 0);
+      },
+      onGameEnd:     () => audio.clearAmbient('tier', { fade: 0.8 }),
+      stopAll:       () => audio.clearAll({ fade: 0.2 }),
+      setTierDrone:  (n, cfg) => {
+        TotoFXAudioChiptune.chiptunePack.tierDrones[n] = cfg;
+        audio.clearAmbient('tier', { fade: 0.1 });
+        audio.setAmbient('tier', n);
       },
     };
 
-    const Sound = (function () {
-      let ctx = null;
-      let masterGain = null;
-      let droneBus = null;
-      let enabled = true;
-      let initialized = false;
-      let currentTier = -1;
-      let droneVoices = []; // [{osc, gain, filter, lfo, lfoGain, sub, subGain, stopAt}]
-      let lastBlipAt = 0;
-      const BLIP_MIN_INTERVAL = 1000 / 15; // 15 Hz ceiling — keeps GC quiet at 30 cps
-      let thousandPlayed = false;
-      let pack = SOUND_PACKS.default;
-
-      function now() { return ctx ? ctx.currentTime : 0; }
-
-      function ensureContext() {
-        if (ctx) return ctx;
-        try {
-          const AC = window.AudioContext || window.webkitAudioContext;
-          ctx = new AC();
-          masterGain = ctx.createGain();
-          masterGain.gain.value = enabled ? 0.8 : 0.0;
-          masterGain.connect(ctx.destination);
-          droneBus = ctx.createGain();
-          droneBus.gain.value = 1.0;
-          droneBus.connect(masterGain);
-          initialized = true;
-        } catch (e) { ctx = null; }
-        return ctx;
-      }
-
-      function init() {
-        // Called on first user gesture. Resumes a suspended context if
-        // the browser created one in suspended state.
-        ensureContext();
-        if (ctx && ctx.state === 'suspended') ctx.resume();
-      }
-
-      function setEnabled(on) {
-        enabled = !!on;
-        if (!ctx || !masterGain) return;
-        const t = now();
-        masterGain.gain.cancelScheduledValues(t);
-        masterGain.gain.linearRampToValueAtTime(enabled ? 0.8 : 0.0, t + 0.08);
-      }
-
-      // ── Shepard tone click ─────────────────────────────────────
-      // Three oscillators one octave apart. Each has a window amplitude
-      // that fades in at the bottom of its cycle and out at the top, so
-      // as `score` increases the pitch appears to rise forever while the
-      // audible spectrum stays bounded (220-1760 Hz).
-      function shepardFreqs(score) {
-        const cycle = (score % 200) / 200; // 0..1 position within a cycle
-        const baseOctaves = [220, 440, 880, 1760];
-        const out = [];
-        for (let i = 0; i < baseOctaves.length; i++) {
-          // Each voice sweeps up by one octave over the cycle, then wraps.
-          const freq = baseOctaves[i] * Math.pow(2, cycle);
-          // Window: triangle across the cycle centered at 0.5
-          const w = Math.sin(Math.PI * cycle); // 0 at edges, 1 in middle
-          // Cross-fade between voices so the wrap is smooth: voices near
-          // the edges of the audible band are attenuated.
-          const bandBias = i === 0 ? (1 - cycle)
-                         : i === baseOctaves.length - 1 ? cycle
-                         : 1;
-          out.push({ freq, gain: 0.7 * w + 0.3 * bandBias });
-        }
-        return out;
-      }
-
-      function clickBlipVolume(tier) {
-        // tier 0-5: full, 6-9: blend down, 10+: subtle tick
-        const n = tier ? tier.n : 0;
-        if (n <= 5) return 1.0;
-        if (n >= 10) return 0.12;
-        // Linear blend 6-9 from 1.0 → 0.2
-        return 1.0 - (n - 5) * 0.2;
-      }
-
-      function onClick(score, tier) {
-        if (!enabled || !ctx) return;
-        const t = now();
-        if ((t - lastBlipAt) * 1000 < BLIP_MIN_INTERVAL) return;
-        lastBlipAt = t;
-
-        const blipVol = clickBlipVolume(tier);
-        const voices = shepardFreqs(score);
-
-        // Blip envelope — very short, 8-bit square character.
-        // Attack 4ms, decay 80ms so at 15 Hz voices barely overlap.
-        for (const v of voices) {
-          const osc = ctx.createOscillator();
-          const g = ctx.createGain();
-          osc.type = 'square';
-          osc.frequency.value = v.freq;
-          osc.connect(g);
-          g.connect(masterGain);
-          const peak = 0.06 * v.gain * blipVol;
-          g.gain.setValueAtTime(0, t);
-          g.gain.linearRampToValueAtTime(peak, t + 0.004);
-          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
-          osc.start(t);
-          osc.stop(t + 0.09);
-        }
-
-        // At tier 10+ add a faint low tick for tactile feedback
-        if (tier && tier.n >= 10) {
-          const osc = ctx.createOscillator();
-          const g = ctx.createGain();
-          osc.type = 'triangle';
-          osc.frequency.value = 180;
-          osc.connect(g);
-          g.connect(masterGain);
-          g.gain.setValueAtTime(0, t);
-          g.gain.linearRampToValueAtTime(0.05, t + 0.002);
-          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
-          osc.start(t);
-          osc.stop(t + 0.05);
-        }
-      }
-
-      // ── Per-tier drone ──────────────────────────────────────────
-      function stopDroneVoices(fadeSec) {
-        const t = now();
-        for (const v of droneVoices) {
-          try {
-            v.gain.gain.cancelScheduledValues(t);
-            v.gain.gain.linearRampToValueAtTime(0.0001, t + fadeSec);
-            v.osc.stop(t + fadeSec + 0.02);
-            if (v.lfo) v.lfo.stop(t + fadeSec + 0.02);
-            if (v.sub) {
-              v.subGain.gain.cancelScheduledValues(t);
-              v.subGain.gain.linearRampToValueAtTime(0.0001, t + fadeSec);
-              v.sub.stop(t + fadeSec + 0.02);
-            }
-          } catch {}
-        }
-        droneVoices = [];
-      }
-
-      function startDroneForTier(tierN) {
-        if (!ctx) return;
-        const cfg = pack.tierDrones[Math.max(0, Math.min(pack.tierDrones.length - 1, tierN))];
-        if (!cfg) return;
-        const t = now();
-        const attack = 0.4;
-
-        // Per-drone filter on a shared sub-bus so the LFO modulates the
-        // whole chord together.
-        let node = droneBus;
-        let filter = null;
-        let lfo = null;
-        let lfoGain = null;
-        if (cfg.filter) {
-          filter = ctx.createBiquadFilter();
-          filter.type = cfg.filter.type;
-          filter.frequency.value = cfg.filter.freq;
-          filter.Q.value = cfg.filter.Q;
-          filter.connect(droneBus);
-          node = filter;
-          if (cfg.modulation) {
-            lfo = ctx.createOscillator();
-            lfo.type = 'sine';
-            lfo.frequency.value = cfg.modulation.lfoFreq;
-            lfoGain = ctx.createGain();
-            lfoGain.gain.value = cfg.modulation.lfoDepth;
-            lfo.connect(lfoGain);
-            lfoGain.connect(filter.frequency);
-            lfo.start(t);
-          }
-        }
-
-        const voiceGain = cfg.gain / Math.max(1, cfg.freqs.length);
-        const voices = [];
-        for (const freq of cfg.freqs) {
-          const osc = ctx.createOscillator();
-          osc.type = cfg.waveform;
-          osc.frequency.value = freq;
-          const g = ctx.createGain();
-          g.gain.setValueAtTime(0, t);
-          g.gain.linearRampToValueAtTime(voiceGain, t + attack);
-          osc.connect(g);
-          g.connect(node);
-          osc.start(t);
-          voices.push({ osc, gain: g, filter, lfo, lfoGain });
-        }
-
-        // Sub-bass: not split per-voice — single oscillator into droneBus.
-        if (cfg.sub) {
-          const sub = ctx.createOscillator();
-          sub.type = 'sine'; // sine ok here — sub-bass, 8-bit rule is for mids
-          sub.frequency.value = cfg.sub.freq;
-          const sg = ctx.createGain();
-          sg.gain.setValueAtTime(0, t);
-          sg.gain.linearRampToValueAtTime(cfg.sub.gain, t + attack);
-          sub.connect(sg);
-          sg.connect(droneBus);
-          sub.start(t);
-          voices[0].sub = sub;
-          voices[0].subGain = sg;
-        }
-        droneVoices = voices;
-      }
-
-      function onTierEnter(tier) {
-        if (!enabled || !ctx || !tier) return;
-        if (tier.n === currentTier) return;
-        currentTier = tier.n;
-        stopDroneVoices(0.4);
-        startDroneForTier(tier.n);
-
-        // Short "tier-up" stinger: ascending 3-note square arp
-        const t = now();
-        const roots = [261.63, 329.63, 392.00]; // C E G
-        for (let i = 0; i < 3; i++) {
-          const osc = ctx.createOscillator();
-          const g = ctx.createGain();
-          osc.type = 'square';
-          osc.frequency.value = roots[i] * (1 + tier.n * 0.02);
-          osc.connect(g);
-          g.connect(masterGain);
-          const start = t + i * 0.08;
-          g.gain.setValueAtTime(0, start);
-          g.gain.linearRampToValueAtTime(0.08, start + 0.01);
-          g.gain.exponentialRampToValueAtTime(0.0001, start + 0.18);
-          osc.start(start);
-          osc.stop(start + 0.2);
-        }
-      }
-
-      // ── Milestone arpeggios ─────────────────────────────────────
-      function playArpeggio(freqs, noteDur, startGain, wave) {
-        if (!enabled || !ctx) return;
-        const t = now();
-        const w = wave || 'square';
-        for (let i = 0; i < freqs.length; i++) {
-          const osc = ctx.createOscillator();
-          const g = ctx.createGain();
-          osc.type = w;
-          osc.frequency.value = freqs[i];
-          osc.connect(g);
-          g.connect(masterGain);
-          const start = t + i * noteDur;
-          g.gain.setValueAtTime(0, start);
-          g.gain.linearRampToValueAtTime(startGain, start + 0.006);
-          g.gain.exponentialRampToValueAtTime(0.0001, start + noteDur * 1.6);
-          osc.start(start);
-          osc.stop(start + noteDur * 1.7);
-        }
-      }
-
-      function onMilestone(score, kind) {
-        if (!enabled || !ctx) return;
-        // Major-third ascending C-scale flavors, varying length by kind.
-        const base = 523.25; // C5
-        if (kind === 'medium') {
-          // 5 notes, major third steps
-          const f = [base, base * 1.26, base * 1.5, base * 1.89, base * 2.0];
-          playArpeggio(f, 0.06, 0.10, 'square');
-        } else if (kind === 'big') {
-          // 7 notes, wider reach
-          const f = [base, base * 1.26, base * 1.5, base * 1.89, base * 2.0, base * 2.52, base * 3.0];
-          playArpeggio(f, 0.07, 0.11, 'square');
-          // low supporting thump
-          const t = now();
-          const osc = ctx.createOscillator();
-          const g = ctx.createGain();
-          osc.type = 'triangle'; osc.frequency.value = 110;
-          osc.connect(g); g.connect(masterGain);
-          g.gain.setValueAtTime(0, t);
-          g.gain.linearRampToValueAtTime(0.18, t + 0.01);
-          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
-          osc.start(t); osc.stop(t + 0.4);
-        } else {
-          // huge — held chord + fanfare
-          const t = now();
-          const chord = [261.63, 329.63, 392.0, 523.25];
-          for (const f of chord) {
-            const osc = ctx.createOscillator();
-            const g = ctx.createGain();
-            osc.type = 'square';
-            osc.frequency.value = f;
-            osc.connect(g); g.connect(masterGain);
-            g.gain.setValueAtTime(0, t);
-            g.gain.linearRampToValueAtTime(0.07, t + 0.02);
-            g.gain.linearRampToValueAtTime(0.04, t + 0.5);
-            g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
-            osc.start(t); osc.stop(t + 1.0);
-          }
-          // ascending sweep on top
-          const sweep = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568.0];
-          playArpeggio(sweep, 0.08, 0.10, 'sawtooth');
-        }
-      }
-
-      // ── One Thousand fanfare ────────────────────────────────────
-      function onOneThousand() {
-        if (!enabled || !ctx) return;
-        if (thousandPlayed) return;
-        thousandPlayed = true;
-        const t = now();
-        // Held major chord with detuned octaves (C E G C up octave, detuned)
-        const notes = [130.81, 164.81, 196.0, 261.63, 329.63, 392.0, 523.25];
-        for (let i = 0; i < notes.length; i++) {
-          const f = notes[i];
-          const detunes = [0, 6, -6]; // cents
-          for (const d of detunes) {
-            const osc = ctx.createOscillator();
-            const g = ctx.createGain();
-            osc.type = i < 3 ? 'sawtooth' : 'square';
-            osc.frequency.value = f;
-            osc.detune.value = d;
-            osc.connect(g); g.connect(masterGain);
-            g.gain.setValueAtTime(0, t);
-            g.gain.linearRampToValueAtTime(0.05, t + 0.04);
-            g.gain.linearRampToValueAtTime(0.035, t + 1.2);
-            g.gain.exponentialRampToValueAtTime(0.0001, t + 1.9);
-            osc.start(t); osc.stop(t + 2.0);
-          }
-        }
-        // Rising Shepard-style sweep on top
-        const sweep = [];
-        for (let i = 0; i < 12; i++) sweep.push(523.25 * Math.pow(2, i / 12));
-        playArpeggio(sweep, 0.05, 0.08, 'square');
-        // Ringing crash — noise-like pitched cluster
-        const cluster = [1046.5, 1244.5, 1397.0, 1760.0, 2093.0];
-        setTimeout(() => {
-          if (!enabled || !ctx) return;
-          const t2 = now();
-          for (const f of cluster) {
-            const osc = ctx.createOscillator();
-            const g = ctx.createGain();
-            osc.type = 'square';
-            osc.frequency.value = f;
-            osc.connect(g); g.connect(masterGain);
-            g.gain.setValueAtTime(0, t2);
-            g.gain.linearRampToValueAtTime(0.04, t2 + 0.005);
-            g.gain.exponentialRampToValueAtTime(0.0001, t2 + 1.0);
-            osc.start(t2); osc.stop(t2 + 1.1);
-          }
-        }, 300);
-      }
-
-      // ── Black flash → low boom ─────────────────────────────────
-      function onBlackFlash() {
-        if (!enabled || !ctx) return;
-        const t = now();
-        const osc = ctx.createOscillator();
-        const g = ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(80, t);
-        osc.frequency.exponentialRampToValueAtTime(30, t + 0.3);
-        osc.connect(g); g.connect(masterGain);
-        g.gain.setValueAtTime(0, t);
-        g.gain.linearRampToValueAtTime(0.25, t + 0.01);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
-        osc.start(t); osc.stop(t + 0.45);
-      }
-
-      // ── Nuclear dotgrid → whoosh + impact ──────────────────────
-      function onNuclear(tier) {
-        if (!enabled || !ctx) return;
-        const t = now();
-        // Whoosh: filter sweep on white-noise-ish saw stack
-        const noise = ctx.createOscillator();
-        const ng = ctx.createGain();
-        const nf = ctx.createBiquadFilter();
-        noise.type = 'sawtooth';
-        noise.frequency.setValueAtTime(220, t);
-        noise.frequency.exponentialRampToValueAtTime(880, t + 0.25);
-        nf.type = 'bandpass';
-        nf.frequency.setValueAtTime(400, t);
-        nf.frequency.exponentialRampToValueAtTime(3000, t + 0.22);
-        nf.Q.value = 2;
-        noise.connect(nf); nf.connect(ng); ng.connect(masterGain);
-        ng.gain.setValueAtTime(0, t);
-        ng.gain.linearRampToValueAtTime(0.12, t + 0.05);
-        ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
-        noise.start(t); noise.stop(t + 0.3);
-        // Impact: low boom after the whoosh
-        const impactAt = t + 0.22;
-        const osc = ctx.createOscillator();
-        const g = ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(90, impactAt);
-        osc.frequency.exponentialRampToValueAtTime(40, impactAt + 0.4);
-        osc.connect(g); g.connect(masterGain);
-        g.gain.setValueAtTime(0, impactAt);
-        g.gain.linearRampToValueAtTime(0.28, impactAt + 0.01);
-        g.gain.exponentialRampToValueAtTime(0.0001, impactAt + 0.5);
-        osc.start(impactAt); osc.stop(impactAt + 0.55);
-      }
-
-      function onGameStart() {
-        if (!ctx) return;
-        thousandPlayed = false;
-        currentTier = -1;
-        // kick drone on with the base tier
-        stopDroneVoices(0.1);
-        startDroneForTier(0);
-        currentTier = 0;
-      }
-
-      function onGameEnd() {
-        if (!ctx) return;
-        stopDroneVoices(0.8);
-        currentTier = -1;
-      }
-
-      function stopAll() {
-        if (!ctx) return;
-        stopDroneVoices(0.2);
-        currentTier = -1;
-        thousandPlayed = false;
-      }
-
-      function setTierDrone(tierIdx, cfg) {
-        pack.tierDrones[tierIdx] = cfg;
-        if (currentTier === tierIdx) {
-          stopDroneVoices(0.2);
-          startDroneForTier(tierIdx);
-        }
-      }
-
-      return {
-        init, setEnabled,
-        onClick, onTierEnter, onMilestone, onOneThousand,
-        onBlackFlash, onNuclear, onGameStart, onGameEnd, stopAll,
-        setTierDrone,
-      };
     })();
 
     // ── Three.js arena ────────────────────────────────────────────

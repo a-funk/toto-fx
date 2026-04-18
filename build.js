@@ -18,6 +18,11 @@ const plugins = [
   { name: 'in-progress', entry: 'src/plugins/in-progress.js', global: 'TotoFXInProgress' },
 ];
 
+// Audio pack entry points — soundpack plugins for createAudioEngine.
+const audioPacks = [
+  { name: 'chiptune', entry: 'src/audio-packs/chiptune.js', global: 'TotoFXAudioChiptune' },
+];
+
 // Dotgrid effect plugin entry points
 const dotgridPlugins = [
   { name: 'ripple',  entry: 'src/dotgrid-plugins/ripple.js',  global: 'TotoFXDotgridRipple' },
@@ -102,6 +107,25 @@ async function build() {
     }));
   }
 
+  // ── Audio pack bundles (ESM + IIFE) ──────────────────────
+  for (const ap of audioPacks) {
+    builds.push(esbuild.build({
+      ...commonOpts,
+      entryPoints: [ap.entry],
+      outfile: `dist/audio-packs/${ap.name}.esm.js`,
+      format: 'esm',
+      minify: true,
+    }));
+    builds.push(esbuild.build({
+      ...commonOpts,
+      entryPoints: [ap.entry],
+      outfile: `dist/audio-packs/${ap.name}.min.js`,
+      format: 'iife',
+      globalName: ap.global,
+      minify: true,
+    }));
+  }
+
   // ── Dotgrid effect plugin bundles (ESM + IIFE) ───────────
   for (const dp of dotgridPlugins) {
     builds.push(esbuild.build({
@@ -142,6 +166,10 @@ async function build() {
   for (const dp of dotgridPlugins) {
     const s = fs.statSync(`dist/dotgrid-plugins/${dp.name}.min.js`).size;
     console.log(`  dist/dotgrid-plugins/${dp.name}.min.js  ${(s / 1024).toFixed(1)}KB (${dp.global})`);
+  }
+  for (const ap of audioPacks) {
+    const s = fs.statSync(`dist/audio-packs/${ap.name}.min.js`).size;
+    console.log(`  dist/audio-packs/${ap.name}.min.js  ${(s / 1024).toFixed(1)}KB (${ap.global})`);
   }
 }
 
