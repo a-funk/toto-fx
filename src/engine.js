@@ -13,6 +13,9 @@ import { createDOMObserver } from './dom-observer.js';
 import { createReconciler, ANIM_KEY } from './reconciler.js';
 import { createRefreshCoordinator } from './refresh-coordinator.js';
 import { createLayoutAnimator } from './layout-animator.js';
+import { createClock } from './core/clock.js';
+import { createRngPool } from './core/rng.js';
+import { createScheduler } from './core/scheduler.js';
 
 /**
  * Create a TotoFX engine instance.
@@ -26,6 +29,13 @@ export function createEngine(userConfig) {
   // ── Per-engine state and observer ───────────────────────────
   const _store = createStateStore();
   const _domObserver = createDOMObserver(_store);
+
+  // ── Determinism primitives ──────────────────────────────────
+  // Live mode by default — zero-overhead pass-through to browser APIs.
+  // Flip to render mode via engine.setRenderMode(true, { seed }).
+  const _clock = createClock();
+  const _rng = createRngPool(0);
+  const _scheduler = createScheduler(_clock);
 
   // ── Configuration ──────────────────────────────────────────
 
@@ -216,6 +226,87 @@ export function createEngine(userConfig) {
       const idx = fns.indexOf(fn);
       if (idx !== -1) fns.splice(idx, 1);
     },
+
+    // ── Determinism Primitives ───────────────────────────────
+    //
+    // In live mode (default), these pass through to `performance.now()`,
+    // `requestAnimationFrame`, and `Math.random()`. Zero overhead.
+    //
+    // In render mode, they route through an engine-owned virtual clock,
+    // a drainable frame scheduler, and a seeded per-namespace PRNG pool —
+    // giving frame-exact, bit-identical output across renders when given
+    // the same seed and tick sequence.
+    //
+    // Enter render mode with `engine.setRenderMode(true, { seed: 42 })`,
+    // then drive frames with `engine.tick(dtMs)` in a loop.
+
+    /** Current time in ms. `performance.now()` in live mode, virtual in render mode. */
+    now: function () { return _clock.now(); },
+
+    /**
+     * Schedule a callback for the next frame. Returns a token for `cancelRaf`.
+     * Live mode: wraps `requestAnimationFrame`.
+     * Render mode: enqueues; fires on the next `tick()`.
+     *
+     * Callbacks scheduled *during* a tick fire on the **next** tick, never
+     * the current one — prevents infinite rAF chains from stalling the
+     * render loop.
+     */
+    raf: function (cb) { return _scheduler.schedule(cb); },
+
+    /** Cancel a callback scheduled via `raf()`. Idempotent for unknown tokens. */
+    cancelRaf: function (token) { _scheduler.cancel(token); },
+
+    /**
+     * Draw the next float in `[0, 1)`.
+     * Live mode: `Math.random()` — namespace is ignored.
+     * Render mode: per-namespace mulberry32 keyed by `hash(ns) ^ seed`, so
+     * two animation instances get independent, reproducible sequences.
+     *
+     * @param {string} [namespace='__global__']
+     */
+    rand: function (namespace) { return _rng.rand(namespace); },
+
+    /**
+     * Advance the virtual clock by `dtMs` and fire every pending `raf()`
+     * callback. No-op in live mode.
+     *
+     * @param {number} dtMs — milliseconds, e.g. 16.6667 for 60fps.
+     * @returns {Promise<void>} resolves after a microtask, letting layout settle.
+     */
+    tick: function (dtMs) { return _scheduler.tick(dtMs); },
+
+    /**
+     * Switch between live and render mode.
+     *
+     * Render mode:
+     *   - Clock starts at 0, advances only via `tick()`.
+     *   - Scheduler queues callbacks; drained only via `tick()`.
+     *   - RNG re-seeds all per-namespace generators from `opts.seed`.
+     *   - Background GC interval is suspended.
+     *
+     * @param {boolean} on
+     * @param {{ seed?: number }} [opts]
+     */
+    setRenderMode: function (on, opts) {
+      opts = opts || {};
+      const targetMode = on ? 'render' : 'live';
+      if (on && typeof opts.seed === 'number') {
+        _rng.setSeed(opts.seed);
+      }
+      _clock.setMode(targetMode);
+      _rng.setMode(targetMode);
+      _scheduler.setMode(targetMode);
+      // Suspend the background GC interval during render — renders are
+      // short-lived and GC just pollutes the frame trace.
+      if (on && this._gcInterval) {
+        clearInterval(this._gcInterval);
+        this._gcInterval = null;
+      }
+    },
+
+    /** True if the engine is currently in render mode. */
+    isRenderMode: function () { return _clock.getMode() === 'render'; },
 
     /**
      * Initialize the engine. Call after configuration and plugin registration.
@@ -758,6 +849,16 @@ export function createEngine(userConfig) {
                 _dotgrid.runEffect(name, args);
               }
             };
+            // Determinism primitives. Plugins that migrate in P1 will use
+            // ctx.now / ctx.raf / ctx.rand instead of the raw browser APIs.
+            // Each animation instance gets its own RNG namespace derived from
+            // (category, style, variant, key) so particle sequences are stable
+            // across render reruns even when multiple animations interleave.
+            ctx.now = _clock.now;
+            ctx.raf = _scheduler.schedule;
+            ctx.cancelRaf = _scheduler.cancel;
+            var _animRngNs = category + '/' + s + '/' + v + '/' + (ctx.key || '__');
+            ctx.rand = function () { return _rng.rand(_animRngNs); };
             variantObj.play(el, ctx);
             el[ANIM_KEY] = {
               _fxCategory: category,
