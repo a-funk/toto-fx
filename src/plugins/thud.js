@@ -56,7 +56,7 @@ export const animeSlamPlugin = {
     const sub = fx.getSubElements(el);
     const pos = fx.getItemRect(el);
     const cx = pos.cx, cy = pos.cy;
-    const rotX = -6 + Math.random() * 3, rotY = -3 + Math.random() * 6;
+    const rotX = -6 + ctx.rand() * 3, rotY = -3 + ctx.rand() * 6;
     const scale = fx.intensityScale(ctx.intensity || 5);
 
     fx.liftCard(el, sub.shadow, cx, cy, p.peakZ, p.liftDur, rotX, rotY, function () {
@@ -111,7 +111,7 @@ export const lowBouncePlugin = {
     const sub = fx.getSubElements(el);
     const pos = fx.getItemRect(el);
     const cx = pos.cx, cy = pos.cy;
-    const rotX = -3 + Math.random() * 2, rotY = -2 + Math.random() * 4;
+    const rotX = -3 + ctx.rand() * 2, rotY = -2 + ctx.rand() * 4;
     const scale = fx.intensityScale(ctx.intensity || 5);
 
     fx.liftCard(el, sub.shadow, cx, cy, p.peakZ, p.liftDur, rotX, rotY, function () {
@@ -160,7 +160,7 @@ export const stratospherePlugin = {
     const sub = fx.getSubElements(el);
     const pos = fx.getItemRect(el);
     const cx = pos.cx, cy = pos.cy;
-    const rotX = -8 + Math.random() * 4, rotY = -4 + Math.random() * 8;
+    const rotX = -8 + ctx.rand() * 4, rotY = -4 + ctx.rand() * 8;
     const scale = fx.intensityScale(ctx.intensity || 5);
     const glowColor = ThemeManager.color('glow') || 'rgba(196,90,60,0.15)';
 
@@ -185,7 +185,7 @@ export const stratospherePlugin = {
         fx.doScreenShake(true);
         fx.doDotgridRipple(cx, cy, { radius: 650, push: 22, scale: 3.5 });
 
-        requestAnimationFrame(function () {
+        ctx.raf(function () {
           let recoverTransition = fx.fxEnabled('cardSquash')
             ? 'transform 0.22s cubic-bezier(0.25,1,0.5,1)' : '';
           if (!fx.isMobile) recoverTransition += (recoverTransition ? ', ' : '') + 'box-shadow 0.4s ease-out';
@@ -254,7 +254,7 @@ export const orbitSlamPlugin = {
     const sub = fx.getSubElements(el);
     const pos = fx.getItemRect(el);
     const cx = pos.cx, cy = pos.cy;
-    const rotX = -5 + Math.random() * 3, rotY = -3 + Math.random() * 6;
+    const rotX = -5 + ctx.rand() * 3, rotY = -3 + ctx.rand() * 6;
     const scale = fx.intensityScale(ctx.intensity || 5);
 
     fx.liftCard(el, sub.shadow, cx, cy, p.peakZ, p.liftDur, rotX, rotY, function () {
@@ -263,7 +263,7 @@ export const orbitSlamPlugin = {
       if (sub.shadow) sub.shadow.style.transition = 'none';
 
       const orbitDur = p.orbitDur;
-      const orbitStart = performance.now();
+      const orbitStart = ctx.now();
 
       function orbitStep(now) {
         const t = Math.min((now - orbitStart) / orbitDur, 1);
@@ -281,7 +281,7 @@ export const orbitSlamPlugin = {
         }
 
         if (t < 1) {
-          requestAnimationFrame(orbitStep);
+          ctx.raf(orbitStep);
         } else {
           fx.gravityFall(el, sub.shadow, p.peakZ, 0, 0, p.fallDur, p.fallExp, cx, cy, function () {
             fx.standardImpact(el, sub.shadow, sub.burst, cx, cy);
@@ -297,7 +297,7 @@ export const orbitSlamPlugin = {
           });
         }
       }
-      requestAnimationFrame(orbitStep);
+      ctx.raf(orbitStep);
     });
   },
   cleanup: function (el) {
@@ -333,7 +333,7 @@ export const craterPlugin = {
     const sub = fx.getSubElements(el);
     const pos = fx.getItemRect(el);
     const cx = pos.cx, cy = pos.cy;
-    const rotX = -6 + Math.random() * 3, rotY = -3 + Math.random() * 6;
+    const rotX = -6 + ctx.rand() * 3, rotY = -3 + ctx.rand() * 6;
     const scale = fx.intensityScale(ctx.intensity || 5);
 
     fx.liftCard(el, sub.shadow, cx, cy, p.peakZ, p.liftDur, rotX, rotY, function () {
@@ -384,7 +384,7 @@ export const deepCraterPlugin = {
     const sub = fx.getSubElements(el);
     const pos = fx.getItemRect(el);
     const cx = pos.cx, cy = pos.cy;
-    const rotX = -6 + Math.random() * 3, rotY = -3 + Math.random() * 6;
+    const rotX = -6 + ctx.rand() * 3, rotY = -3 + ctx.rand() * 6;
     const scale = fx.intensityScale(ctx.intensity || 5);
 
     fx.liftCard(el, sub.shadow, cx, cy, p.peakZ, p.liftDur, rotX, rotY, function () {
@@ -450,17 +450,17 @@ export const meteorPlugin = {
     const sub = fx.getSubElements(el);
     const pos = fx.getItemRect(el);
     const cx = pos.cx, cy = pos.cy;
-    const rotX = -6 + Math.random() * 3, rotY = -3 + Math.random() * 6;
+    const rotX = -6 + ctx.rand() * 3, rotY = -3 + ctx.rand() * 6;
     const scale = fx.intensityScale(ctx.intensity || 5);
 
     fx.liftCard(el, sub.shadow, cx, cy, p.peakZ, p.liftDur, rotX, rotY, function () {
       el.style.transition = 'none';
       if (sub.shadow) sub.shadow.style.transition = 'none';
 
-      const fallAngle = -0.3 + Math.random() * 0.6;
+      const fallAngle = -0.3 + ctx.rand() * 0.6;
       const lateralDrift = p.lateralDrift * Math.sign(fallAngle || 1);
       const fallDuration = p.fallDur;
-      const start = performance.now();
+      const start = ctx.now();
       let lastFireTime = 0;
       const trajStartX = cx, trajStartY = cy - 120;
 
@@ -489,7 +489,7 @@ export const meteorPlugin = {
         }
 
         if (t < 1) {
-          requestAnimationFrame(step);
+          ctx.raf(step);
         } else {
           fx.stopSpeedLines();
           const impactX = cx + lateralDrift;
@@ -514,7 +514,7 @@ export const meteorPlugin = {
           fx.completeAndRemove(el, sub.badge, sub.strike, 350, ctx.onDone);
         }
       }
-      requestAnimationFrame(step);
+      ctx.raf(step);
     });
   },
   cleanup: function (el) {
@@ -552,7 +552,7 @@ export const detonationPlugin = {
     const sub = fx.getSubElements(el);
     const pos = fx.getItemRect(el);
     const cx = pos.cx, cy = pos.cy;
-    const rotX = -6 + Math.random() * 3, rotY = -3 + Math.random() * 6;
+    const rotX = -6 + ctx.rand() * 3, rotY = -3 + ctx.rand() * 6;
     const scale = fx.intensityScale(ctx.intensity || 5);
 
     fx.liftCard(el, sub.shadow, cx, cy, p.peakZ, p.liftDur, rotX, rotY, function () {
@@ -624,7 +624,7 @@ export const nuclearPlugin = {
     const sub = fx.getSubElements(el);
     const pos = fx.getItemRect(el);
     const cx = pos.cx, cy = pos.cy;
-    const rotX = -6 + Math.random() * 3, rotY = -3 + Math.random() * 6;
+    const rotX = -6 + ctx.rand() * 3, rotY = -3 + ctx.rand() * 6;
     const scale = fx.intensityScale(ctx.intensity || 5);
 
     fx.liftCard(el, sub.shadow, cx, cy, p.peakZ, p.liftDur, rotX, rotY, function () {
@@ -651,41 +651,41 @@ export const nuclearPlugin = {
           const sz = p.particleSize / 10;
           // Base fire
           for (let i = 0; i < Math.round(15 * scale); i++) {
-            const angle = Math.random() * Math.PI * 2;
+            const angle = ctx.rand() * Math.PI * 2;
             batch.push({
-              x: cx + (Math.random() - 0.5) * 30, y: cy,
-              vx: Math.cos(angle) * (0.5 + Math.random()), vy: -(0.5 + Math.random() * 1.5),
-              life: 55 + Math.random() * 25, maxLife: 80,
-              size: (6 + Math.random() * 8) * sz,
+              x: cx + (ctx.rand() - 0.5) * 30, y: cy,
+              vx: Math.cos(angle) * (0.5 + ctx.rand()), vy: -(0.5 + ctx.rand() * 1.5),
+              life: 55 + ctx.rand() * 25, maxLife: 80,
+              size: (6 + ctx.rand() * 8) * sz,
               color: ThemeManager.particleColor('fire'),
               gravity: -0.01, drag: 0.98,
-              char: fireGlyphs[Math.floor(Math.random() * fireGlyphs.length)],
+              char: fireGlyphs[Math.floor(ctx.rand() * fireGlyphs.length)],
             });
           }
           // Stem
           for (let j = 0; j < Math.round(p.stemParticles * scale); j++) {
             batch.push({
-              x: cx + (Math.random() - 0.5) * 20, y: cy - Math.random() * 20,
-              vx: (Math.random() - 0.5) * 0.4, vy: -(2.5 + Math.random() * 3.5),
-              life: 100 + Math.random() * 35, maxLife: 135,
-              size: (5 + Math.random() * 7) * sz,
+              x: cx + (ctx.rand() - 0.5) * 20, y: cy - ctx.rand() * 20,
+              vx: (ctx.rand() - 0.5) * 0.4, vy: -(2.5 + ctx.rand() * 3.5),
+              life: 100 + ctx.rand() * 35, maxLife: 135,
+              size: (5 + ctx.rand() * 7) * sz,
               color: ThemeManager.particleColor('debris'),
               gravity: -0.025, drag: 0.985,
-              char: smokeGlyphs[Math.floor(Math.random() * smokeGlyphs.length)],
+              char: smokeGlyphs[Math.floor(ctx.rand() * smokeGlyphs.length)],
             });
           }
           // Cap
           for (let k = 0; k < Math.round(p.capParticles * scale); k++) {
-            const capAngle = Math.random() * Math.PI * 2;
-            const vel = 0.8 + Math.random() * 2.5;
+            const capAngle = ctx.rand() * Math.PI * 2;
+            const vel = 0.8 + ctx.rand() * 2.5;
             batch.push({
-              x: cx + (Math.random() - 0.5) * 30, y: cy - 80 - Math.random() * 30,
-              vx: Math.cos(capAngle) * vel, vy: -(0.8 + Math.random() * 1.5),
-              life: 80 + Math.random() * 50, maxLife: 130,
-              size: (8 + Math.random() * 12) * sz,
+              x: cx + (ctx.rand() - 0.5) * 30, y: cy - 80 - ctx.rand() * 30,
+              vx: Math.cos(capAngle) * vel, vy: -(0.8 + ctx.rand() * 1.5),
+              life: 80 + ctx.rand() * 50, maxLife: 130,
+              size: (8 + ctx.rand() * 12) * sz,
               color: ThemeManager.particleColor('smoke'),
               gravity: -0.012, drag: 0.975,
-              char: blastGlyphs[Math.floor(Math.random() * blastGlyphs.length)],
+              char: blastGlyphs[Math.floor(ctx.rand() * blastGlyphs.length)],
             });
           }
           fx.pushParticles(batch);
@@ -738,7 +738,7 @@ export const shatterPlugin = {
     const sub = fx.getSubElements(el);
     const pos = fx.getItemRect(el);
     const cx = pos.cx, cy = pos.cy;
-    const rotX = -6 + Math.random() * 3, rotY = -3 + Math.random() * 6;
+    const rotX = -6 + ctx.rand() * 3, rotY = -3 + ctx.rand() * 6;
     const scale = fx.intensityScale(ctx.intensity || 5);
 
     fx.liftCard(el, sub.shadow, cx, cy, p.peakZ, p.liftDur, rotX, rotY, function () {
@@ -759,19 +759,19 @@ export const shatterPlugin = {
 
         for (let i = 0; i < fragCount; i++) {
           const frag = document.createElement('span');
-          const glyph = shatterGlyphs[Math.floor(Math.random() * shatterGlyphs.length)];
-          const fontSize = 14 + Math.floor(Math.random() * 18);
-          const fx = r.left + Math.random() * r.width;
-          const fy = r.top + Math.random() * r.height;
+          const glyph = shatterGlyphs[Math.floor(ctx.rand() * shatterGlyphs.length)];
+          const fontSize = 14 + Math.floor(ctx.rand() * 18);
+          const fx = r.left + ctx.rand() * r.width;
+          const fy = r.top + ctx.rand() * r.height;
           frag.textContent = glyph;
           frag.style.cssText = 'position:fixed;left:' + fx + 'px;top:' + fy + 'px;font-family:monospace;font-size:' + fontSize + 'px;color:var(--ink);pointer-events:none;z-index:200;will-change:transform,opacity;';
           frag.setAttribute('data-thud-frag', 'true');
           document.body.appendChild(frag);
 
           (function (f) {
-            const vx = (Math.random() - 0.5) * 6;
-            let vy = -(1 + Math.random() * 3);
-            const vr = (Math.random() - 0.5) * 8;
+            const vx = (ctx.rand() - 0.5) * 6;
+            let vy = -(1 + ctx.rand() * 3);
+            const vr = (ctx.rand() - 0.5) * 8;
             let posX = 0, posY = 0, rot = 0, opacity = 1;
 
             function animFrag() {
@@ -779,10 +779,10 @@ export const shatterPlugin = {
               posX += vx; posY += vy; rot += vr; opacity -= 0.012;
               f.style.transform = 'translate(' + posX + 'px, ' + posY + 'px) rotate(' + rot + 'deg)';
               f.style.opacity = String(Math.max(0, opacity));
-              if (opacity > 0 && posY < window.innerHeight) requestAnimationFrame(animFrag);
+              if (opacity > 0 && posY < window.innerHeight) ctx.raf(animFrag);
               else f.remove();
             }
-            requestAnimationFrame(animFrag);
+            ctx.raf(animFrag);
           })(frag);
         }
 
@@ -801,8 +801,8 @@ export const shatterPlugin = {
           const h = cachedHeight;
           el.style.maxHeight = h + 'px';
           el.style.overflow = 'hidden';
-          requestAnimationFrame(function () {
-            requestAnimationFrame(function () {
+          ctx.raf(function () {
+            ctx.raf(function () {
               el.style.maxHeight = '0px';
               el.style.marginBottom = '0px';
               el.style.paddingTop = '0px';
