@@ -118,19 +118,19 @@ export const explodePlugin = {
     const fragments = [];
     const fragCount = FX.pCount(p.fragmentCount);
     for (let i = 0; i < fragCount; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = p.minSpeed + Math.random() * p.speedRange;
+      const angle = ctx.rand() * Math.PI * 2;
+      const speed = p.minSpeed + ctx.rand() * p.speedRange;
       fragments.push({
-        x: cx + (Math.random() - 0.5) * pos.rect.width * 0.6,
-        y: cy + (Math.random() - 0.5) * pos.rect.height * 0.6,
+        x: cx + (ctx.rand() - 0.5) * pos.rect.width * 0.6,
+        y: cy + (ctx.rand() - 0.5) * pos.rect.height * 0.6,
         vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 100 - Math.random() * 200,
-        rotation: Math.random() * Math.PI * 2,
-        rotSpeed: (Math.random() - 0.5) * 15,
+        vy: Math.sin(angle) * speed - 100 - ctx.rand() * 200,
+        rotation: ctx.rand() * Math.PI * 2,
+        rotSpeed: (ctx.rand() - 0.5) * 15,
         alpha: 1,
-        char: fragChars[Math.floor(Math.random() * fragChars.length)],
-        size: (8 + Math.random() * 20) * p.particleSize / 14,
-        isHot: Math.random() > 0.4,
+        char: fragChars[Math.floor(ctx.rand() * fragChars.length)],
+        size: (8 + ctx.rand() * 20) * p.particleSize / 14,
+        isHot: ctx.rand() > 0.4,
       });
     }
 
@@ -138,18 +138,18 @@ export const explodePlugin = {
     const smokeScale = p.particleSize / 14;
     for (let i = 0; i < FX.pCount(p.smokeCount); i++) {
       smokes.push({
-        x: cx + (Math.random() - 0.5) * 60,
-        y: cy + (Math.random() - 0.5) * 40,
-        vx: (Math.random() - 0.5) * 40,
-        vy: -15 - Math.random() * 30,
-        alpha: 0.3 + Math.random() * 0.3,
-        size: (12 + Math.random() * 16) * smokeScale,
-        char: ['~', '.', ':', '*'][Math.floor(Math.random() * 4)],
-        growRate: 3 + Math.random() * 5,
+        x: cx + (ctx.rand() - 0.5) * 60,
+        y: cy + (ctx.rand() - 0.5) * 40,
+        vx: (ctx.rand() - 0.5) * 40,
+        vy: -15 - ctx.rand() * 30,
+        alpha: 0.3 + ctx.rand() * 0.3,
+        size: (12 + ctx.rand() * 16) * smokeScale,
+        char: ['~', '.', ':', '*'][Math.floor(ctx.rand() * 4)],
+        growRate: 3 + ctx.rand() * 5,
       });
     }
 
-    const startTime = performance.now();
+    const startTime = ctx.now();
     const duration = p.duration;
 
     FX.registerFxDraw(_drawId, function(fxCtx, now) {
@@ -186,8 +186,8 @@ export const explodePlugin = {
         if (f.alpha < 0.01) return;
 
         const color = f.isHot
-          ? 'rgba(' + (200 + Math.floor(Math.random() * 55)) + ',' + Math.floor(80 + Math.random() * 80) + ',' + Math.floor(Math.random() * 30) + ',' + f.alpha + ')'
-          : 'rgba(' + (180 + Math.floor(Math.random() * 50)) + ',' + (180 + Math.floor(Math.random() * 50)) + ',' + (180 + Math.floor(Math.random() * 50)) + ',' + f.alpha + ')';
+          ? 'rgba(' + (200 + Math.floor(ctx.rand() * 55)) + ',' + Math.floor(80 + ctx.rand() * 80) + ',' + Math.floor(ctx.rand() * 30) + ',' + f.alpha + ')'
+          : 'rgba(' + (180 + Math.floor(ctx.rand() * 50)) + ',' + (180 + Math.floor(ctx.rand() * 50)) + ',' + (180 + Math.floor(ctx.rand() * 50)) + ',' + f.alpha + ')';
 
         fxCtx.save();
         fxCtx.translate(f.x, f.y);
@@ -239,7 +239,7 @@ export const incineratePlugin = {
     const pos = FX.prepareCard(el);
     const rect = pos.rect;
     const _drawId = FX.nextFxDrawId('death-incinerate');
-    const startTime = performance.now();
+    const startTime = ctx.now();
     const duration = p.burnDuration;
 
     // Dotgrid: scorch trail along the burn path (bottom to top of card)
@@ -254,16 +254,16 @@ export const incineratePlugin = {
       const count = isMobile ? 2 : p.flameSpawnRate;
       for (let j = 0; j < count; j++) {
         flames.push({
-          x: rect.left + Math.random() * rect.width,
-          y: burnLine + (Math.random() - 0.5) * 20,
-          vx: (Math.random() - 0.5) * p.flameSpread,
-          vy: -60 - Math.random() * p.flameRiseSpeed,
-          size: p.flameMinSize + Math.random() * 18,
-          alpha: 0.8 + Math.random() * 0.2,
-          life: 0.3 + Math.random() * 0.5,
-          born: performance.now(),
-          char: FIRE_CHARS[Math.floor(Math.random() * FIRE_CHARS.length)],
-          phase: Math.random(),
+          x: rect.left + ctx.rand() * rect.width,
+          y: burnLine + (ctx.rand() - 0.5) * 20,
+          vx: (ctx.rand() - 0.5) * p.flameSpread,
+          vy: -60 - ctx.rand() * p.flameRiseSpeed,
+          size: p.flameMinSize + ctx.rand() * 18,
+          alpha: 0.8 + ctx.rand() * 0.2,
+          life: 0.3 + ctx.rand() * 0.5,
+          born: ctx.now(),
+          char: FIRE_CHARS[Math.floor(ctx.rand() * FIRE_CHARS.length)],
+          phase: ctx.rand(),
         });
       }
     }
@@ -303,7 +303,7 @@ export const incineratePlugin = {
         f.x += f.vx / 60;
         f.y += f.vy / 60;
         f.vy -= 20 / 60;
-        f.vx += (Math.random() - 0.5) * 15;
+        f.vx += (ctx.rand() - 0.5) * 15;
         const lifeFrac = age / f.life;
         const alpha = f.alpha * (1 - lifeFrac);
 
@@ -317,7 +317,7 @@ export const incineratePlugin = {
 
         fxCtx.save();
         fxCtx.translate(f.x, f.y);
-        fxCtx.rotate((Math.random() - 0.5) * 0.5);
+        fxCtx.rotate((ctx.rand() - 0.5) * 0.5);
         fxCtx.font = 'bold ' + (f.size * (1 - lifeFrac * 0.3)) + 'px monospace';
         fxCtx.fillStyle = color;
         if (FX.shouldShadow() && lifeFrac < 0.5) {
@@ -370,7 +370,7 @@ export const shredderPlugin = {
     const _drawId = FX.nextFxDrawId('death-shredder');
     const stripCount = p.stripCount;
     const stripH = rect.height / stripCount;
-    const startTime = performance.now();
+    const startTime = ctx.now();
 
     const slashDuration = p.slashDuration;
     const slashGap = p.slashGap;
@@ -417,19 +417,19 @@ export const shredderPlugin = {
             const trailT = Math.max(st - ti * 0.04, 0);
             const tx = startX + (endX - startX) * trailT;
             const alpha = (1 - ti / trailLen) * (st < 1 ? 1 : Math.max(1 - (slashElapsed - slashDuration) / 100, 0));
-            const char = BLADE_CHARS[Math.floor(Math.random() * BLADE_CHARS.length)];
-            FX.drawAsciiChar(fxCtx, char, tx, s.y, 'rgba(220, 220, 240, ' + (alpha * 0.8) + ')', 10 + Math.random() * 6, 1, s.fromLeft ? -0.2 : 0.2);
+            const char = BLADE_CHARS[Math.floor(ctx.rand() * BLADE_CHARS.length)];
+            FX.drawAsciiChar(fxCtx, char, tx, s.y, 'rgba(220, 220, 240, ' + (alpha * 0.8) + ')', 10 + ctx.rand() * 6, 1, s.fromLeft ? -0.2 : 0.2);
           }
 
           // Sparks at cutting tip
           if (st < 1) {
             for (let si = 0; si < (isMobile ? 1 : p.sparkCount); si++) {
-              const sparkChar = SPARK_CHARS[Math.floor(Math.random() * SPARK_CHARS.length)];
+              const sparkChar = SPARK_CHARS[Math.floor(ctx.rand() * SPARK_CHARS.length)];
               FX.drawAsciiChar(fxCtx, sparkChar,
-                currentX + (Math.random() - 0.5) * 10,
-                s.y + (Math.random() - 0.5) * 10,
-                'rgba(255, 220, 100, ' + (0.6 + Math.random() * 0.3) + ')',
-                (6 + Math.random() * 8) * p.particleSize / 10, 1, Math.random() * Math.PI);
+                currentX + (ctx.rand() - 0.5) * 10,
+                s.y + (ctx.rand() - 0.5) * 10,
+                'rgba(255, 220, 100, ' + (0.6 + ctx.rand() * 0.3) + ')',
+                (6 + ctx.rand() * 8) * p.particleSize / 10, 1, ctx.rand() * Math.PI);
             }
           }
 
@@ -525,7 +525,7 @@ export const guillotinePlugin = {
     const pos = FX.prepareCard(el);
     const rect = pos.rect;
     const _drawId = FX.nextFxDrawId('death-guillotine');
-    const startTime = performance.now();
+    const startTime = ctx.now();
     const bladeDropDuration = p.bladeDropDuration;
     const fallDuration = p.fallDuration;
     const cutY = rect.top + rect.height * p.cutPosition;
@@ -600,14 +600,14 @@ export const guillotinePlugin = {
 
         for (let i = 0; i < FX.pCount(p.bloodCount); i++) {
           bloodChars.push({
-            x: rect.left + Math.random() * rect.width,
-            y: cutY + (Math.random() - 0.5) * 12,
-            vx: (Math.random() - 0.5) * 80,
-            vy: (Math.random() - 0.5) * 40 + 20,
-            char: BLOOD_CHARS[Math.floor(Math.random() * BLOOD_CHARS.length)],
-            size: (6 + Math.random() * 12) * p.particleSize / 12,
-            alpha: 0.5 + Math.random() * 0.4,
-            rotation: (Math.random() - 0.5) * 2,
+            x: rect.left + ctx.rand() * rect.width,
+            y: cutY + (ctx.rand() - 0.5) * 12,
+            vx: (ctx.rand() - 0.5) * 80,
+            vy: (ctx.rand() - 0.5) * 40 + 20,
+            char: BLOOD_CHARS[Math.floor(ctx.rand() * BLOOD_CHARS.length)],
+            size: (6 + ctx.rand() * 12) * p.particleSize / 12,
+            alpha: 0.5 + ctx.rand() * 0.4,
+            rotation: (ctx.rand() - 0.5) * 2,
           });
         }
       }
@@ -633,7 +633,7 @@ export const guillotinePlugin = {
         b.alpha *= 0.99;
         if (b.alpha < 0.01) return;
         FX.drawAsciiChar(fxCtx, b.char, b.x, b.y,
-          'rgba(' + (140 + Math.floor(Math.random() * 40)) + ', 0, ' + Math.floor(Math.random() * 15) + ', ' + b.alpha + ')',
+          'rgba(' + (140 + Math.floor(ctx.rand() * 40)) + ', 0, ' + Math.floor(ctx.rand() * 15) + ', ' + b.alpha + ')',
           b.size, 1, b.rotation);
       });
 
@@ -672,7 +672,7 @@ export const heartbeatPlugin = {
     const rect = pos.rect;
     const cx = pos.cx, cy = pos.cy;
     const _drawId = FX.nextFxDrawId('death-heartbeat');
-    const startTime = performance.now();
+    const startTime = ctx.now();
     const duration = p.duration;
     let heartbeatDotgridFired = false;
 
@@ -902,15 +902,15 @@ export const sniperPlugin = {
     const pos = FX.prepareCard(el);
     const cx = pos.cx, cy = pos.cy;
     const _drawId = FX.nextFxDrawId('death-sniper');
-    const startTime = performance.now();
+    const startTime = ctx.now();
     const lockOnDuration = p.lockOnDuration;
     const bangDuration = p.bangDuration;
     const afterDuration = p.afterDuration;
     const totalDuration = lockOnDuration + bangDuration + afterDuration;
 
     // Start crosshair from click position if available, otherwise random offset
-    let crossX = (ctx.clickX != null) ? ctx.clickX : cx + (Math.random() - 0.5) * 100;
-    let crossY = (ctx.clickY != null) ? ctx.clickY : cy + (Math.random() - 0.5) * 60;
+    let crossX = (ctx.clickX != null) ? ctx.clickX : cx + (ctx.rand() - 0.5) * 100;
+    let crossY = (ctx.clickY != null) ? ctx.clickY : cy + (ctx.rand() - 0.5) * 60;
     let bangFired = false;
 
     FX.registerFxDraw(_drawId, function(fxCtx, now) {
@@ -922,8 +922,8 @@ export const sniperPlugin = {
         const t = elapsed / lockOnDuration;
         const ease = t * t;
         const wobble = (1 - ease) * p.crosshairWobble;
-        crossX += (cx - crossX) * 0.06 + (Math.random() - 0.5) * wobble;
-        crossY += (cy - crossY) * 0.06 + (Math.random() - 0.5) * wobble;
+        crossX += (cx - crossX) * 0.06 + (ctx.rand() - 0.5) * wobble;
+        crossY += (cy - crossY) * 0.06 + (ctx.rand() - 0.5) * wobble;
 
         // Crosshair circle
         const radius = p.crosshairRadius - ease * 10;
@@ -980,19 +980,19 @@ export const sniperPlugin = {
           const holeRadius = 5 + afterT * 30;
           for (let i = 0; i < FX.pCount(20); i++) {
             const angle = (i / 20) * Math.PI * 2;
-            const char = BLOOD_CHARS[Math.floor(Math.random() * BLOOD_CHARS.length)];
-            const bx = crossX + Math.cos(angle) * holeRadius + (Math.random() - 0.5) * 8;
-            const by = crossY + Math.sin(angle) * holeRadius + (Math.random() - 0.5) * 8;
+            const char = BLOOD_CHARS[Math.floor(ctx.rand() * BLOOD_CHARS.length)];
+            const bx = crossX + Math.cos(angle) * holeRadius + (ctx.rand() - 0.5) * 8;
+            const by = crossY + Math.sin(angle) * holeRadius + (ctx.rand() - 0.5) * 8;
             FX.drawAsciiChar(fxCtx, char, bx, by,
-              'rgba(' + (140 + Math.floor(Math.random() * 60)) + ', 0, 0, ' + (bloodAlpha * (0.4 + Math.random() * 0.4)) + ')',
-              8 + Math.random() * 10, 1, Math.random() * Math.PI);
+              'rgba(' + (140 + Math.floor(ctx.rand() * 60)) + ', 0, 0, ' + (bloodAlpha * (0.4 + ctx.rand() * 0.4)) + ')',
+              8 + ctx.rand() * 10, 1, ctx.rand() * Math.PI);
           }
           for (let i = 0; i < FX.pCount(8); i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const dist = holeRadius + 20 + Math.random() * 60 * afterT;
-            const char = BLOOD_CHARS[Math.floor(Math.random() * BLOOD_CHARS.length)];
+            const angle = ctx.rand() * Math.PI * 2;
+            const dist = holeRadius + 20 + ctx.rand() * 60 * afterT;
+            const char = BLOOD_CHARS[Math.floor(ctx.rand() * BLOOD_CHARS.length)];
             FX.drawAsciiChar(fxCtx, char, crossX + Math.cos(angle) * dist, crossY + Math.sin(angle) * dist,
-              'rgba(160, 0, 0, ' + (bloodAlpha * 0.3) + ')', 6 + Math.random() * 8, 1, Math.random());
+              'rgba(160, 0, 0, ' + (bloodAlpha * 0.3) + ')', 6 + ctx.rand() * 8, 1, ctx.rand());
           }
         }
 
@@ -1033,7 +1033,7 @@ export const eatenPlugin = {
     const rect = pos.rect;
     const cx = pos.cx, cy = pos.cy;
     const _drawId = FX.nextFxDrawId('death-eaten');
-    const startTime = performance.now();
+    const startTime = ctx.now();
     const app = getApp();
     const shakeEnabled = FX.fxEnabled('shake');
 
@@ -1059,39 +1059,39 @@ export const eatenPlugin = {
     ];
 
     function foodColor(alpha) {
-      const c = FOOD_COLORS[Math.floor(Math.random() * FOOD_COLORS.length)];
+      const c = FOOD_COLORS[Math.floor(ctx.rand() * FOOD_COLORS.length)];
       return 'rgba(' + c[0] + ', ' + c[1] + ', ' + c[2] + ', ' + alpha + ')';
     }
 
     function spawnCrumbs(x, y, count) {
       for (let i = 0; i < count; i++) {
-        const c = FOOD_COLORS[Math.floor(Math.random() * FOOD_COLORS.length)];
+        const c = FOOD_COLORS[Math.floor(ctx.rand() * FOOD_COLORS.length)];
         crumbs.push({
-          x: x + (Math.random() - 0.5) * 30, y: y + (Math.random() - 0.5) * 8,
-          vx: (Math.random() - 0.5) * 80, vy: 20 + Math.random() * 60,
-          char: CRUMB_CHARS[Math.floor(Math.random() * CRUMB_CHARS.length)],
-          size: 7 + Math.random() * 8,
+          x: x + (ctx.rand() - 0.5) * 30, y: y + (ctx.rand() - 0.5) * 8,
+          vx: (ctx.rand() - 0.5) * 80, vy: 20 + ctx.rand() * 60,
+          char: CRUMB_CHARS[Math.floor(ctx.rand() * CRUMB_CHARS.length)],
+          size: 7 + ctx.rand() * 8,
           r: c[0], g: c[1], b: c[2],
-          alpha: 0.8 + Math.random() * 0.2,
-          gravity: 80 + Math.random() * 60, life: 1.0, decay: 0.3 + Math.random() * 0.4,
+          alpha: 0.8 + ctx.rand() * 0.2,
+          gravity: 80 + ctx.rand() * 60, life: 1.0, decay: 0.3 + ctx.rand() * 0.4,
         });
       }
     }
 
     function stickLetter(chewNum) {
       const available = taskLetters.filter(function(_, i) { return !stuckLetters.some(function(s) { return s.srcIdx === i; }); });
-      const addCount = 2 + Math.floor(Math.random() * 3);
+      const addCount = 2 + Math.floor(ctx.rand() * 3);
       for (let i = 0; i < addCount && available.length > 0; i++) {
-        const pickIdx = Math.floor(Math.random() * available.length);
+        const pickIdx = Math.floor(ctx.rand() * available.length);
         const char = available[pickIdx];
         const srcIdx = taskLetters.indexOf(char);
         available.splice(pickIdx, 1);
-        const toothIdx = Math.floor(Math.random() * (teethCount - 1));
+        const toothIdx = Math.floor(ctx.rand() * (teethCount - 1));
         const tx = rect.left + ((toothIdx + 0.5) / teethCount) * rect.width + 6;
         stuckLetters.push({
           char: char, srcIdx: srcIdx, toothIdx: toothIdx, x: tx,
-          offsetY: (Math.random() - 0.5) * 6, size: 7 + Math.random() * 4,
-          mangleLevel: chewNum, rotation: (Math.random() - 0.5) * 0.6,
+          offsetY: (ctx.rand() - 0.5) * 6, size: 7 + ctx.rand() * 4,
+          mangleLevel: chewNum, rotation: (ctx.rand() - 0.5) * 0.6,
         });
       }
     }
@@ -1121,8 +1121,8 @@ export const eatenPlugin = {
       fxCtx.textBaseline = 'middle';
       stuckLetters.forEach(function(s) {
         let displayChar = s.char;
-        if (s.mangleLevel >= 3) displayChar = CRUMB_CHARS[Math.floor(Math.random() * CRUMB_CHARS.length)];
-        else if (s.mangleLevel >= 2) displayChar = Math.random() > 0.5 ? s.char.toLowerCase() : s.char;
+        if (s.mangleLevel >= 3) displayChar = CRUMB_CHARS[Math.floor(ctx.rand() * CRUMB_CHARS.length)];
+        else if (s.mangleLevel >= 2) displayChar = ctx.rand() > 0.5 ? s.char.toLowerCase() : s.char;
         fxCtx.save();
         fxCtx.translate(s.x, cy + s.offsetY);
         fxCtx.rotate(s.rotation * (1 + s.mangleLevel * 0.3));
@@ -1197,16 +1197,16 @@ export const eatenPlugin = {
         drawTeeth(fxCtx, topY, botY, jawGap, 0.9);
         drawStuckLetters(fxCtx);
 
-        if (closeOpen > 0.8 && Math.random() > 0.4) {
-          const side = Math.random() > 0.5 ? rect.left - 5 : rect.right + 5;
-          spawnCrumbs(side, cy, 2 + Math.floor(Math.random() * 2));
+        if (closeOpen > 0.8 && ctx.rand() > 0.4) {
+          const side = ctx.rand() > 0.5 ? rect.left - 5 : rect.right + 5;
+          spawnCrumbs(side, cy, 2 + Math.floor(ctx.rand() * 2));
         }
-        if (Math.random() > 0.6) spawnCrumbs(rect.left + Math.random() * rect.width, botY + 5, 1);
+        if (ctx.rand() > 0.6) spawnCrumbs(rect.left + ctx.rand() * rect.width, botY + 5, 1);
 
         drawCrumbs(fxCtx, dt);
 
         if (shakeEnabled && closeOpen > 0.7) {
-          app.style.transform = 'translate(' + ((Math.random() - 0.5) * 2) + 'px, ' + ((Math.random() - 0.5) * 2) + 'px)';
+          app.style.transform = 'translate(' + ((ctx.rand() - 0.5) * 2) + 'px, ' + ((ctx.rand() - 0.5) * 2) + 'px)';
         }
 
       // Phase 3: Swallow
@@ -1257,14 +1257,14 @@ export const eatenPlugin = {
           fxCtx.textAlign = 'center';
           for (let i = 0; i < FX.pCount(10); i++) {
             const spread = 30 + burpT * 40;
-            const bx = cx + (Math.random() - 0.5) * spread;
-            const by = cy - 15 - burpT * 50 + (Math.random() - 0.5) * 20;
+            const bx = cx + (ctx.rand() - 0.5) * spread;
+            const by = cy - 15 - burpT * 50 + (ctx.rand() - 0.5) * 20;
             const bSize = 10 + burpT * 8;
             fxCtx.font = bSize + 'px monospace';
-            fxCtx.fillStyle = Math.random() > 0.5
+            fxCtx.fillStyle = ctx.rand() > 0.5
               ? 'rgba(100, 160, 60, ' + ((1 - burpT) * 0.6) + ')'
               : 'rgba(160, 140, 60, ' + ((1 - burpT) * 0.55) + ')';
-            fxCtx.fillText(burpChars[Math.floor(Math.random() * burpChars.length)], bx, by);
+            fxCtx.fillText(burpChars[Math.floor(ctx.rand() * burpChars.length)], bx, by);
           }
         }
 
@@ -1307,7 +1307,7 @@ export const lightningPlugin = {
     const rect = pos.rect;
     const cx = pos.cx, cy = pos.cy;
     const _drawId = FX.nextFxDrawId('death-lightning');
-    const startTime = performance.now();
+    const startTime = ctx.now();
 
     const buildupDuration = p.buildupDuration;
     const crackDuration = p.crackDuration;
@@ -1329,11 +1329,11 @@ export const lightningPlugin = {
 
     // Generate main bolt path
     const mainBolt = [];
-    let bx = cx + (Math.random() - 0.5) * 60;
+    let bx = cx + (ctx.rand() - 0.5) * 60;
     let by = -20;
     while (by < cy + 5) {
-      const jag = (Math.random() - 0.5) * 70;
-      const stepY = 10 + Math.random() * 18;
+      const jag = (ctx.rand() - 0.5) * 70;
+      const stepY = 10 + ctx.rand() * 18;
       mainBolt.push({ x: bx + jag, y: by + stepY });
       bx += jag;
       by += stepY;
@@ -1341,17 +1341,17 @@ export const lightningPlugin = {
 
     // Branch bolts
     const branches = [];
-    const branchCount = isMobile ? 2 : (3 + Math.floor(Math.random() * 3));
+    const branchCount = isMobile ? 2 : (3 + Math.floor(ctx.rand() * 3));
     for (let b = 0; b < branchCount; b++) {
-      const forkIdx = 2 + Math.floor(Math.random() * (mainBolt.length - 4));
+      const forkIdx = 2 + Math.floor(ctx.rand() * (mainBolt.length - 4));
       const forkPt = mainBolt[forkIdx];
-      const dir = Math.random() > 0.5 ? 1 : -1;
+      const dir = ctx.rand() > 0.5 ? 1 : -1;
       const branch = [{ x: forkPt.x, y: forkPt.y }];
       let bbx = forkPt.x, bby = forkPt.y;
-      const branchLen = 3 + Math.floor(Math.random() * 5);
+      const branchLen = 3 + Math.floor(ctx.rand() * 5);
       for (let s = 0; s < branchLen; s++) {
-        bbx += dir * (15 + Math.random() * 25);
-        bby += 8 + Math.random() * 15;
+        bbx += dir * (15 + ctx.rand() * 25);
+        bby += 8 + ctx.rand() * 15;
         branch.push({ x: bbx, y: bby });
       }
       branches.push({ points: branch, forkIdx: forkIdx });
@@ -1368,24 +1368,24 @@ export const lightningPlugin = {
         const t = s / steps;
         const px = x1 + dx * t, py = y1 + dy * t;
         for (let w = -Math.floor(coreWidth); w <= Math.floor(coreWidth); w++) {
-          const charX = px + perpX * w * 7 + (Math.random() - 0.5) * 2;
-          const charY = py + perpY * w * 7 + (Math.random() - 0.5) * 2;
+          const charX = px + perpX * w * 7 + (ctx.rand() - 0.5) * 2;
+          const charY = py + perpY * w * 7 + (ctx.rand() - 0.5) * 2;
           const distFromCenter = Math.abs(w) / coreWidth;
 
           if (distFromCenter < 0.3) {
-            const ch = BOLT_CORE_CHARS[Math.floor(Math.random() * 3)];
-            fxCtx.font = 'bold ' + (12 + Math.random() * 4) + 'px monospace';
+            const ch = BOLT_CORE_CHARS[Math.floor(ctx.rand() * 3)];
+            fxCtx.font = 'bold ' + (12 + ctx.rand() * 4) + 'px monospace';
             fxCtx.fillStyle = 'rgba(' + (VG_WHITE[0] * 0.6 + VG_YELLOW[0] * 0.4) + ', ' + (VG_WHITE[1] * 0.6 + VG_YELLOW[1] * 0.4) + ', ' + (VG_WHITE[2] * 0.6 + VG_YELLOW[2] * 0.4) + ', ' + alpha + ')';
             fxCtx.fillText(ch, charX, charY);
           } else if (distFromCenter < 0.7) {
-            const ch = BOLT_EDGE_CHARS[Math.floor(Math.random() * BOLT_EDGE_CHARS.length)];
-            fxCtx.font = 'bold ' + (10 + Math.random() * 4) + 'px monospace';
-            const blend = Math.random();
+            const ch = BOLT_EDGE_CHARS[Math.floor(ctx.rand() * BOLT_EDGE_CHARS.length)];
+            fxCtx.font = 'bold ' + (10 + ctx.rand() * 4) + 'px monospace';
+            const blend = ctx.rand();
             fxCtx.fillStyle = 'rgba(' + (VG_BLUE[0] * blend + VG_PURPLE[0] * (1 - blend)) + ', ' + (VG_BLUE[1] * blend + VG_PURPLE[1] * (1 - blend)) + ', ' + (VG_BLUE[2] * blend + VG_PURPLE[2] * (1 - blend)) + ', ' + (alpha * 0.8) + ')';
             fxCtx.fillText(ch, charX, charY);
           } else {
-            const ch = BOLT_GLOW_CHARS[Math.floor(Math.random() * BOLT_GLOW_CHARS.length)];
-            fxCtx.font = (8 + Math.random() * 4) + 'px monospace';
+            const ch = BOLT_GLOW_CHARS[Math.floor(ctx.rand() * BOLT_GLOW_CHARS.length)];
+            fxCtx.font = (8 + ctx.rand() * 4) + 'px monospace';
             fxCtx.fillStyle = 'rgba(' + (VG_CYAN[0] * 0.5 + VG_BLUE[0] * 0.5) + ', ' + (VG_CYAN[1] * 0.5 + VG_BLUE[1] * 0.5) + ', ' + (VG_CYAN[2] * 0.5 + VG_BLUE[2] * 0.5) + ', ' + (alpha * 0.4) + ')';
             fxCtx.fillText(ch, charX, charY);
           }
@@ -1419,14 +1419,14 @@ export const lightningPlugin = {
     const swirlCount = isMobile ? 30 : 60;
     for (let i = 0; i < swirlCount; i++) {
       swirls.push({
-        cx: cx + (Math.random() - 0.5) * initW * 0.8,
-        cy: cy * 0.5 + (Math.random() - 0.5) * initH * 0.4,
-        angle: Math.random() * Math.PI * 2,
-        dist: 10 + Math.random() * 30,
-        speed: 2 + Math.random() * 4,
-        char: SWIRL_CHARS[Math.floor(Math.random() * SWIRL_CHARS.length)],
-        size: 8 + Math.random() * 14,
-        colorIdx: Math.floor(Math.random() * 4),
+        cx: cx + (ctx.rand() - 0.5) * initW * 0.8,
+        cy: cy * 0.5 + (ctx.rand() - 0.5) * initH * 0.4,
+        angle: ctx.rand() * Math.PI * 2,
+        dist: 10 + ctx.rand() * 30,
+        speed: 2 + ctx.rand() * 4,
+        char: SWIRL_CHARS[Math.floor(ctx.rand() * SWIRL_CHARS.length)],
+        size: 8 + ctx.rand() * 14,
+        colorIdx: Math.floor(ctx.rand() * 4),
       });
     }
 
@@ -1439,11 +1439,11 @@ export const lightningPlugin = {
         char: cardText[i],
         x: rect.left + 40 + (i % 30) * 10,
         y: rect.top + 20 + Math.floor(i / 30) * 18,
-        vx: (Math.random() - 0.5) * 500,
-        vy: -150 - Math.random() * 350,
-        rotation: 0, rotSpeed: (Math.random() - 0.5) * 25,
-        alpha: 1, jitter: 5 + Math.random() * 12,
-        burning: Math.random() > 0.5,
+        vx: (ctx.rand() - 0.5) * 500,
+        vy: -150 - ctx.rand() * 350,
+        rotation: 0, rotSpeed: (ctx.rand() - 0.5) * 25,
+        alpha: 1, jitter: 5 + ctx.rand() * 12,
+        burning: ctx.rand() > 0.5,
       });
     }
 
@@ -1475,8 +1475,8 @@ export const lightningPlugin = {
           fxCtx.fillText(s.char, sx, sy);
         }
 
-        if (Math.random() > 0.6) el.style.opacity = String(0.5 + Math.random() * 0.5);
-        if (t > 0.85 && Math.random() > 0.6) FX.flashColor('rgba(255, 255, 255, 0.15)', 40);
+        if (ctx.rand() > 0.6) el.style.opacity = String(0.5 + ctx.rand() * 0.5);
+        if (t > 0.85 && ctx.rand() > 0.6) FX.flashColor('rgba(255, 255, 255, 0.15)', 40);
 
       // Phase 2: Crack
       } else if (elapsed < buildupDuration + crackDuration) {
@@ -1555,11 +1555,11 @@ export const lightningPlugin = {
           fxCtx.rotate(c.rotation);
           fxCtx.font = 'bold 13px monospace';
           if (c.burning) {
-            const flicker = Math.random();
+            const flicker = ctx.rand();
             const br = flicker > 0.5 ? VG_YELLOW : [255, 160, 40];
             fxCtx.fillStyle = 'rgba(' + br[0] + ', ' + br[1] + ', ' + br[2] + ', ' + c.alpha + ')';
           } else {
-            const ec = Math.random() > 0.6 ? VG_CYAN : VG_WHITE;
+            const ec = ctx.rand() > 0.6 ? VG_CYAN : VG_WHITE;
             fxCtx.fillStyle = 'rgba(' + ec[0] + ', ' + ec[1] + ', ' + ec[2] + ', ' + c.alpha + ')';
           }
           fxCtx.fillText(c.char, 0, 0);
@@ -1604,8 +1604,8 @@ export const steamrollerPlugin = {
     const cx = pos.cx, cy = pos.cy;
     const _drawId = FX.nextFxDrawId('death-steamroller');
     const app = getApp();
-    const startTime = performance.now();
-    const goRight = Math.random() > 0.5;
+    const startTime = ctx.now();
+    const goRight = ctx.rand() > 0.5;
     const totalDuration = p.totalDuration;
 
     const dustParticles = [];
@@ -1617,12 +1617,12 @@ export const steamrollerPlugin = {
     function spawnDust(x, y, count) {
       for (let i = 0; i < count; i++) {
         dustParticles.push({
-          x: x + (Math.random() - 0.5) * 20, y: y + (Math.random() - 0.5) * 10,
-          vx: (goRight ? -1 : 1) * (20 + Math.random() * 60) + (Math.random() - 0.5) * 30,
-          vy: -p.dustLaunchSpeed - Math.random() * (p.dustLaunchSpeed * 2),
-          char: DUST_CHARS[Math.floor(Math.random() * DUST_CHARS.length)],
-          size: (5 + Math.random() * 7) * p.particleSize / 8, alpha: 0.4 + Math.random() * 0.4,
-          gravity: p.dustGravity + Math.random() * 40, life: 1.0, decay: 0.6 + Math.random() * 0.6,
+          x: x + (ctx.rand() - 0.5) * 20, y: y + (ctx.rand() - 0.5) * 10,
+          vx: (goRight ? -1 : 1) * (20 + ctx.rand() * 60) + (ctx.rand() - 0.5) * 30,
+          vy: -p.dustLaunchSpeed - ctx.rand() * (p.dustLaunchSpeed * 2),
+          char: DUST_CHARS[Math.floor(ctx.rand() * DUST_CHARS.length)],
+          size: (5 + ctx.rand() * 7) * p.particleSize / 8, alpha: 0.4 + ctx.rand() * 0.4,
+          gravity: p.dustGravity + ctx.rand() * 40, life: 1.0, decay: 0.6 + ctx.rand() * 0.6,
         });
       }
     }
@@ -1702,18 +1702,18 @@ export const steamrollerPlugin = {
           dustAccum += pixelsThisFrame;
           while (dustAccum >= p.dustSpawnRate) {
             dustAccum -= p.dustSpawnRate;
-            spawnDust(rollerX, rect.bottom - 5 + (Math.random() - 0.5) * rect.height * 0.3, 1);
+            spawnDust(rollerX, rect.bottom - 5 + (ctx.rand() - 0.5) * rect.height * 0.3, 1);
           }
           crackAccum += pixelsThisFrame;
           while (crackAccum >= p.crackSpawnRate) {
             crackAccum -= p.crackSpawnRate;
             const crackX = goRight
-              ? rect.left + Math.random() * Math.max(rollerX - rect.left, 1)
-              : rollerX + Math.random() * Math.max(rect.right - rollerX, 1);
+              ? rect.left + ctx.rand() * Math.max(rollerX - rect.left, 1)
+              : rollerX + ctx.rand() * Math.max(rect.right - rollerX, 1);
             cracks.push({
-              x: crackX, y: rect.bottom - 2 + (Math.random() - 0.5) * 6,
-              char: CRACK_CHARS[Math.floor(Math.random() * CRACK_CHARS.length)],
-              size: 6 + Math.random() * 5, alpha: 0.3 + Math.random() * 0.2,
+              x: crackX, y: rect.bottom - 2 + (ctx.rand() - 0.5) * 6,
+              char: CRACK_CHARS[Math.floor(ctx.rand() * CRACK_CHARS.length)],
+              size: 6 + ctx.rand() * 5, alpha: 0.3 + ctx.rand() * 0.2,
             });
           }
         } else {
@@ -1776,10 +1776,10 @@ export const steamrollerPlugin = {
         while (exhaustAccum >= 0.08) {
           exhaustAccum -= 0.08;
           exhaustPuffs.push({
-            x: rollerX + cabOffsetX + (goRight ? 10 : -10) + (Math.random() - 0.5) * 6,
-            y: rect.bottom - 58, vx: (Math.random() - 0.5) * 8, vy: -15 - Math.random() * 20,
-            char: PUFF_CHARS[Math.floor(Math.random() * PUFF_CHARS.length)],
-            size: 6 + Math.random() * 5, alpha: 0.3, life: 1.0, decay: 0.8,
+            x: rollerX + cabOffsetX + (goRight ? 10 : -10) + (ctx.rand() - 0.5) * 6,
+            y: rect.bottom - 58, vx: (ctx.rand() - 0.5) * 8, vy: -15 - ctx.rand() * 20,
+            char: PUFF_CHARS[Math.floor(ctx.rand() * PUFF_CHARS.length)],
+            size: 6 + ctx.rand() * 5, alpha: 0.3, life: 1.0, decay: 0.8,
           });
         }
       }
@@ -1859,7 +1859,7 @@ export const piranhasPlugin = {
     const cx = pos.cx, cy = pos.cy;
     const _drawId = FX.nextFxDrawId('death-piranhas');
     const app = getApp();
-    const startTime = performance.now();
+    const startTime = ctx.now();
 
     const swarmInDuration = p.swarmInDuration;
     const frenzyDuration = p.frenzyDuration;
@@ -1881,19 +1881,19 @@ export const piranhasPlugin = {
     const fishCount = isMobile ? Math.max(5, Math.round(p.fishCount / 2)) : p.fishCount;
     const fish = [];
     for (let i = 0; i < fishCount; i++) {
-      const angle = (i / fishCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
-      const dist = 150 + Math.random() * 200;
+      const angle = (i / fishCount) * Math.PI * 2 + (ctx.rand() - 0.5) * 0.4;
+      const dist = 150 + ctx.rand() * 200;
       fish.push({
         x: cx + Math.cos(angle) * dist, y: cy + Math.sin(angle) * dist,
-        homeAngle: angle, speed: p.fishSpeed + Math.random() * 300,
-        size: (10 + Math.random() * 5) * p.particleSize / 12,
-        wobblePhase: Math.random() * Math.PI * 2,
-        wobbleFreq: 0.008 + Math.random() * 0.006,
-        alpha: 0.8 + Math.random() * 0.2,
+        homeAngle: angle, speed: p.fishSpeed + ctx.rand() * 300,
+        size: (10 + ctx.rand() * 5) * p.particleSize / 12,
+        wobblePhase: ctx.rand() * Math.PI * 2,
+        wobbleFreq: 0.008 + ctx.rand() * 0.006,
+        alpha: 0.8 + ctx.rand() * 0.2,
         facingRight: Math.cos(angle) < 0,
         biteTimer: 0,
-        edgeSide: Math.floor(Math.random() * 4),
-        edgePos: Math.random(),
+        edgeSide: Math.floor(ctx.rand() * 4),
+        edgePos: ctx.rand(),
       });
     }
 
@@ -1941,11 +1941,11 @@ export const piranhasPlugin = {
     function spawnBlood(x, y, count) {
       for (let i = 0; i < count; i++) {
         bloodDrops.push({
-          x: x + (Math.random() - 0.5) * 12, y: y + (Math.random() - 0.5) * 8,
-          vx: (Math.random() - 0.5) * 80, vy: -30 - Math.random() * 60,
-          char: BLOOD_ASCII[Math.floor(Math.random() * BLOOD_ASCII.length)],
-          size: 6 + Math.random() * 10, alpha: 0.7 + Math.random() * 0.3,
-          gravity: 80 + Math.random() * 40, life: 1.0, decay: 0.2 + Math.random() * 0.3,
+          x: x + (ctx.rand() - 0.5) * 12, y: y + (ctx.rand() - 0.5) * 8,
+          vx: (ctx.rand() - 0.5) * 80, vy: -30 - ctx.rand() * 60,
+          char: BLOOD_ASCII[Math.floor(ctx.rand() * BLOOD_ASCII.length)],
+          size: 6 + ctx.rand() * 10, alpha: 0.7 + ctx.rand() * 0.3,
+          gravity: 80 + ctx.rand() * 40, life: 1.0, decay: 0.2 + ctx.rand() * 0.3,
         });
       }
     }
@@ -1977,7 +1977,7 @@ export const piranhasPlugin = {
           const charSet = heading ? FISH_R : FISH_L;
           fxCtx.font = 'bold ' + f.size + 'px monospace';
           fxCtx.fillStyle = 'rgba(255, 140, 40, ' + (f.alpha * ease) + ')';
-          fxCtx.fillText(charSet[Math.floor(Math.random() * charSet.length)], f.x + wobX, f.y + wobY);
+          fxCtx.fillText(charSet[Math.floor(ctx.rand() * charSet.length)], f.x + wobX, f.y + wobY);
         });
 
       // Phase 2: Feeding frenzy
@@ -1986,9 +1986,9 @@ export const piranhasPlugin = {
         const t = frenzyElapsed / frenzyDuration;
         const maxDepthVal = 15 + t * 40;
 
-        if (FX.fxEnabled('shake') && Math.random() > 0.6) {
+        if (FX.fxEnabled('shake') && ctx.rand() > 0.6) {
           const intensity = 1 + t * 3;
-          app.style.transform = 'translate(' + ((Math.random() - 0.5) * intensity) + 'px, ' + ((Math.random() - 0.5) * intensity) + 'px)';
+          app.style.transform = 'translate(' + ((ctx.rand() - 0.5) * intensity) + 'px, ' + ((ctx.rand() - 0.5) * intensity) + 'px)';
         }
 
         el.style.opacity = String(Math.max(1 - t * 1.2, 0));
@@ -2012,12 +2012,12 @@ export const piranhasPlugin = {
           f.y = target.y + Math.sin(orbitAngle) * orbitR;
 
           if (isBiting && biteDepth[sideKey][segIdx] < maxDepthVal) {
-            const bitePower = (0.8 + Math.random() * 0.5) * dt * p.biteSpeed;
+            const bitePower = (0.8 + ctx.rand() * 0.5) * dt * p.biteSpeed;
             biteDepth[sideKey][segIdx] = Math.min(biteDepth[sideKey][segIdx] + bitePower, maxDepthVal);
             if (segIdx > 0) biteDepth[sideKey][segIdx - 1] = Math.min(biteDepth[sideKey][segIdx - 1] + bitePower * 0.3, maxDepthVal);
             if (segIdx < EDGE_SEGMENTS - 1) biteDepth[sideKey][segIdx + 1] = Math.min(biteDepth[sideKey][segIdx + 1] + bitePower * 0.3, maxDepthVal);
-            if (Math.random() > 0.5) spawnBlood(target.x, target.y, 2 + Math.floor(Math.random() * 3));
-            if (Math.random() > 0.95) { f.edgeSide = Math.floor(Math.random() * 4); f.edgePos = Math.random(); }
+            if (ctx.rand() > 0.5) spawnBlood(target.x, target.y, 2 + Math.floor(ctx.rand() * 3));
+            if (ctx.rand() > 0.95) { f.edgeSide = Math.floor(ctx.rand() * 4); f.edgePos = ctx.rand(); }
           }
 
           const wobX = Math.sin(now * f.wobbleFreq + f.wobblePhase) * 3;
@@ -2050,8 +2050,8 @@ export const piranhasPlugin = {
           piranhasDotgridTimer = 0;
           piranhasDotgridCount++;
           const intensity = ctx.intensity / 10;
-          const biteEdge = Math.floor(Math.random() * 4);
-          const biteSeg = Math.floor(Math.random() * EDGE_SEGMENTS);
+          const biteEdge = Math.floor(ctx.rand() * 4);
+          const biteSeg = Math.floor(ctx.rand() * EDGE_SEGMENTS);
           const bitePos = edgePosition(biteEdge, biteSeg);
           if (FX.doDotgridCrater) {
             FX.doDotgridCrater(bitePos.x, bitePos.y, lerp(25, 60, intensity), lerp(0.5, 1.2, intensity), {
@@ -2138,7 +2138,7 @@ export const woodchipperPlugin = {
     const cy = pos.cy;
     const _drawId = FX.nextFxDrawId('death-woodchipper');
     const app = getApp();
-    const startTime = performance.now();
+    const startTime = ctx.now();
     const feedDuration = p.feedDuration;
     const afterDuration = p.afterDuration;
     const totalDuration = feedDuration + afterDuration;
@@ -2183,25 +2183,25 @@ export const woodchipperPlugin = {
         fxCtx.fillText('\u256B\u256B\u256B\u256B\u256B\u256B', chipperX - 50, cy + grindOffset);
 
         // Spray chunks
-        if (t > 0.1 && Math.random() > 0.3) {
+        if (t > 0.1 && ctx.rand() > 0.3) {
           const sprayCount = isMobile ? Math.max(1, p.sprayCount - 1) : p.sprayCount;
           for (let i = 0; i < sprayCount; i++) {
             chunks.push({
-              x: window.innerWidth - 80, y: cy + (Math.random() - 0.5) * 20,
-              vx: -(p.spraySpeed * 0.8) - Math.random() * (p.spraySpeed * 1.2), vy: -(p.spraySpeed * 0.6) - Math.random() * (p.spraySpeed * 0.8),
-              char: CHUNK_CHARS[Math.floor(Math.random() * CHUNK_CHARS.length)],
-              size: p.chunkSize - 3 + Math.random() * (p.chunkSize + 3), alpha: 0.7 + Math.random() * 0.3,
-              rotation: Math.random() * Math.PI * 2,
-              rotSpeed: (Math.random() - 0.5) * 15,
-              colorR: 150 + Math.floor(Math.random() * 100),
-              colorG: 150 + Math.floor(Math.random() * 100),
-              colorB: 150 + Math.floor(Math.random() * 100),
+              x: window.innerWidth - 80, y: cy + (ctx.rand() - 0.5) * 20,
+              vx: -(p.spraySpeed * 0.8) - ctx.rand() * (p.spraySpeed * 1.2), vy: -(p.spraySpeed * 0.6) - ctx.rand() * (p.spraySpeed * 0.8),
+              char: CHUNK_CHARS[Math.floor(ctx.rand() * CHUNK_CHARS.length)],
+              size: p.chunkSize - 3 + ctx.rand() * (p.chunkSize + 3), alpha: 0.7 + ctx.rand() * 0.3,
+              rotation: ctx.rand() * Math.PI * 2,
+              rotSpeed: (ctx.rand() - 0.5) * 15,
+              colorR: 150 + Math.floor(ctx.rand() * 100),
+              colorG: 150 + Math.floor(ctx.rand() * 100),
+              colorB: 150 + Math.floor(ctx.rand() * 100),
             });
           }
         }
 
-        if (Math.random() > 0.7 && FX.fxEnabled('shake')) {
-          app.style.transform = 'translate(' + ((Math.random() - 0.5) * 2) + 'px, ' + ((Math.random() - 0.5) * 2) + 'px)';
+        if (ctx.rand() > 0.7 && FX.fxEnabled('shake')) {
+          app.style.transform = 'translate(' + ((ctx.rand() - 0.5) * 2) + 'px, ' + ((ctx.rand() - 0.5) * 2) + 'px)';
         }
       } else {
         FX.destroyCard(el);
