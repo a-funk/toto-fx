@@ -1,0 +1,103 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>toto-fx nuclear render</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 1280px; height: 720px;
+      overflow: hidden;
+      background: #12080a;
+      color: #ffc89a;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      /* Dotgrid base color picks up from --ink-muted CSS var when baseColor is null.
+         We also pass baseColor explicitly in JS, but this is a belt-and-braces default. */
+      --ink-muted: rgb(255, 160, 80);
+    }
+    #stage {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    #target {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 320px;
+      height: 100px;
+      background: linear-gradient(135deg, #C45A3C, #8b3a22);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      border-radius: 12px;
+      box-shadow: 0 8px 40px rgba(196, 90, 60, 0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <div id="target" data-anim-id="hero" data-group="g1">DESTROY ME</div>
+  </div>
+
+  <script src="./toto-fx.min.js"></script>
+  <script src="./dotgrid.min.js"></script>
+  <script src="./nuclear.min.js"></script>
+  <script src="./crater.min.js"></script>
+  <script src="./ripple.min.js"></script>
+  <script src="./thud.min.js"></script>
+  <script src="./death.min.js"></script>
+  <script>
+    (function () {
+      // 1. Engine
+      const engine = window.TotoFX.createEngine({
+        root: document.body,
+        resolveElement: function (key) {
+          return document.querySelector('[data-anim-id="' + key + '"]');
+        },
+        debug: false,
+        reducedMotion: 'ignore',
+      });
+
+      // 2. Dotgrid — fluid-sim character grid that fills the viewport.
+      //    Warm ember palette, explicit bright base color, denser coverage.
+      const dotgrid = window.TotoFXDotgrid.createDotgrid({
+        dotSize: 18,
+        fontSize: 16,
+        baseOpacity: 0.55,
+        baseColor: [255, 160, 80],      // warm ember, high contrast against #12080a bg
+        palette: 'dense',                // heavy chars: # % & @ █ ▓ ▒ ░ ● etc.
+        opacityMin: 0.35,
+        opacityMax: 1.0,
+        densityMultiplier: 1.4,          // more visible impact impulse
+        glowEnabled: true,
+        glowRadius: 8,
+        glowIntensity: 1.0,
+      });
+      dotgrid.init();
+      engine.setDotgrid(dotgrid);
+
+      // 3. Install dotgrid effect plugins (nuclear, crater, ripple)
+      if (window.TotoFXDotgridNuclear) window.TotoFXDotgridNuclear.install(dotgrid);
+      if (window.TotoFXDotgridCrater) window.TotoFXDotgridCrater.install(dotgrid);
+      if (window.TotoFXDotgridRipple) window.TotoFXDotgridRipple.install(dotgrid);
+
+      // 4. Register animation plugins
+      if (window.TotoFXThud && window.TotoFXThud.thudPlugin) engine.use(window.TotoFXThud.thudPlugin);
+      if (window.TotoFXDeath && window.TotoFXDeath.deathPlugin) engine.use(window.TotoFXDeath.deathPlugin);
+
+      engine.init();
+
+      window.__engine = engine;
+      window.__dotgrid = dotgrid;
+      window.__ready = true;
+    })();
+  </script>
+</body>
+</html>
