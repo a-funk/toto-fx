@@ -40,7 +40,7 @@ function getApp() {
  * @returns {*} A random element.
  * @private
  */
-function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function pick(arr) { return arr[Math.floor(ctx.rand() * arr.length)]; }
 
 /**
  * Generate a random number in the range [a, b).
@@ -49,7 +49,7 @@ function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
  * @returns {number}
  * @private
  */
-function randRange(a, b) { return a + Math.random() * (b - a); }
+function randRange(a, b) { return a + ctx.rand() * (b - a); }
 
 /**
  * Linear interpolation between two values.
@@ -208,21 +208,21 @@ export const confettiPlugin = {
     const dotRadius = lerp(120, 400, intensity);
 
     for (let i = 0; i < particleCount; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = lerp(100, 200, intensity) + Math.random() * lerp(150, 400, intensity);
+      const angle = ctx.rand() * Math.PI * 2;
+      const speed = lerp(100, 200, intensity) + ctx.rand() * lerp(150, 400, intensity);
       particles.push({
         x: center.cx + randRange(-center.w * 0.3, center.w * 0.3),
         y: center.cy + randRange(-center.h * 0.3, center.h * 0.3),
         vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - pm.burstLift,
         char: pick(CONFETTI_CHARS), color: pick(RAINBOW),
-        size: (lerp(8, 14, intensity) + Math.random() * lerp(6, 16, intensity)) * pm.particleSize / 10,
-        rotation: Math.random() * Math.PI * 2,
-        rotSpeed: (Math.random() - 0.5) * 10, drift: (Math.random() - 0.5) * 60,
-        life: 0, maxLife: lerp(800, 1400, intensity) + Math.random() * 800, delay: Math.random() * 100
+        size: (lerp(8, 14, intensity) + ctx.rand() * lerp(6, 16, intensity)) * pm.particleSize / 10,
+        rotation: ctx.rand() * Math.PI * 2,
+        rotSpeed: (ctx.rand() - 0.5) * 10, drift: (ctx.rand() - 0.5) * 60,
+        life: 0, maxLife: lerp(800, 1400, intensity) + ctx.rand() * 800, delay: ctx.rand() * 100
       });
     }
 
-    const startTime = performance.now();
+    const startTime = ctx.now();
     FX.doDotgridRipple(center.cx, center.cy, { color: '#d4728c', radius: dotRadius, duration: effectDuration * 0.6 });
     FX.doImpactFlash(false);
     FX.doScreenShake(false);
@@ -298,7 +298,7 @@ export const flowersPlugin = {
     const intensity = FX.intensityScale(pctx.intensity || 5);
     const center = FX.prepareCard(el);
     const _drawId = FX.nextFxDrawId('cute-flowers');
-    const startTime = performance.now();
+    const startTime = ctx.now();
     const totalDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
     const isHighIntensity = intensity >= 0.8;
     const isMedIntensity = intensity >= 0.5;
@@ -312,30 +312,30 @@ export const flowersPlugin = {
       const species = FLOWER_SPECIES[i % FLOWER_SPECIES.length];
       const palette = pick(species.palettes);
       const baseX = gardenLeft + ((i + 0.5) / flowerCount) * gardenWidth;
-      const stemHeight = lerp(35, pm.maxStemHeight, intensity) + Math.random() * lerp(15, 50, intensity);
+      const stemHeight = lerp(35, pm.maxStemHeight, intensity) + ctx.rand() * lerp(15, 50, intensity);
       const headSizeBase = lerp(species.headSize[0], species.headSize[1], intensity);
 
       const flower = {
         species: species, baseX: baseX + randRange(-15, 15), baseY: center.rect.bottom,
         stemHeight: stemHeight, stemColor: pick(MONET_STEM_GREENS), petalColors: palette,
-        growDelay: i * lerp(120, 30, intensity) + Math.random() * lerp(200, 60, intensity),
-        curvature: (Math.random() - 0.5) * lerp(10, 25, intensity),
-        swayPhase: Math.random() * Math.PI * 2, swaySpeed: pm.swaySpeed + Math.random() * 1.5,
+        growDelay: i * lerp(120, 30, intensity) + ctx.rand() * lerp(200, 60, intensity),
+        curvature: (ctx.rand() - 0.5) * lerp(10, 25, intensity),
+        swayPhase: ctx.rand() * Math.PI * 2, swaySpeed: pm.swaySpeed + ctx.rand() * 1.5,
         headSize: headSizeBase, leaves: [],
         hasThorns: species.name === 'rose' && intensity > 0.4,
         _topX: undefined, _topY: undefined, _bloomT: 0
       };
 
-      const leafCount = Math.floor(lerp(1, 5, intensity)) + (Math.random() > 0.4 ? 1 : 0);
+      const leafCount = Math.floor(lerp(1, 5, intensity)) + (ctx.rand() > 0.4 ? 1 : 0);
       for (let j = 0; j < leafCount; j++) {
         const side = (j % 2 === 0) ? -1 : 1;
         flower.leaves.push({
           heightRatio: 0.12 + (j / leafCount) * 0.55, side: side,
           char: pick(REAL_LEAF_CHARS),
-          offset: lerp(6, 14, intensity) + Math.random() * 5,
-          size: (lerp(6, 12, intensity) + Math.random() * 4) * pm.particleSize / 10,
-          angle: side * (0.3 + Math.random() * 0.4),
-          hasVein: isHighIntensity && Math.random() > 0.5
+          offset: lerp(6, 14, intensity) + ctx.rand() * 5,
+          size: (lerp(6, 12, intensity) + ctx.rand() * 4) * pm.particleSize / 10,
+          angle: side * (0.3 + ctx.rand() * 0.4),
+          hasVein: isHighIntensity && ctx.rand() > 0.5
         });
       }
       flowers.push(flower);
@@ -350,12 +350,12 @@ export const flowersPlugin = {
       const bflyColors = ['#e8b4b8', '#b4dae8', '#d0b4e8', '#e8e4b4', '#b4e8c9', '#e8b4cb'];
       for (let bi = 0; bi < bflyCount; bi++) {
         gardenButterflies.push({
-          x: gardenLeft + Math.random() * gardenWidth,
-          y: center.rect.bottom - lerp(30, 80, intensity) - Math.random() * 40,
-          vx: (Math.random() - 0.5) * 20, vy: -5 - Math.random() * 15,
-          flapPhase: Math.random() * Math.PI * 2, flapSpeed: 6 + Math.random() * 4,
+          x: gardenLeft + ctx.rand() * gardenWidth,
+          y: center.rect.bottom - lerp(30, 80, intensity) - ctx.rand() * 40,
+          vx: (ctx.rand() - 0.5) * 20, vy: -5 - ctx.rand() * 15,
+          flapPhase: ctx.rand() * Math.PI * 2, flapSpeed: 6 + ctx.rand() * 4,
           color: pick(bflyColors), size: lerp(6, 12, intensity) * psz,
-          delay: 1800 + Math.random() * 2000, curvePhase: Math.random() * Math.PI * 2
+          delay: 1800 + ctx.rand() * 2000, curvePhase: ctx.rand() * Math.PI * 2
         });
       }
     }
@@ -366,12 +366,12 @@ export const flowersPlugin = {
       const beeCount = Math.floor(lerp(0, 4, intensity));
       for (let bei = 0; bei < beeCount; bei++) {
         gardenBees.push({
-          x: gardenLeft + Math.random() * gardenWidth,
-          y: center.rect.bottom - 50 - Math.random() * 40,
-          targetFlower: Math.floor(Math.random() * flowerCount),
-          orbitPhase: Math.random() * Math.PI * 2, orbitSpeed: 2 + Math.random() * 3,
-          orbitRadius: 12 + Math.random() * 15, buzzPhase: Math.random() * Math.PI * 2,
-          delay: 2200 + Math.random() * 2000, size: lerp(5, 9, intensity) * psz
+          x: gardenLeft + ctx.rand() * gardenWidth,
+          y: center.rect.bottom - 50 - ctx.rand() * 40,
+          targetFlower: Math.floor(ctx.rand() * flowerCount),
+          orbitPhase: ctx.rand() * Math.PI * 2, orbitSpeed: 2 + ctx.rand() * 3,
+          orbitRadius: 12 + ctx.rand() * 15, buzzPhase: ctx.rand() * Math.PI * 2,
+          delay: 2200 + ctx.rand() * 2000, size: lerp(5, 9, intensity) * psz
         });
       }
     }
@@ -382,12 +382,12 @@ export const flowersPlugin = {
       const pollenCount = FX.pCount(Math.floor(lerp(0, 35, intensity)));
       for (let pi = 0; pi < pollenCount; pi++) {
         pollenParticles.push({
-          x: gardenLeft + Math.random() * gardenWidth,
-          y: center.rect.bottom - Math.random() * lerp(40, 120, intensity),
-          vx: (Math.random() - 0.5) * 15, vy: -(5 + Math.random() * 15),
-          size: (2 + Math.random() * 3) * psz,
+          x: gardenLeft + ctx.rand() * gardenWidth,
+          y: center.rect.bottom - ctx.rand() * lerp(40, 120, intensity),
+          vx: (ctx.rand() - 0.5) * 15, vy: -(5 + ctx.rand() * 15),
+          size: (2 + ctx.rand() * 3) * psz,
           color: pick(MONET_YELLOWS.concat(['#f0e8e0', '#e8dcc0'])),
-          phase: Math.random() * Math.PI * 2, life: 0, delay: 1200 + Math.random() * 2500
+          phase: ctx.rand() * Math.PI * 2, life: 0, delay: 1200 + ctx.rand() * 2500
         });
       }
     }
@@ -398,11 +398,11 @@ export const flowersPlugin = {
       const breezeCount = FX.pCount(Math.floor(lerp(0, 10, intensity)));
       for (let bri = 0; bri < breezeCount; bri++) {
         breezeParticles.push({
-          x: gardenLeft - 30 + Math.random() * 30,
-          y: center.rect.bottom - 30 - Math.random() * 80,
-          vx: 15 + Math.random() * 25, vy: -2 + (Math.random() - 0.5) * 8,
-          char: pick(['*', '\u00B7', ',', '\'']), size: (3 + Math.random() * 3) * psz,
-          phase: Math.random() * Math.PI * 2, delay: 800 + Math.random() * 3000,
+          x: gardenLeft - 30 + ctx.rand() * 30,
+          y: center.rect.bottom - 30 - ctx.rand() * 80,
+          vx: 15 + ctx.rand() * 25, vy: -2 + (ctx.rand() - 0.5) * 8,
+          char: pick(['*', '\u00B7', ',', '\'']), size: (3 + ctx.rand() * 3) * psz,
+          phase: ctx.rand() * Math.PI * 2, delay: 800 + ctx.rand() * 3000,
           color: pick(['#e8dcc0', '#f0e8e0', '#d0c8b0'])
         });
       }
@@ -440,7 +440,7 @@ export const flowersPlugin = {
           const gx = groundLeft2 + (g / groundDensity) * groundWidth2 + randRange(-3, 3);
           const soilChars = layer === 0 ? GROUND_CHARS : ['\u2591', '\u2592', '\u00B7', '~'];
           FX.drawChar(fxCtx, pick(soilChars), gx, layerY + randRange(-2, 4),
-            layer === 0 ? (Math.random() > 0.4 ? pick(GROUND_GREENS) : pick(GROUND_BROWNS)) : pick(GROUND_BROWNS),
+            layer === 0 ? (ctx.rand() > 0.4 ? pick(GROUND_GREENS) : pick(GROUND_BROWNS)) : pick(GROUND_BROWNS),
             lerp(7, 13, intensity), layerAlpha * (layer === 0 ? 1 : 0.6), 0);
         }
       }
@@ -455,7 +455,7 @@ export const flowersPlugin = {
             groundY - lerp(3, 8, intensity) + randRange(-2, 2),
             pick(MONET_GREENS), lerp(4, 8, intensity), groundAlpha * lerp(0.45, 0.8, intensity),
             grassSway + breezeWind * 0.05);
-          if (isHighIntensity && Math.random() > 0.85) {
+          if (isHighIntensity && ctx.rand() > 0.85) {
             FX.drawChar(fxCtx, pick(['\u273F', '\u00B7', '\u00B7']),
               gxi + randRange(-6, 6), groundY - lerp(6, 12, intensity),
               pick(MONET_PINKS.concat(MONET_YELLOWS)), 4, groundAlpha * 0.65 * lerp(0.45, 0.8, intensity), 0);
@@ -610,7 +610,7 @@ export const flowersPlugin = {
               const hazeCount = Math.floor(lerp(1, 3, intensity));
               for (let h = 0; h < hazeCount; h++) {
                 FX.drawChar(fxCtx, f.species.outerChar, stemTopX + randRange(-2, 2), stemTopY + randRange(-2, 2),
-                  f.petalColors[Math.floor(Math.random() * f.petalColors.length)],
+                  f.petalColors[Math.floor(ctx.rand() * f.petalColors.length)],
                   hSize * lerp(0.4, 0.65, intensity) * hazeT * breathe,
                   hazeT * lerp(0.12, 0.22, intensity), randRange(-0.15, 0.15));
               }
@@ -624,7 +624,7 @@ export const flowersPlugin = {
                 const sparkAlpha = (fullT - 0.5) * 0.4 * (Math.sin(elapsed * 0.004 + f.swayPhase) * 0.5 + 0.5);
                 FX.drawChar(fxCtx, '\u00B7', stemTopX + randRange(-1, 1), stemTopY - 2, '#f0e8e0', 3, sparkAlpha, 0);
               }
-              if (isHighIntensity && fullT > 0.8 && Math.random() > 0.92) {
+              if (isHighIntensity && fullT > 0.8 && ctx.rand() > 0.92) {
                 FX.drawChar(fxCtx, pick([',', '\'']),
                   stemTopX + randRange(-8, 8) + breezeWind * 3, stemTopY + randRange(5, 20),
                   pick(f.petalColors), 4, 0.3, randRange(-0.5, 0.5));
@@ -755,7 +755,7 @@ export const sparklePlugin = {
     const intensity = FX.intensityScale(pctx.intensity || 5);
     const center = FX.prepareCard(el);
     const _drawId = FX.nextFxDrawId('cute-sparkle');
-    const startTime = performance.now();
+    const startTime = ctx.now();
     const totalDuration = lerp(1800, 3800, intensity);
     const particles = [];
     const particleCount = FX.pCount(Math.floor(lerp(20, 150, intensity)));
@@ -763,15 +763,15 @@ export const sparklePlugin = {
 
     for (let i = 0; i < particleCount; i++) {
       particles.push({
-        x: center.rect.left + Math.random() * center.w,
-        y: center.rect.top + Math.random() * center.h,
-        vx: (Math.random() - 0.5) * 80, vy: -(60 + Math.random() * 200),
+        x: center.rect.left + ctx.rand() * center.w,
+        y: center.rect.top + ctx.rand() * center.h,
+        vx: (ctx.rand() - 0.5) * 80, vy: -(60 + ctx.rand() * 200),
         char: pick(SPARKLE_CHARS),
         color: pick(['#c9a84c', '#d4a850', '#e0d0a0', '#e8dcc0', '#d8c890']),
-        size: lerp(6, 10, intensity) + Math.random() * lerp(6, 16, intensity), life: 0,
-        maxLife: lerp(600, 1200, intensity) + Math.random() * 1200, delay: Math.random() * 400,
-        blinkPhase: Math.random() * Math.PI * 2, blinkSpeed: 4 + Math.random() * 8,
-        drift: (Math.random() - 0.5) * 30
+        size: lerp(6, 10, intensity) + ctx.rand() * lerp(6, 16, intensity), life: 0,
+        maxLife: lerp(600, 1200, intensity) + ctx.rand() * 1200, delay: ctx.rand() * 400,
+        blinkPhase: ctx.rand() * Math.PI * 2, blinkSpeed: 4 + ctx.rand() * 8,
+        drift: (ctx.rand() - 0.5) * 30
       });
     }
 
@@ -852,7 +852,7 @@ export const shootingstarPlugin = {
     const intensity = FX.intensityScale(pctx.intensity || 5);
     const center = FX.prepareCard(el);
     const _drawId = FX.nextFxDrawId('cute-shootingstar');
-    const startTime = performance.now();
+    const startTime = ctx.now();
     const totalDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
     const trailParticles = [];
     const dotRadius = lerp(180, 450, intensity);
@@ -867,13 +867,13 @@ export const shootingstarPlugin = {
         const t = elapsed / 400;
         el.style.transform = 'scale(' + (1 + t * 0.05) + ') translateY(' + (t * 3) + 'px)';
         el.style.boxShadow = '0 0 ' + (t * 20) + 'px rgba(201, 168, 76, ' + (t * 0.3) + ')';
-        if (Math.random() > 0.5) {
+        if (ctx.rand() > 0.5) {
           trailParticles.push({
             x: center.cx + randRange(-center.w * 0.4, center.w * 0.4),
             y: center.cy + randRange(-center.h * 0.3, center.h * 0.3),
-            vx: (Math.random() - 0.5) * 20, vy: (Math.random() - 0.5) * 20,
+            vx: (ctx.rand() - 0.5) * 20, vy: (ctx.rand() - 0.5) * 20,
             char: pick(SPARKLE_CHARS), color: pick(['#c9a84c', '#d4a850', '#f0e8e0']),
-            size: lerp(4, 8, intensity) + Math.random() * 8, life: 0, maxLife: 300, alpha: 0.8
+            size: lerp(4, 8, intensity) + ctx.rand() * 8, life: 0, maxLife: 300, alpha: 0.8
           });
         }
       } else {
@@ -892,8 +892,8 @@ export const shootingstarPlugin = {
               x: cx + randRange(-10, 10), y: cy + randRange(-5, 15),
               vx: randRange(-80, -20), vy: randRange(20, 80),
               char: pick(STAR_CHARS), color: pick(['#c9a84c', '#d4a850', '#e8dcc0', '#d4728c', '#9b85c4']),
-              size: lerp(6, 10, intensity) + Math.random() * 12, life: 0,
-              maxLife: lerp(400, 800, intensity) + Math.random() * 400, alpha: 0.9
+              size: lerp(6, 10, intensity) + ctx.rand() * 12, life: 0,
+              maxLife: lerp(400, 800, intensity) + ctx.rand() * 400, alpha: 0.9
             });
           }
         }
@@ -949,7 +949,7 @@ export const butterfliesPlugin = {
     const intensity = FX.intensityScale(pctx.intensity || 5);
     const center = FX.prepareCard(el);
     const _drawId = FX.nextFxDrawId('cute-butterflies');
-    const startTime = performance.now();
+    const startTime = ctx.now();
     const totalDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
     const butterflies = [];
     const bColors = ['#e8b4b8', '#b4dae8', '#d0b4e8', '#e8e4b4', '#b4e8c9', '#e8b4cb', '#c8b6e0', '#a8d0e0'];
@@ -957,15 +957,15 @@ export const butterfliesPlugin = {
     const dotRadius = lerp(120, 300, intensity);
 
     for (let i = 0; i < bCount; i++) {
-      const bAngle = (Math.random() - 0.5) * Math.PI * 0.8 - Math.PI / 2;
+      const bAngle = (ctx.rand() - 0.5) * Math.PI * 0.8 - Math.PI / 2;
       butterflies.push({
         x: center.cx + randRange(-center.w * 0.3, center.w * 0.3),
         y: center.cy + randRange(-center.h * 0.2, center.h * 0.2),
-        targetAngle: bAngle, speed: pm.flySpeed + Math.random() * 60,
-        flapPhase: Math.random() * Math.PI * 2, flapSpeed: pm.flapSpeed + Math.random() * 4,
-        color: bColors[i % bColors.length], size: (lerp(10, 16, intensity) + Math.random() * 6) * pm.particleSize / 12,
-        delay: 200 + i * lerp(160, 80, intensity), curveAmp: 30 + Math.random() * 50,
-        curveFreq: 0.8 + Math.random() * 1.2, curvePhase: Math.random() * Math.PI * 2, life: 0
+        targetAngle: bAngle, speed: pm.flySpeed + ctx.rand() * 60,
+        flapPhase: ctx.rand() * Math.PI * 2, flapSpeed: pm.flapSpeed + ctx.rand() * 4,
+        color: bColors[i % bColors.length], size: (lerp(10, 16, intensity) + ctx.rand() * 6) * pm.particleSize / 12,
+        delay: 200 + i * lerp(160, 80, intensity), curveAmp: 30 + ctx.rand() * 50,
+        curveFreq: 0.8 + ctx.rand() * 1.2, curvePhase: ctx.rand() * Math.PI * 2, life: 0
       });
     }
 
@@ -999,7 +999,7 @@ export const butterfliesPlugin = {
           FX.drawChar(fxCtx, '\u2572', b.x + 4, b.y, b.color, b.size * 0.8, alpha, 0);
         }
         FX.drawChar(fxCtx, '\u00B7', b.x, b.y, b.color, 6, alpha, 0);
-        if (b.life > 100 && Math.random() > 0.7) {
+        if (b.life > 100 && ctx.rand() > 0.7) {
           FX.drawChar(fxCtx, '\u00B7', b.x + randRange(-3, 3), b.y + randRange(5, 15), b.color, 4, alpha * 0.5, 0);
         }
       });
@@ -1033,7 +1033,7 @@ export const rainbowPlugin = {
     const intensity = FX.intensityScale(pctx.intensity || 5);
     const center = FX.prepareCard(el);
     const _drawId = FX.nextFxDrawId('cute-rainbow');
-    const startTime = performance.now();
+    const startTime = ctx.now();
     const totalDuration = lerp(2000, 4000, intensity);
     const acx = center.cx, acy = center.cy + 100, ar = lerp(200, 400, intensity);
     const blockChars = ['\u2593', '\u2592', '\u2591'];
@@ -1068,9 +1068,9 @@ export const rainbowPlugin = {
         const cy2 = acy + Math.sin(ca) * ar - center.cy;
         el.style.transform = 'translate(' + cx2 + 'px, ' + cy2 + 'px) scale(' + Math.max(1 - sT * 0.8, 0.1) + ') rotate(' + (sE * 360) + 'deg)';
         el.style.opacity = String(Math.max(1 - sT * 1.3, 0));
-        if (sT < 0.9 && Math.random() > 0.5) {
+        if (sT < 0.9 && ctx.rand() > 0.5) {
           FX.drawChar(fxCtx, pick(SPARKLE_CHARS), center.cx + cx2 + randRange(-10, 10), center.cy + cy2 + randRange(-10, 10),
-            pick(ROYGBIV), 8 + Math.random() * 6, 0.5, Math.random() * Math.PI);
+            pick(ROYGBIV), 8 + ctx.rand() * 6, 0.5, ctx.rand() * Math.PI);
         }
       } else {
         const pt = elapsed / 800;
@@ -1114,7 +1114,7 @@ export const fireworksPlugin = {
     const intensity = FX.intensityScale(pctx.intensity || 5);
     const center = FX.prepareCard(el);
     const _drawId = FX.nextFxDrawId('cute-fireworks');
-    const startTime = performance.now();
+    const startTime = ctx.now();
     const totalDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
     const burstCount = Math.floor(lerp(1, pm.maxBursts, intensity));
     const bursts = [];
@@ -1136,13 +1136,13 @@ export const fireworksPlugin = {
       for (let i = 0; i < count; i++) {
         const bAngle = (i / count) * Math.PI * 2;
         let speed;
-        if (pattern === 'circle') speed = lerp(60, 140, intensity) + Math.random() * 60;
-        else if (pattern === 'star') speed = (i % 3 === 0) ? lerp(80, 160, intensity) + Math.random() * 40 : lerp(40, 80, intensity) + Math.random() * 40;
-        else speed = lerp(30, 70, intensity) + Math.random() * 100;
+        if (pattern === 'circle') speed = lerp(60, 140, intensity) + ctx.rand() * 60;
+        else if (pattern === 'star') speed = (i % 3 === 0) ? lerp(80, 160, intensity) + ctx.rand() * 40 : lerp(40, 80, intensity) + ctx.rand() * 40;
+        else speed = lerp(30, 70, intensity) + ctx.rand() * 100;
         ps.push({
           x: bx, y: by, vx: Math.cos(bAngle) * speed, vy: Math.sin(bAngle) * speed - 30,
-          char: pick(FIREWORK_CHARS), color: color, size: (lerp(8, 12, intensity) + Math.random() * 8) * pm.particleSize / 10, life: 0,
-          maxLife: pattern === 'willow' ? lerp(1000, 1800, intensity) : lerp(700, 1200, intensity) + Math.random() * 500,
+          char: pick(FIREWORK_CHARS), color: color, size: (lerp(8, 12, intensity) + ctx.rand() * 8) * pm.particleSize / 10, life: 0,
+          maxLife: pattern === 'willow' ? lerp(1000, 1800, intensity) : lerp(700, 1200, intensity) + ctx.rand() * 500,
           gravity: pattern === 'willow' ? pm.gravity * 2 : pm.gravity, drag: pattern === 'willow' ? 0.96 : 0.98
         });
       }
@@ -1161,7 +1161,7 @@ export const fireworksPlugin = {
         const ry = center.cy - e * (center.cy - 80);
         for (let ti = 0; ti < FX.pCount(3); ti++) {
           FX.drawChar(fxCtx, pick(['*', '+', '\u00B7', '^']), center.cx + randRange(-8, 8), ry + 20 + randRange(0, 30),
-            pick(['#c9a84c', '#d4728c', '#d4a850']), 8 + Math.random() * 10, 0.5 + Math.random() * 0.3, Math.random() * Math.PI);
+            pick(['#c9a84c', '#d4728c', '#d4a850']), 8 + ctx.rand() * 10, 0.5 + ctx.rand() * 0.3, ctx.rand() * Math.PI);
         }
       } else {
         el.style.opacity = '0';
@@ -1235,7 +1235,7 @@ export const heartsPlugin = {
     const intensity = FX.intensityScale(pctx.intensity || 5);
     const center = FX.prepareCard(el);
     const _drawId = FX.nextFxDrawId('cute-hearts');
-    const startTime = performance.now();
+    const startTime = ctx.now();
     const totalDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
     const hearts = [];
     const hColors = ['#d4728c', '#c97088', '#cf6e5e', '#d99a7c', '#c44068', '#d07080', '#e0a0b0', '#b06070'];
@@ -1243,18 +1243,18 @@ export const heartsPlugin = {
     const dotRadius = lerp(150, 350, intensity);
 
     for (let i = 0; i < heartCount; i++) {
-      const hAngle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.2;
-      const speed = lerp(80, 150, intensity) + Math.random() * lerp(100, 280, intensity);
+      const hAngle = -Math.PI / 2 + (ctx.rand() - 0.5) * Math.PI * 1.2;
+      const speed = lerp(80, 150, intensity) + ctx.rand() * lerp(100, 280, intensity);
       hearts.push({
         x: center.cx + randRange(-20, 20), y: center.cy,
         vx: Math.cos(hAngle) * speed, vy: Math.sin(hAngle) * speed,
         char: pick(HEART_CHARS), color: pick(hColors),
-        size: (lerp(10, 14, intensity) + Math.random() * lerp(8, 18, intensity)) * pm.particleSize / 12, life: 0,
-        maxLife: lerp(800, 1400, intensity) + Math.random() * 800,
-        delay: Math.random() * 200, rotation: (Math.random() - 0.5) * 0.5,
-        rotSpeed: (Math.random() - 0.5) * 3,
-        canSplit: Math.random() > 0.6 && i < 15, hasSplit: false,
-        splitTime: 400 + Math.random() * 300
+        size: (lerp(10, 14, intensity) + ctx.rand() * lerp(8, 18, intensity)) * pm.particleSize / 12, life: 0,
+        maxLife: lerp(800, 1400, intensity) + ctx.rand() * 800,
+        delay: ctx.rand() * 200, rotation: (ctx.rand() - 0.5) * 0.5,
+        rotSpeed: (ctx.rand() - 0.5) * 3,
+        canSplit: ctx.rand() > 0.6 && i < 15, hasSplit: false,
+        splitTime: 400 + ctx.rand() * 300
       });
     }
 
@@ -1294,12 +1294,12 @@ export const heartsPlugin = {
         if (h.canSplit && !h.hasSplit && h.life > h.splitTime) {
           h.hasSplit = true;
           for (let j = 0; j < 3; j++) {
-            const a = (Math.random() - 0.5) * Math.PI;
+            const a = (ctx.rand() - 0.5) * Math.PI;
             newH.push({
               x: h.x, y: h.y, vx: Math.cos(a) * 60 + h.vx * 0.3,
               vy: Math.sin(a) * 60 + h.vy * 0.3 - 30, char: pick(['\u2661', '\u2665']),
-              color: pick(hColors), size: h.size * 0.5, life: 0, maxLife: 600 + Math.random() * 400,
-              delay: 0, rotation: Math.random(), rotSpeed: (Math.random() - 0.5) * 5,
+              color: pick(hColors), size: h.size * 0.5, life: 0, maxLife: 600 + ctx.rand() * 400,
+              delay: 0, rotation: ctx.rand(), rotSpeed: (ctx.rand() - 0.5) * 5,
               canSplit: false, hasSplit: false, splitTime: 9999
             });
           }
@@ -1357,7 +1357,7 @@ export const catPlugin = {
     const intensity = FX.intensityScale(pctx.intensity || 5);
     const center = FX.prepareCard(el);
     const _drawId = FX.nextFxDrawId('cute-cat');
-    const startTime = performance.now();
+    const startTime = ctx.now();
     const totalDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
 
     const catColor = pick(CAT_FUR_COLORS);
@@ -1367,17 +1367,17 @@ export const catPlugin = {
     const catParticles = [];
     const particleCount = FX.pCount(Math.floor(lerp(8, 50, intensity)));
     for (let i = 0; i < particleCount; i++) {
-      const cAngle = Math.random() * Math.PI * 2;
-      const cSpeed = lerp(40, 100, intensity) + Math.random() * lerp(60, 150, intensity);
+      const cAngle = ctx.rand() * Math.PI * 2;
+      const cSpeed = lerp(40, 100, intensity) + ctx.rand() * lerp(60, 150, intensity);
       catParticles.push({
         x: center.cx + randRange(-center.w * 0.3, center.w * 0.3),
         y: center.cy + randRange(-center.h * 0.2, center.h * 0.2),
         vx: Math.cos(cAngle) * cSpeed, vy: Math.sin(cAngle) * cSpeed - 40,
         char: pick(CAT_CHARS), color: pick(CAT_COLORS),
-        size: (lerp(6, 10, intensity) + Math.random() * lerp(6, 14, intensity)) * pm.particleSize / 10,
-        rotation: (Math.random() - 0.5) * 0.5, rotSpeed: (Math.random() - 0.5) * 3,
-        life: 0, maxLife: lerp(800, 1600, intensity) + Math.random() * 800,
-        delay: Math.random() * 200
+        size: (lerp(6, 10, intensity) + ctx.rand() * lerp(6, 14, intensity)) * pm.particleSize / 10,
+        rotation: (ctx.rand() - 0.5) * 0.5, rotSpeed: (ctx.rand() - 0.5) * 3,
+        life: 0, maxLife: lerp(800, 1600, intensity) + ctx.rand() * 800,
+        delay: ctx.rand() * 200
       });
     }
 
@@ -1400,7 +1400,7 @@ export const catPlugin = {
       purrLines.push({
         x: center.cx + randRange(-20, 20),
         y: center.cy + randRange(-10, 10),
-        vx: (Math.random() > 0.5 ? 1 : -1) * (20 + Math.random() * 30),
+        vx: (ctx.rand() > 0.5 ? 1 : -1) * (20 + ctx.rand() * 30),
         delay: 600 + pli * lerp(150, 60, intensity),
         size: lerp(8, 14, intensity) * pm.particleSize / 10, life: 0
       });
@@ -1528,7 +1528,7 @@ export const dogPlugin = {
     const intensity = FX.intensityScale(pctx.intensity || 5);
     const center = FX.prepareCard(el);
     const _drawId = FX.nextFxDrawId('cute-dog');
-    const startTime = performance.now();
+    const startTime = ctx.now();
     const totalDuration = lerp(pm.minDuration, pm.maxDuration, intensity);
 
     const dogColor = pick(DOG_FUR_COLORS);
@@ -1539,19 +1539,19 @@ export const dogPlugin = {
     const particleCount = FX.pCount(Math.floor(lerp(10, 60, intensity)));
     const boneChars = ['_', '=', 'o'];
     for (let i = 0; i < particleCount; i++) {
-      const dAngle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.5;
-      const dSpeed = lerp(60, 140, intensity) + Math.random() * lerp(80, 200, intensity);
-      const isBone = Math.random() > 0.6;
+      const dAngle = -Math.PI / 2 + (ctx.rand() - 0.5) * Math.PI * 1.5;
+      const dSpeed = lerp(60, 140, intensity) + ctx.rand() * lerp(80, 200, intensity);
+      const isBone = ctx.rand() > 0.6;
       dogParticles.push({
         x: center.cx + randRange(-center.w * 0.3, center.w * 0.3),
         y: center.cy + randRange(-center.h * 0.2, center.h * 0.2),
         vx: Math.cos(dAngle) * dSpeed, vy: Math.sin(dAngle) * dSpeed - 50,
         char: isBone ? pick(boneChars) : pick(DOG_CHARS),
         color: isBone ? pick(DOG_FUR_COLORS) : pick(DOG_COLORS),
-        size: (lerp(6, 10, intensity) + Math.random() * lerp(6, 14, intensity)) * pm.particleSize / 10,
-        rotation: (Math.random() - 0.5) * 0.5, rotSpeed: (Math.random() - 0.5) * 4,
-        life: 0, maxLife: lerp(800, 1500, intensity) + Math.random() * 800,
-        delay: Math.random() * 200, isBone: isBone
+        size: (lerp(6, 10, intensity) + ctx.rand() * lerp(6, 14, intensity)) * pm.particleSize / 10,
+        rotation: (ctx.rand() - 0.5) * 0.5, rotSpeed: (ctx.rand() - 0.5) * 4,
+        life: 0, maxLife: lerp(800, 1500, intensity) + ctx.rand() * 800,
+        delay: ctx.rand() * 200, isBone: isBone
       });
     }
 
@@ -1574,7 +1574,7 @@ export const dogPlugin = {
     for (let bki = 0; bki < barkCount; bki++) {
       barks.push({
         x: center.cx + randRange(-40, 40),
-        y: center.cy - 25 - Math.random() * 30,
+        y: center.cy - 25 - ctx.rand() * 30,
         text: pick(barkTexts),
         delay: 500 + bki * lerp(400, 150, intensity),
         size: lerp(6, 10, intensity) * pm.particleSize / 10, life: 0
@@ -1707,7 +1707,7 @@ export const snowfallPlugin = {
     const intensity = FX.intensityScale(pctx.intensity || 5);
     const center = FX.prepareCard(el);
     const _drawId = FX.nextFxDrawId('cute-snowfall');
-    const startTime = performance.now();
+    const startTime = ctx.now();
     const totalDuration = lerp(2500, 5000, intensity);
 
     const snowflakes = [];
@@ -1716,17 +1716,17 @@ export const snowfallPlugin = {
       snowflakes.push({
         x: randRange(0, window.innerWidth),
         y: randRange(-100, -20),
-        vx: (Math.random() - 0.5) * 30,
-        vy: lerp(30, 80, intensity) + Math.random() * lerp(30, 60, intensity),
+        vx: (ctx.rand() - 0.5) * 30,
+        vy: lerp(30, 80, intensity) + ctx.rand() * lerp(30, 60, intensity),
         char: pick(SNOW_CHARS),
         color: pick(SNOW_COLORS),
-        size: lerp(4, 8, intensity) + Math.random() * lerp(4, 12, intensity),
-        phase: Math.random() * Math.PI * 2,
-        driftSpeed: 0.5 + Math.random() * 2,
-        driftAmp: 15 + Math.random() * 30,
-        delay: Math.random() * lerp(1500, 500, intensity),
-        rotation: Math.random() * Math.PI * 2,
-        rotSpeed: (Math.random() - 0.5) * 2
+        size: lerp(4, 8, intensity) + ctx.rand() * lerp(4, 12, intensity),
+        phase: ctx.rand() * Math.PI * 2,
+        driftSpeed: 0.5 + ctx.rand() * 2,
+        driftAmp: 15 + ctx.rand() * 30,
+        delay: ctx.rand() * lerp(1500, 500, intensity),
+        rotation: ctx.rand() * Math.PI * 2,
+        rotSpeed: (ctx.rand() - 0.5) * 2
       });
     }
 
@@ -1738,7 +1738,7 @@ export const snowfallPlugin = {
         crystals.push({
           x: center.cx + randRange(-center.w * 0.6, center.w * 0.6),
           y: center.cy + randRange(-center.h * 0.4, center.h * 0.4),
-          delay: 800 + Math.random() * 1500,
+          delay: 800 + ctx.rand() * 1500,
           size: lerp(10, 20, intensity), life: 0
         });
       }
@@ -1854,7 +1854,7 @@ export const oceanPlugin = {
     const intensity = FX.intensityScale(pctx.intensity || 5);
     const center = FX.prepareCard(el);
     const _drawId = FX.nextFxDrawId('cute-ocean');
-    const startTime = performance.now();
+    const startTime = ctx.now();
     const totalDuration = lerp(2500, 5000, intensity);
 
     // Wave rows
@@ -1865,17 +1865,17 @@ export const oceanPlugin = {
     const fish = [];
     const fishCount = FX.pCount(Math.floor(lerp(2, 10, intensity)));
     for (let i = 0; i < fishCount; i++) {
-      const goingRight = Math.random() > 0.5;
+      const goingRight = ctx.rand() > 0.5;
       fish.push({
-        x: goingRight ? -50 - Math.random() * 100 : window.innerWidth + 50 + Math.random() * 100,
+        x: goingRight ? -50 - ctx.rand() * 100 : window.innerWidth + 50 + ctx.rand() * 100,
         y: center.cy + randRange(-center.h * 0.3, center.h * 0.5),
-        vx: (goingRight ? 1 : -1) * (lerp(40, 100, intensity) + Math.random() * 60),
+        vx: (goingRight ? 1 : -1) * (lerp(40, 100, intensity) + ctx.rand() * 60),
         char: goingRight ? pick(['><>', '><))\'>' ]) : pick(['<><', '<\'((><']),
         color: pick(OCEAN_COLORS.concat(['#c9a84c', '#cf6e5e', '#6aab8e'])),
-        size: lerp(8, 14, intensity) + Math.random() * 6,
-        delay: 400 + Math.random() * 2000,
-        wigglePhase: Math.random() * Math.PI * 2,
-        wiggleAmp: 3 + Math.random() * 8
+        size: lerp(8, 14, intensity) + ctx.rand() * 6,
+        delay: 400 + ctx.rand() * 2000,
+        wigglePhase: ctx.rand() * Math.PI * 2,
+        wiggleAmp: 3 + ctx.rand() * 8
       });
     }
 
@@ -1885,14 +1885,14 @@ export const oceanPlugin = {
     for (let bi = 0; bi < bubbleCount; bi++) {
       bubbles.push({
         x: center.cx + randRange(-center.w * 0.5, center.w * 0.5),
-        y: center.rect.bottom + 20 + Math.random() * 40,
-        vy: -(lerp(20, 60, intensity) + Math.random() * 40),
+        y: center.rect.bottom + 20 + ctx.rand() * 40,
+        vy: -(lerp(20, 60, intensity) + ctx.rand() * 40),
         char: pick(BUBBLE_CHARS),
-        size: lerp(4, 8, intensity) + Math.random() * 6,
+        size: lerp(4, 8, intensity) + ctx.rand() * 6,
         color: pick(OCEAN_FOAM),
-        delay: Math.random() * lerp(2000, 800, intensity),
-        phase: Math.random() * Math.PI * 2,
-        wobbleAmp: 5 + Math.random() * 15
+        delay: ctx.rand() * lerp(2000, 800, intensity),
+        phase: ctx.rand() * Math.PI * 2,
+        wobbleAmp: 5 + ctx.rand() * 15
       });
     }
 
@@ -1903,8 +1903,8 @@ export const oceanPlugin = {
       seaweeds.push({
         baseX: center.rect.left + ((si + 0.5) / seaweedCount) * center.w,
         baseY: center.rect.bottom + 10,
-        height: lerp(20, 50, intensity) + Math.random() * 20,
-        phase: Math.random() * Math.PI * 2,
+        height: lerp(20, 50, intensity) + ctx.rand() * 20,
+        phase: ctx.rand() * Math.PI * 2,
         segments: Math.floor(lerp(3, 7, intensity))
       });
     }
@@ -2017,7 +2017,7 @@ export const firefliesPlugin = {
     const intensity = FX.intensityScale(pctx.intensity || 5);
     const center = FX.prepareCard(el);
     const _drawId = FX.nextFxDrawId('cute-fireflies');
-    const startTime = performance.now();
+    const startTime = ctx.now();
     const totalDuration = lerp(2800, 5500, intensity);
 
     // Fireflies with glow pulsing
@@ -2027,17 +2027,17 @@ export const firefliesPlugin = {
       fireflies.push({
         x: center.cx + randRange(-center.w * 0.8, center.w * 0.8),
         y: center.cy + randRange(-center.h * 0.6, center.h * 0.6),
-        vx: (Math.random() - 0.5) * 20,
-        vy: (Math.random() - 0.5) * 20,
-        glowPhase: Math.random() * Math.PI * 2,
-        glowSpeed: 1 + Math.random() * 3,
-        size: lerp(4, 8, intensity) + Math.random() * 4,
+        vx: (ctx.rand() - 0.5) * 20,
+        vy: (ctx.rand() - 0.5) * 20,
+        glowPhase: ctx.rand() * Math.PI * 2,
+        glowSpeed: 1 + ctx.rand() * 3,
+        size: lerp(4, 8, intensity) + ctx.rand() * 4,
         color: pick(FIREFLY_GLOW),
-        delay: Math.random() * lerp(1500, 500, intensity),
-        driftPhase: Math.random() * Math.PI * 2,
-        driftSpeed: 0.5 + Math.random() * 1.5,
-        driftAmpX: 20 + Math.random() * 40,
-        driftAmpY: 10 + Math.random() * 25
+        delay: ctx.rand() * lerp(1500, 500, intensity),
+        driftPhase: ctx.rand() * Math.PI * 2,
+        driftSpeed: 0.5 + ctx.rand() * 1.5,
+        driftAmpX: 20 + ctx.rand() * 40,
+        driftAmpY: 10 + ctx.rand() * 25
       });
     }
 
@@ -2045,14 +2045,14 @@ export const firefliesPlugin = {
     const foliage = [];
     const foliageCount = FX.pCount(Math.floor(lerp(5, 20, intensity)));
     for (let fi = 0; fi < foliageCount; fi++) {
-      const fSide = Math.random() > 0.5 ? -1 : 1;
+      const fSide = ctx.rand() > 0.5 ? -1 : 1;
       foliage.push({
-        x: center.cx + fSide * (center.w * 0.4 + Math.random() * center.w * 0.3),
-        y: center.rect.bottom - Math.random() * center.h * 0.5,
+        x: center.cx + fSide * (center.w * 0.4 + ctx.rand() * center.w * 0.3),
+        y: center.rect.bottom - ctx.rand() * center.h * 0.5,
         char: pick(['\u2663', '\u2767', '\u273F', '|', '/', '\\']),
-        size: lerp(8, 16, intensity) + Math.random() * 8,
+        size: lerp(8, 16, intensity) + ctx.rand() * 8,
         color: pick(NIGHT_GREENS),
-        swayPhase: Math.random() * Math.PI * 2
+        swayPhase: ctx.rand() * Math.PI * 2
       });
     }
 
@@ -2064,9 +2064,9 @@ export const firefliesPlugin = {
         x: randRange(center.rect.left - 80, center.rect.right + 80),
         y: randRange(center.rect.top - 60, center.cy),
         char: pick(['.', '\u00B7', '*', '+']),
-        size: 2 + Math.random() * 4,
-        phase: Math.random() * Math.PI * 2,
-        speed: 1 + Math.random() * 3
+        size: 2 + ctx.rand() * 4,
+        phase: ctx.rand() * Math.PI * 2,
+        speed: 1 + ctx.rand() * 3
       });
     }
 
@@ -2161,7 +2161,7 @@ export const firefliesPlugin = {
       });
 
       // Occasional cricket chirp visual
-      if (elapsed > 600 && Math.random() > 0.97) {
+      if (elapsed > 600 && ctx.rand() > 0.97) {
         const chirpX = center.cx + randRange(-center.w * 0.5, center.w * 0.5);
         const chirpY = center.rect.bottom - randRange(5, 20);
         FX.drawChar(fxCtx, pick([',', '\'', '`']), chirpX, chirpY,
