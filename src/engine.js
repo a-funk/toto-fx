@@ -16,6 +16,7 @@ import { createLayoutAnimator } from './layout-animator.js';
 import { createClock } from './core/clock.js';
 import { createRngPool } from './core/rng.js';
 import { createScheduler } from './core/scheduler.js';
+import { configurePrimitives as _configureFXPrimitives } from './fx.js';
 
 /**
  * Create a TotoFX engine instance.
@@ -36,6 +37,17 @@ export function createEngine(userConfig) {
   const _clock = createClock();
   const _rng = createRngPool(0);
   const _scheduler = createScheduler(_clock);
+
+  // Bind fx.js to this engine's primitives so particle/speed-line/flash
+  // helpers route through the same clock/scheduler/rng as plugins. Last
+  // engine to construct wins if multiple engines exist (singleton
+  // limitation acknowledged in fx.js — not a v0.4 concern).
+  _configureFXPrimitives({
+    now: function () { return _clock.now(); },
+    raf: function (cb) { return _scheduler.schedule(cb); },
+    cancelRaf: function (token) { _scheduler.cancel(token); },
+    rand: function () { return _rng.rand('fx'); },
+  });
 
   // ── Configuration ──────────────────────────────────────────
 

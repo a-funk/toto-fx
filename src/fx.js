@@ -357,6 +357,42 @@ export function fxEnabled(key) {
   return fxConfig[key] !== false;
 }
 
+// ── Determinism primitives ───────────────────────────────────────
+// Default to raw browser APIs — live mode is zero-overhead identical to
+// pre-migration. `configurePrimitives()` rebinds these to route through
+// an engine's clock/scheduler/rng, giving deterministic render mode.
+//
+// Module-level singleton: last engine to configure wins. Multi-engine
+// render mode is out of scope for v0.4; document if it becomes real.
+// Use globalThis to access the browser APIs directly here, so replace_all
+// couldn't accidentally recurse these defaults into themselves.
+let _now = () => globalThis.performance.now();
+let _raf = (cb) => globalThis.requestAnimationFrame(cb);
+let _cancelRaf = (token) => globalThis.cancelAnimationFrame(token);
+let _rand = () => globalThis.Math.random();
+
+/**
+ * Bind fx.js to an engine's determinism primitives. Called automatically
+ * by `createEngine()` during setup; consumers don't need to invoke it.
+ *
+ * After binding, the master rAF loop, particle init, speed-line timing,
+ * and every other time/entropy-dependent FX routes through the engine —
+ * so in render mode, identical seeds + identical ticks produce identical
+ * pixel-level output.
+ *
+ * Leaves setTimeout-based flash/burst clearing on the real browser timer
+ * (P0 scheduler is rAF-only by design; flash timing is a P2+ concern).
+ *
+ * @param {{ now?: () => number, raf?: (cb: Function) => any, cancelRaf?: (token: any) => void, rand?: () => number }} primitives
+ */
+export function configurePrimitives(primitives) {
+  if (!primitives) return;
+  if (primitives.now) _now = primitives.now;
+  if (primitives.raf) _raf = primitives.raf;
+  if (primitives.cancelRaf) _cancelRaf = primitives.cancelRaf;
+  if (primitives.rand) _rand = primitives.rand;
+}
+
 // ── Unified RAF Loop ─────────────────────────────────────────────
 // Single requestAnimationFrame drives all active subsystems (particles,
 // speed lines) to avoid 2+ RAF callbacks per frame during animations.
@@ -436,12 +472,12 @@ function _masterTick(now) {
     }
   }
 
-  if (anyActive) _masterRAF = requestAnimationFrame(_masterTick);
+  if (anyActive) _masterRAF = _raf(_masterTick);
   else { _masterRAF = null; _lastFrameTime = 0; }
 }
 
 function _ensureMasterTick() {
-  if (!_masterRAF) _masterRAF = requestAnimationFrame(_masterTick);
+  if (!_masterRAF) _masterRAF = _raf(_masterTick);
 }
 
 // ── Particle State ───────────────────────────────────────────────
@@ -478,16 +514,16 @@ for (let i = 0; i < radialLineCount; i++) {
   if (isMobile) {
     // Bias toward vertical (top/bottom) for portrait screens.
     // Concentrate angles near PI/2 (down) and 3PI/2 (up) with +-45deg spread.
-    const base = Math.random() < 0.5 ? (Math.PI / 2) : (3 * Math.PI / 2);
-    angle = base + (Math.random() - 0.5) * (Math.PI / 2);
+    const base = _rand() < 0.5 ? (Math.PI / 2) : (3 * Math.PI / 2);
+    angle = base + (_rand() - 0.5) * (Math.PI / 2);
   } else {
-    angle = Math.random() * Math.PI * 2;
+    angle = _rand() * Math.PI * 2;
   }
   radialLines.push({
     angle: angle,
-    speed: 0.6 + Math.random() * 0.8,
-    opacity: 0.15 + Math.random() * 0.45,
-    width: 0.8 + Math.random() * 1.5,
+    speed: 0.6 + _rand() * 0.8,
+    opacity: 0.15 + _rand() * 0.45,
+    width: 0.8 + _rand() * 1.5,
   });
 }
 
@@ -572,7 +608,7 @@ export function startSpeedLines(cx, cy, direction, durationMs) {
   if (!fxEnabled('speedLines')) return;
   const c = getFxCanvas();
   _speedLinesActive = true;
-  _speedLinesStart = performance.now();
+  _speedLinesStart = _now();
   _speedLinesDuration = durationMs;
   _speedLinesCx = cx;
   _speedLinesCy = cy;
@@ -634,19 +670,19 @@ export function spawnParticles(cx, cy, opts) {
     ? _theme.chars(_ctx.particleStyle)
     : (opts.chars || _theme.chars('particles'));
   for (let i = 0; i < count; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const vel = (opts.minVel || 1) + Math.random() * spread;
+    const angle = _rand() * Math.PI * 2;
+    const vel = (opts.minVel || 1) + _rand() * spread;
     particles.push({
-      x: cx + (Math.random() - 0.5) * (opts.originSpread || 10),
-      y: cy + (Math.random() - 0.5) * (opts.originSpread || 10),
+      x: cx + (_rand() - 0.5) * (opts.originSpread || 10),
+      y: cy + (_rand() - 0.5) * (opts.originSpread || 10),
       vx: Math.cos(angle) * vel,
       vy: Math.sin(angle) * vel - (opts.upBias || 0),
-      life: life + Math.random() * 30,
+      life: life + _rand() * 30,
       maxLife: life + 30,
-      size: sizeRange[0] + Math.random() * (sizeRange[1] - sizeRange[0]),
+      size: sizeRange[0] + _rand() * (sizeRange[1] - sizeRange[0]),
       color: color,
       gravity: gravity,
-      char: glyphs[Math.floor(Math.random() * glyphs.length)],
+      char: glyphs[Math.floor(_rand() * glyphs.length)],
       drag: opts.drag || 0.98,
     });
   }
@@ -758,11 +794,11 @@ export function spawnSmoke(cx, cy, count) {
   const color = _theme.particleColor('smoke');
   for (let i = 0; i < count; i++) {
     particles.push({
-      x: cx + (Math.random() - 0.5) * 40, y: cy + Math.random() * 10,
-      vx: (Math.random() - 0.5) * 0.5, vy: -(0.3 + Math.random() * 0.8),
-      life: 90 + Math.random() * 50, maxLife: 140,
-      size: 8 + Math.random() * 15, color: color, gravity: -0.01, drag: 0.99,
-      char: glyphs[Math.floor(Math.random() * glyphs.length)],
+      x: cx + (_rand() - 0.5) * 40, y: cy + _rand() * 10,
+      vx: (_rand() - 0.5) * 0.5, vy: -(0.3 + _rand() * 0.8),
+      life: 90 + _rand() * 50, maxLife: 140,
+      size: 8 + _rand() * 15, color: color, gravity: -0.01, drag: 0.99,
+      char: glyphs[Math.floor(_rand() * glyphs.length)],
     });
   }
   _ensureParticlePool();
@@ -781,14 +817,14 @@ export function spawnFireTrail(x, y, angle) {
   const glyphs = _theme.chars('fire');
   const color = _theme.particleColor('fire');
   for (let i = 0; i < 4; i++) {
-    const spread = (Math.random() - 0.5) * 0.8;
+    const spread = (_rand() - 0.5) * 0.8;
     particles.push({
       x: x, y: y,
-      vx: Math.cos(angle + Math.PI + spread) * (1 + Math.random() * 2),
-      vy: Math.sin(angle + Math.PI + spread) * (1 + Math.random() * 2),
-      life: 20 + Math.random() * 15, maxLife: 35,
-      size: 2 + Math.random() * 4, color: color, gravity: -0.02, drag: 0.96,
-      char: glyphs[Math.floor(Math.random() * glyphs.length)],
+      vx: Math.cos(angle + Math.PI + spread) * (1 + _rand() * 2),
+      vy: Math.sin(angle + Math.PI + spread) * (1 + _rand() * 2),
+      life: 20 + _rand() * 15, maxLife: 35,
+      size: 2 + _rand() * 4, color: color, gravity: -0.02, drag: 0.96,
+      char: glyphs[Math.floor(_rand() * glyphs.length)],
     });
   }
   _ensureParticlePool();
@@ -816,7 +852,7 @@ export function flashColor(color, durationMs) {
   _flashEl.style.transition = 'none';
   _flashEl.style.background = color;
   _flashEl.style.opacity = '1';
-  requestAnimationFrame(function () {
+  _raf(function () {
     _flashEl.style.transition = 'opacity ' + durationMs + 'ms ease-out';
     _flashEl.style.opacity = '0';
     _flashTimer = setTimeout(function () {
@@ -851,7 +887,7 @@ export function doImpactFlash(whiteOut) {
   _flashEl.style.background = whiteOut ? '#fff' : '#000';
   _flashEl.style.opacity = '1';
 
-  requestAnimationFrame(function () {
+  _raf(function () {
     _flashEl.style.transition = 'opacity ' + fadeDur + 'ms ease-out';
     _flashEl.style.opacity = '0';
     _flashTimer = setTimeout(function () {
@@ -873,7 +909,7 @@ export function doScreenShake(heavy) {
   const el = document.querySelector(_selectors.appShell) || document.body;
   const cls = heavy ? _classes.shakingHeavy : _classes.shaking;
   el.classList.remove(_classes.shaking, _classes.shakingHeavy);
-  requestAnimationFrame(function () {
+  _raf(function () {
     el.classList.add(cls);
     setTimeout(function () { el.classList.remove(cls); }, heavy ? 550 : 450);
   });
@@ -1109,7 +1145,7 @@ export function liftCard(card, shadow, cx, cy, peakZ, liftDuration, rotX, rotY, 
   const glowColor = _theme.color('glow') || 'rgba(196,90,60,0.15)';
   const dur = speedScale(liftDuration);
 
-  requestAnimationFrame(function () {
+  _raf(function () {
     let liftTransition = 'transform ' + dur + 'ms cubic-bezier(0.22, 1, 0.36, 1)';
     if (!isMobile) liftTransition += ', box-shadow ' + dur + 'ms ease';
     card.style.transition = liftTransition;
@@ -1157,7 +1193,7 @@ export function gravityFall(card, shadow, peakZ, rotX, rotY, fallDuration, easeE
   const dur = speedScale(fallDuration);
   startSpeedLines(cx, cy, 'inward', dur);
 
-  const start = performance.now();
+  const start = _now();
   const glowColor = _theme.color('glow') || 'rgba(196,90,60,0.15)';
   let _fallFrame = 0;
 
@@ -1182,10 +1218,10 @@ export function gravityFall(card, shadow, peakZ, rotX, rotY, fallDuration, easeE
     }
     _fallFrame++;
 
-    if (t < 1) requestAnimationFrame(step);
+    if (t < 1) _raf(step);
     else { stopSpeedLines(); onImpact(); }
   }
-  requestAnimationFrame(step);
+  _raf(step);
 }
 
 /**
@@ -1232,7 +1268,7 @@ export function standardImpact(card, shadow, burst, cx, cy) {
   doDotgridRipple(cx, cy);
 
   // Write phase 2: recovery transitions — next frame
-  requestAnimationFrame(function () {
+  _raf(function () {
     if (isMobile) {
       // Mobile: only animate GPU-friendly transform + opacity
       card.style.transition = fxEnabled('cardSquash')
@@ -1695,7 +1731,7 @@ export function setAnimationCleanup(el, cleanupFn) {
 export function cancelAnimation(el) {
   const entry = _activeAnimations.get(el);
   if (!entry) return false;
-  entry.rafIds.forEach(function (id) { cancelAnimationFrame(id); });
+  entry.rafIds.forEach(function (id) { _cancelRaf(id); });
   if (entry.cleanup) entry.cleanup();
   _activeAnimations.delete(el);
   return true;
@@ -1887,10 +1923,10 @@ export function warmup() {
     _flashEl.style.transition = 'none';
     _flashEl.style.background = '#000';
     _flashEl.style.opacity = '0';
-    requestAnimationFrame(function() {
+    _raf(function() {
       _flashEl.style.transition = 'opacity 1ms ease-out';
       _flashEl.style.opacity = '0';
-      requestAnimationFrame(function() {
+      _raf(function() {
         _flashEl.style.background = '';
         _flashEl.style.transition = '';
       });
@@ -1900,7 +1936,7 @@ export function warmup() {
   // Warm screen shake path
   const shakeTarget = document.querySelector(_selectors.appShell) || document.body;
   shakeTarget.classList.add(_classes.shaking);
-  requestAnimationFrame(function() {
+  _raf(function() {
     shakeTarget.classList.remove(_classes.shaking);
   });
 }
