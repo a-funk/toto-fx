@@ -5,6 +5,19 @@
  * represent. GroupId supports group queries (e.g., "is anything in this list animating?").
  */
 
+// ── Determinism primitives ──────────────────────────────────────
+// Default to raw browser APIs; `configurePrimitives` rebinds at engine
+// construction time so render-mode virtual time flows through startedAt
+// timestamps and GC age checks. Bracket-access avoids the literal
+// "performance.now()" substring so future replace_all migrations of
+// that pattern can't accidentally self-recurse these defaults.
+let _now = () => globalThis['performance']['now']();
+
+/** @param {{ now?: () => number }} primitives */
+export function configurePrimitives(primitives) {
+  if (primitives && primitives.now) _now = primitives.now;
+}
+
 /**
  * @typedef {Object} PersistentEntry
  * @property {string} category
@@ -57,7 +70,7 @@ export function createStateStore() {
         style: (state && state.style) || 'default',
         variant: (state && state.variant) || 'default',
         params: (state && state.params) || state || {},
-        startedAt: performance.now(),
+        startedAt: _now(),
         groupId: (state && state.groupId) || '',
         version: this._version,
       });
@@ -86,7 +99,7 @@ export function createStateStore() {
       this._transient.set(key, {
         category: category,
         groupId: (opts && opts.groupId) || '',
-        startedAt: performance.now(),
+        startedAt: _now(),
         onDone: (opts && opts.onDone) || null,
         element: (opts && opts.element) || null,
       });
@@ -188,7 +201,7 @@ export function createStateStore() {
      * @param {number} [transientMaxAge] - ms before removing stale transient entries (default 30000)
      */
     gc: function (resolver, persistentMaxAge, transientMaxAge) {
-      const now = performance.now();
+      const now = _now();
       const pMax = persistentMaxAge || 60000;
       const tMax = transientMaxAge || 30000;
 

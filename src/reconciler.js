@@ -16,6 +16,14 @@
 /** @type {symbol} Key used to store animation handles on DOM elements. */
 export const ANIM_KEY = Symbol('totoAnimation');
 
+// ── Determinism primitives ──────────────────────────────────────
+let _now = () => globalThis['performance']['now']();
+
+/** @param {{ now?: () => number }} primitives */
+export function configurePrimitives(primitives) {
+  if (primitives && primitives.now) _now = primitives.now;
+}
+
 /**
  * Apply phase offset to maintain visual continuity after element replacement.
  *
@@ -123,7 +131,7 @@ export function createReconciler(store, config, categories, opts) {
      * @private
      */
     _startElement: function (key, el, state) {
-      const elapsed = performance.now() - state.startedAt;
+      const elapsed = _now() - state.startedAt;
 
       // Check if this category has a registered play function
       const catDescriptor = categories[state.category];

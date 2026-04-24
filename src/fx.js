@@ -366,10 +366,12 @@ export function fxEnabled(key) {
 // render mode is out of scope for v0.4; document if it becomes real.
 // Use globalThis to access the browser APIs directly here, so replace_all
 // couldn't accidentally recurse these defaults into themselves.
-let _now = () => globalThis.performance.now();
-let _raf = (cb) => globalThis.requestAnimationFrame(cb);
-let _cancelRaf = (token) => globalThis.cancelAnimationFrame(token);
-let _rand = () => globalThis.Math.random();
+// Bracket access so future bulk replace_all of these patterns cannot
+// accidentally self-recurse these defaults (learned the hard way).
+let _now = () => globalThis['performance']['now']();
+let _raf = (cb) => globalThis['requestAnimationFrame'](cb);
+let _cancelRaf = (token) => globalThis['cancelAnimationFrame'](token);
+let _rand = () => globalThis['Math']['random']();
 
 /**
  * Bind fx.js to an engine's determinism primitives. Called automatically

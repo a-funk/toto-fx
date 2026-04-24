@@ -17,6 +17,10 @@ import { createClock } from './core/clock.js';
 import { createRngPool } from './core/rng.js';
 import { createScheduler } from './core/scheduler.js';
 import { configurePrimitives as _configureFXPrimitives } from './fx.js';
+import { configurePrimitives as _configureStateStorePrimitives } from './state-store.js';
+import { configurePrimitives as _configureReconcilerPrimitives } from './reconciler.js';
+import { configurePrimitives as _configureDomObserverPrimitives } from './dom-observer.js';
+import { configurePrimitives as _configureRefreshCoordinatorPrimitives } from './refresh-coordinator.js';
 
 /**
  * Create a TotoFX engine instance.
@@ -38,16 +42,20 @@ export function createEngine(userConfig) {
   const _rng = createRngPool(0);
   const _scheduler = createScheduler(_clock);
 
-  // Bind fx.js to this engine's primitives so particle/speed-line/flash
-  // helpers route through the same clock/scheduler/rng as plugins. Last
-  // engine to construct wins if multiple engines exist (singleton
-  // limitation acknowledged in fx.js — not a v0.4 concern).
-  _configureFXPrimitives({
+  // Bind engine-internal modules + fx.js to this engine's primitives.
+  // Last engine to construct wins across these module-level singletons —
+  // the multi-engine case is explicitly out of scope for v0.4.
+  const _primBundle = {
     now: function () { return _clock.now(); },
     raf: function (cb) { return _scheduler.schedule(cb); },
     cancelRaf: function (token) { _scheduler.cancel(token); },
     rand: function () { return _rng.rand('fx'); },
-  });
+  };
+  _configureFXPrimitives(_primBundle);
+  _configureStateStorePrimitives(_primBundle);
+  _configureReconcilerPrimitives(_primBundle);
+  _configureDomObserverPrimitives(_primBundle);
+  _configureRefreshCoordinatorPrimitives(_primBundle);
 
   // ── Configuration ──────────────────────────────────────────
 
@@ -613,7 +621,7 @@ export function createEngine(userConfig) {
 
       const self = this;
       const afterSwap = function () {
-        requestAnimationFrame(function () {
+        _scheduler.schedule(function () {
           _store.invalidateCache();
           _reconciler.reconcile();
           if (snapshot) {
@@ -625,7 +633,7 @@ export function createEngine(userConfig) {
       if (result && typeof result.then === 'function') {
         result.then(afterSwap);
       } else {
-        requestAnimationFrame(afterSwap);
+        _scheduler.schedule(afterSwap);
       }
     },
 

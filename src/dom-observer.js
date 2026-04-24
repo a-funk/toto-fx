@@ -13,6 +13,20 @@
 
 import { ANIM_KEY } from './reconciler.js';
 
+// ── Determinism primitives ──────────────────────────────────────
+// Bracket-access avoids literal "requestAnimationFrame(" / "cancelAnimationFrame("
+// substrings in the defaults so future replace_all migrations of those
+// patterns can't self-recurse.
+let _raf = (cb) => globalThis['requestAnimationFrame'](cb);
+let _cancelRaf = (token) => globalThis['cancelAnimationFrame'](token);
+
+/** @param {{ raf?: (cb: Function) => any, cancelRaf?: (token: any) => void }} primitives */
+export function configurePrimitives(primitives) {
+  if (!primitives) return;
+  if (primitives.raf) _raf = primitives.raf;
+  if (primitives.cancelRaf) _cancelRaf = primitives.cancelRaf;
+}
+
 /**
  * Create an isolated DOMObserver instance.
  * Each engine gets its own observer -- no cross-engine interference.
@@ -104,7 +118,7 @@ function _createObserver(store) {
 
       // Coalesce: one rAF per frame
       if (self._pendingRAF) return;
-      self._pendingRAF = requestAnimationFrame(function () {
+      self._pendingRAF = _raf(function () {
         self._pendingRAF = null;
         // Invalidate element cache since DOM changed
         store.invalidateCache();
@@ -160,7 +174,7 @@ function _createObserver(store) {
       this._observer = null;
     }
     if (this._pendingRAF) {
-      cancelAnimationFrame(this._pendingRAF);
+      _cancelRaf(this._pendingRAF);
       this._pendingRAF = null;
     }
     this._initialized = false;
