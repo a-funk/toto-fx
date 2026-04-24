@@ -190,6 +190,95 @@ describe('createScheduler', function () {
     });
   });
 
+  describe('setTimeout — virtual time', function () {
+    function setupRender() {
+      const clock = createClock();
+      const sched = createScheduler(clock);
+      clock.setMode('render');
+      sched.setMode('render');
+      return { clock, sched };
+    }
+
+    it('render-mode setTimeout fires during tick after delay elapses', async function () {
+      const { sched } = setupRender();
+      let fired = false;
+      sched.setTimeout(() => { fired = true; }, 100);
+      await sched.tick(50);
+      assert.equal(fired, false, 'fired too early');
+      await sched.tick(50);
+      assert.equal(fired, true, 'should have fired by now');
+    });
+
+    it('fires across multiple tick-boundary ms jumps', async function () {
+      const { sched } = setupRender();
+      const order = [];
+      sched.setTimeout(() => order.push('t100'), 100);
+      sched.setTimeout(() => order.push('t250'), 250);
+      sched.setTimeout(() => order.push('t50'), 50);
+      // One big tick crosses all three
+      await sched.tick(300);
+      // All three fire in insertion order (Map iteration order), not due-time order
+      // — simple timer wheel, fine for fx.js's use cases (flash clears, burst timing)
+      assert.ok(order.length === 3, `expected 3, got ${order.length}: ${order}`);
+      assert.ok(order.includes('t50') && order.includes('t100') && order.includes('t250'));
+    });
+
+    it('clearTimeout prevents firing', async function () {
+      const { sched } = setupRender();
+      let fired = false;
+      const token = sched.setTimeout(() => { fired = true; }, 50);
+      sched.clearTimeout(token);
+      await sched.tick(100);
+      assert.equal(fired, false);
+    });
+
+    it('live-mode setTimeout wraps globalThis.setTimeout', function (_, done) {
+      const clock = createClock();
+      const sched = createScheduler(clock);
+      const start = performance.now();
+      sched.setTimeout(() => {
+        const elapsed = performance.now() - start;
+        assert.ok(elapsed >= 20 && elapsed < 150, `live setTimeout latency ${elapsed}ms`);
+        done();
+      }, 30);
+    });
+
+    it('setTimeout scheduled inside a setTimeout cb fires on NEXT tick (no reentrancy storm)', async function () {
+      const { sched } = setupRender();
+      let count = 0;
+      function self() {
+        count++;
+        if (count < 3) sched.setTimeout(self, 10);
+      }
+      sched.setTimeout(self, 10);
+      await sched.tick(15);
+      assert.equal(count, 1, 'first tick fires only the outer cb');
+      await sched.tick(15);
+      assert.equal(count, 2);
+      await sched.tick(15);
+      assert.equal(count, 3);
+    });
+
+    it('same seed + same tick sequence with setTimeouts → identical order across two scheduler runs', async function () {
+      async function run() {
+        const clock = createClock();
+        const sched = createScheduler(clock);
+        clock.setMode('render');
+        sched.setMode('render');
+        const order = [];
+        sched.setTimeout(() => order.push(['a', clock.now()]), 50);
+        sched.setTimeout(() => order.push(['b', clock.now()]), 100);
+        sched.setTimeout(() => order.push(['c', clock.now()]), 20);
+        for (let i = 0; i < 10; i++) await sched.tick(16.67);
+        return order;
+      }
+      const run1 = await run();
+      const run2 = await run();
+      assert.deepEqual(run1, run2);
+    });
+  });
+
+
   describe('determinism', function () {
     it('two separate scheduler runs with identical ticks produce identical cb arguments', async function () {
       async function run() {

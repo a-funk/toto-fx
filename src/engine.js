@@ -51,6 +51,8 @@ export function createEngine(userConfig) {
     raf: function (cb) { return _scheduler.schedule(cb); },
     cancelRaf: function (token) { _scheduler.cancel(token); },
     rand: function () { return _rng.rand('fx'); },
+    setTimeout: function (cb, dt) { return _scheduler.setTimeout(cb, dt); },
+    clearTimeout: function (token) { _scheduler.clearTimeout(token); },
   };
   _configureFXPrimitives(_primBundle);
   _configureStateStorePrimitives(_primBundle);
@@ -297,6 +299,19 @@ export function createEngine(userConfig) {
      * @returns {Promise<void>} resolves after a microtask, letting layout settle.
      */
     tick: function (dtMs) { return _scheduler.tick(dtMs); },
+
+    /**
+     * Virtual-time setTimeout. Live mode: wraps `setTimeout`.
+     * Render mode: queues against virtualTime, fires during `tick()`.
+     *
+     * @param {() => void} cb
+     * @param {number} delayMs
+     * @returns token for `clearTimeout`
+     */
+    setTimeout: function (cb, delayMs) { return _scheduler.setTimeout(cb, delayMs); },
+
+    /** Cancel a virtual-time setTimeout. Idempotent. */
+    clearTimeout: function (token) { _scheduler.clearTimeout(token); },
 
     /**
      * Switch between live and render mode.

@@ -372,6 +372,8 @@ let _now = () => globalThis['performance']['now']();
 let _raf = (cb) => globalThis['requestAnimationFrame'](cb);
 let _cancelRaf = (token) => globalThis['cancelAnimationFrame'](token);
 let _rand = () => globalThis['Math']['random']();
+let _setTimeout = (cb, dt) => globalThis['setTimeout'](cb, dt);
+let _clearTimeout = (token) => globalThis['clearTimeout'](token);
 
 /**
  * Bind fx.js to an engine's determinism primitives. Called automatically
@@ -382,10 +384,11 @@ let _rand = () => globalThis['Math']['random']();
  * so in render mode, identical seeds + identical ticks produce identical
  * pixel-level output.
  *
- * Leaves setTimeout-based flash/burst clearing on the real browser timer
- * (P0 scheduler is rAF-only by design; flash timing is a P2+ concern).
+ * As of P3.2, setTimeout-based flash/burst clearing also routes through
+ * the engine's virtual-time timer wheel — so flashes clear at frame N
+ * deterministically in render mode, not after real-time drift.
  *
- * @param {{ now?: () => number, raf?: (cb: Function) => any, cancelRaf?: (token: any) => void, rand?: () => number }} primitives
+ * @param {{ now?: () => number, raf?: (cb: Function) => any, cancelRaf?: (token: any) => void, rand?: () => number, setTimeout?: (cb: Function, dt: number) => any, clearTimeout?: (token: any) => void }} primitives
  */
 export function configurePrimitives(primitives) {
   if (!primitives) return;
@@ -393,6 +396,8 @@ export function configurePrimitives(primitives) {
   if (primitives.raf) _raf = primitives.raf;
   if (primitives.cancelRaf) _cancelRaf = primitives.cancelRaf;
   if (primitives.rand) _rand = primitives.rand;
+  if (primitives.setTimeout) _setTimeout = primitives.setTimeout;
+  if (primitives.clearTimeout) _clearTimeout = primitives.clearTimeout;
 }
 
 // ── Unified RAF Loop ─────────────────────────────────────────────
@@ -470,7 +475,7 @@ function _masterTick(now) {
     if (totalEntities > cap && !_budgetWarnThrottled) {
       console.warn('toto-fx: entity count (' + totalEntities + ') exceeds device budget (' + cap + ')');
       _budgetWarnThrottled = true;
-      setTimeout(function () { _budgetWarnThrottled = false; }, 2000);
+      _setTimeout(function () { _budgetWarnThrottled = false; }, 2000);
     }
   }
 
@@ -656,7 +661,7 @@ export function spawnParticles(cx, cy, opts) {
   // Defer particles until after impact flash clears so they're visible on spawn
   const remaining = _flashClearTime - Date.now();
   if (remaining > 0) {
-    setTimeout(function() { spawnParticles(cx, cy, opts); }, remaining);
+    _setTimeout(function() { spawnParticles(cx, cy, opts); }, remaining);
     return;
   }
   getFxCanvas();
@@ -850,14 +855,14 @@ export function flashColor(color, durationMs) {
   if (!fxEnabled('flash')) return;
   if (!_flashEl) _flashEl = document.querySelector(_selectors.flashOverlay);
   if (!_flashEl) return;
-  if (_flashTimer) { clearTimeout(_flashTimer); _flashTimer = null; }
+  if (_flashTimer) { _clearTimeout(_flashTimer); _flashTimer = null; }
   _flashEl.style.transition = 'none';
   _flashEl.style.background = color;
   _flashEl.style.opacity = '1';
   _raf(function () {
     _flashEl.style.transition = 'opacity ' + durationMs + 'ms ease-out';
     _flashEl.style.opacity = '0';
-    _flashTimer = setTimeout(function () {
+    _flashTimer = _setTimeout(function () {
       _flashEl.style.background = '';
       _flashTimer = null;
     }, durationMs + 20);
@@ -876,7 +881,7 @@ export function doImpactFlash(whiteOut) {
   if (!_flashEl) return;
 
   // Cancel any in-flight flash to prevent style conflicts
-  if (_flashTimer) { clearTimeout(_flashTimer); _flashTimer = null; }
+  if (_flashTimer) { _clearTimeout(_flashTimer); _flashTimer = null; }
 
   const themeFlashDur = _theme.color('flashDuration');
   const flashDur = themeFlashDur
@@ -892,7 +897,7 @@ export function doImpactFlash(whiteOut) {
   _raf(function () {
     _flashEl.style.transition = 'opacity ' + fadeDur + 'ms ease-out';
     _flashEl.style.opacity = '0';
-    _flashTimer = setTimeout(function () {
+    _flashTimer = _setTimeout(function () {
       _flashEl.style.background = '';
       _flashTimer = null;
     }, fadeDur + 20);
@@ -913,7 +918,7 @@ export function doScreenShake(heavy) {
   el.classList.remove(_classes.shaking, _classes.shakingHeavy);
   _raf(function () {
     el.classList.add(cls);
-    setTimeout(function () { el.classList.remove(cls); }, heavy ? 550 : 450);
+    _setTimeout(function () { el.classList.remove(cls); }, heavy ? 550 : 450);
   });
 }
 
@@ -1131,7 +1136,7 @@ export function liftCard(card, shadow, cx, cy, peakZ, liftDuration, rotX, rotY, 
     // Delayed hide — card visible initially, destroyed after delay
     card.classList.add(_classes.visible);
     card.style.opacity = '1';
-    setTimeout(function () { destroyCard(card); }, speedScale(hideDelay));
+    _setTimeout(function () { destroyCard(card); }, speedScale(hideDelay));
   } else {
     // Default (-1): card stays visible throughout thud animation
     card.classList.add(_classes.visible);
@@ -1168,7 +1173,7 @@ export function liftCard(card, shadow, cx, cy, peakZ, liftDuration, rotX, rotY, 
     }
 
     startSpeedLines(cx, cy, 'outward', dur);
-    setTimeout(onDone, dur + 40);
+    _setTimeout(onDone, dur + 40);
   });
 }
 
@@ -1338,7 +1343,7 @@ export function completeAndRemove(card, badge, strike, delayBase, onDone) {
 
   // Strikethrough
   if (showStrike) {
-    setTimeout(function () {
+    _setTimeout(function () {
       card.classList.add(_classes.done);
       card.style.boxShadow = '';
       if (strike) {
@@ -1348,14 +1353,14 @@ export function completeAndRemove(card, badge, strike, delayBase, onDone) {
       }
     }, d);
   } else {
-    setTimeout(function () {
+    _setTimeout(function () {
       card.style.boxShadow = '';
     }, d);
   }
 
   // Done badge popup
   if (showBadge) {
-    setTimeout(function () {
+    _setTimeout(function () {
       if (badge) {
         badge.style.color = badgeColor;
         badge.style.transition = 'transform ' + speedScale(200) + 'ms cubic-bezier(0.22,1,0.36,1), opacity ' + speedScale(200) + 'ms ease';
@@ -1365,7 +1370,7 @@ export function completeAndRemove(card, badge, strike, delayBase, onDone) {
     }, d + speedScale(150));
 
     // Badge fade
-    setTimeout(function () {
+    _setTimeout(function () {
       if (badge) {
         badge.style.transition = 'opacity ' + speedScale(200) + 'ms ease';
         badge.style.opacity = '0';
@@ -1376,7 +1381,7 @@ export function completeAndRemove(card, badge, strike, delayBase, onDone) {
   // Card exit timing: after badge fades (or immediately if no badge/strike)
   const exitDelay = showBadge ? d + speedScale(150 + badgeDur + 200) : (showStrike ? d + speedScale(350) : d + speedScale(100));
 
-  setTimeout(function () {
+  _setTimeout(function () {
     card.classList.remove(_classes.visible);
     card.style.transition = 'opacity ' + speedScale(300) + 'ms ease, transform ' + speedScale(350) + 'ms ease';
     card.style.opacity = '0';
@@ -1389,7 +1394,7 @@ export function completeAndRemove(card, badge, strike, delayBase, onDone) {
       ph.style.marginBottom = '0px';
     }
 
-    setTimeout(function () {
+    _setTimeout(function () {
       if (card._animStage) { card._animStage.remove(); card._animStage = null; }
       if (card._animPlaceholder) { card._animPlaceholder.remove(); card._animPlaceholder = null; }
       card.classList.remove(_classes.animating);
@@ -1435,12 +1440,12 @@ export function cleanupCard(card) {
  * @param {Function} [onDone] - Callback fired after full cleanup.
  */
 export function removeCard(card, fadeDelay, onDone) {
-  setTimeout(function () {
+  _setTimeout(function () {
     // Fade the card
     card.style.transition = 'opacity ' + speedScale(250) + 'ms ease-out';
     card.style.opacity = '0';
 
-    setTimeout(function () {
+    _setTimeout(function () {
       // Collapse placeholder
       if (card._animPlaceholder) {
         card._animPlaceholder.style.transition = 'height ' + speedScale(300) + 'ms ease, margin-bottom ' + speedScale(300) + 'ms ease';
@@ -1448,7 +1453,7 @@ export function removeCard(card, fadeDelay, onDone) {
         card._animPlaceholder.style.marginBottom = '0px';
       }
 
-      setTimeout(function () {
+      _setTimeout(function () {
         cleanupCard(card);
         if (onDone) onDone();
       }, speedScale(350));
@@ -1646,7 +1651,7 @@ export function prepareCard(el) {
   if (hideDelay === 0) {
     destroyCard(el);
   } else if (hideDelay > 0) {
-    setTimeout(function () { destroyCard(el); }, speedScale(hideDelay));
+    _setTimeout(function () { destroyCard(el); }, speedScale(hideDelay));
   }
 
   return { cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2, rect: rect, w: rect.width, h: rect.height };
@@ -1671,7 +1676,7 @@ export function finalize(el, opts) {
     ph.style.height = '0';
     ph.style.marginBottom = '0';
   }
-  setTimeout(function () {
+  _setTimeout(function () {
     deregisterAnimation(el);
     cleanupCard(el);
     el.style.display = 'none';
@@ -1988,12 +1993,12 @@ let _autoWarmup = true;
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   // Defer to allow configure() to be called first
-  setTimeout(function () {
+  _setTimeout(function () {
     if (!_autoWarmup) return;
     if (typeof requestIdleCallback !== 'undefined') {
       requestIdleCallback(warmup);
     } else {
-      setTimeout(warmup, 200);
+      _setTimeout(warmup, 200);
     }
   }, 0);
 }
