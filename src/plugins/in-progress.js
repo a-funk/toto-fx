@@ -19,6 +19,16 @@
  *   import { glowPlugin, snakeBorderPlugin } from 'toto-fx/plugins/in-progress';
  */
 
+// ── Determinism primitives (wired by install() in render mode) ─
+//
+// Defaults are raw browser APIs — live-mode behavior is identical to
+// pre-migration code. When `install(engine)` receives an engine with
+// `engine.raf` etc., these are rebound to route through the engine's
+// scheduler, making the shared ticker render-mode-aware.
+
+let _rafFn = (cb) => requestAnimationFrame(cb);
+let _cancelRafFn = (token) => cancelAnimationFrame(token);
+
 // ── Inject CSS keyframes ──────────────────────────────────────
 
 let _styleInjected = false;
@@ -87,7 +97,7 @@ export const InProgressTicker = {
   unregister: function(el) {
     this._items.delete(el);
     if (this._items.size === 0 && this._raf) {
-      cancelAnimationFrame(this._raf);
+      _cancelRafFn(this._raf);
       this._raf = null;
     }
   },
@@ -99,12 +109,12 @@ export const InProgressTicker = {
         entry.tickFn(entry.state);
       });
       if (self._items.size > 0) {
-        self._raf = requestAnimationFrame(tick);
+        self._raf = _rafFn(tick);
       } else {
         self._raf = null;
       }
     }
-    self._raf = requestAnimationFrame(tick);
+    self._raf = _rafFn(tick);
   },
 };
 
@@ -535,7 +545,7 @@ export const particleOrbitPlugin = {
       const p = document.createElement('div');
       p.style.cssText = 'position:absolute;width:' + size + 'px;height:' + size + 'px;border-radius:50%;background:' + color + ';pointer-events:none;opacity:0.7;';
       container.appendChild(p);
-      particles.push({ el: p, phase: (i / count) * Math.PI * 2, orbitRadius: 4 + Math.random() * 4 });
+      particles.push({ el: p, phase: (i / count) * Math.PI * 2, orbitRadius: 4 + (ctx.rand ? ctx.rand() : Math.random()) * 4 });
     }
 
     const state = { el: el, angle: 0, speed: speed, particles: particles, size: size };
@@ -760,6 +770,16 @@ export function removeStyles() {
 
 export function install(registry) {
   _injectStyles();
+
+  // Wire determinism primitives if we were handed an engine. Safe no-op
+  // if `registry` is an AnimationRegistry (no raf/rand methods) —
+  // defaults stay as raw browser APIs.
+  if (registry && typeof registry.raf === 'function') {
+    _rafFn = registry.raf;
+  }
+  if (registry && typeof registry.cancelRaf === 'function') {
+    _cancelRafFn = registry.cancelRaf;
+  }
 
   if (registry && typeof registry.register === 'function') {
     // Engine instance -- use engine.register(category, style, variants)
