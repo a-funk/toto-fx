@@ -47,6 +47,25 @@
  * Dotgrid.ripple(400, 300);
  */
 
+// ── Determinism primitives ──────────────────────────────────────
+// Default to raw browser APIs; `configurePrimitives` rebinds to an
+// engine's clock/scheduler/rng so the fluid sim render loop + crater
+// crack randomness route through virtual time in render mode.
+//
+// Bracket access in defaults prevents replace_all-style migrations from
+// accidentally rewriting these into themselves (learned in P1.6).
+let _raf = (cb) => globalThis['requestAnimationFrame'](cb);
+let _cancelRaf = (token) => globalThis['cancelAnimationFrame'](token);
+let _rand = () => globalThis['Math']['random']();
+
+/** @param {{ raf?: (cb: Function) => any, cancelRaf?: (token: any) => void, rand?: () => number }} primitives */
+export function configurePrimitives(primitives) {
+  if (!primitives) return;
+  if (primitives.raf) _raf = primitives.raf;
+  if (primitives.cancelRaf) _cancelRaf = primitives.cancelRaf;
+  if (primitives.rand) _rand = primitives.rand;
+}
+
 // ── Default configuration ──────────────────────────────────────
 
 /**
@@ -629,7 +648,7 @@ export function createDotgrid(userConfig) {
     var total = gridCols * gridRows;
 
     // Stop any running sim
-    if (rafId) { cancelAnimationFrame(rafId); rafId = null; simRunning = false; }
+    if (rafId) { _cancelRaf(rafId); rafId = null; simRunning = false; }
 
     // Set up canvas with DPR scaling
     // Cap DPR on tablets to reduce pixel buffer size
@@ -893,7 +912,7 @@ export function createDotgrid(userConfig) {
     // When paused (during completion animations), skip sim + render
     // but keep the RAF loop alive so we resume seamlessly
     if (_paused) {
-      if (!_noRAF) rafId = requestAnimationFrame(render);
+      if (!_noRAF) rafId = _raf(render);
       return;
     }
 
@@ -1061,7 +1080,7 @@ export function createDotgrid(userConfig) {
     if (hasEnergy) {
       // Shrink bbox to fit actual active area
       shrinkBbox();
-      if (!_noRAF) rafId = requestAnimationFrame(render);
+      if (!_noRAF) rafId = _raf(render);
     } else {
       // Simulation exhausted — full cleanup
       simRunning = false;
@@ -1104,7 +1123,7 @@ export function createDotgrid(userConfig) {
   function startSim() {
     if (!simRunning) {
       simRunning = true;
-      rafId = requestAnimationFrame(render);
+      rafId = _raf(render);
     }
   }
 
@@ -1291,12 +1310,12 @@ export function createDotgrid(userConfig) {
 
     // Crack lines
     for (var ci = 0; ci < crackCount; ci++) {
-      var angle = (ci / crackCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
-      var len = crackLen * (0.5 + Math.random() * 0.5);
+      var angle = (ci / crackCount) * Math.PI * 2 + (_rand() - 0.5) * 0.5;
+      var len = crackLen * (0.5 + _rand() * 0.5);
       var curAngle = angle;
       var steps = Math.floor(len);
       for (var s = 0; s < steps; s++) {
-        curAngle += (Math.random() - 0.5) * 0.4;
+        curAngle += (_rand() - 0.5) * 0.4;
         var crCol = g.col + Math.cos(curAngle) * (gridR * 0.3 + s);
         var crRow = g.row + Math.sin(curAngle) * (gridR * 0.3 + s);
         var ci2 = Math.round(crRow) * gridCols + Math.round(crCol);
@@ -1580,7 +1599,7 @@ export function createDotgrid(userConfig) {
    * if it was auto-created, and remove the resize listener.
    */
   function destroy() {
-    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    if (rafId) { _cancelRaf(rafId); rafId = null; }
     simRunning = false;
     _paused = false;
     if (_pauseResumeTimer) { clearTimeout(_pauseResumeTimer); _pauseResumeTimer = null; }
@@ -1687,7 +1706,7 @@ export function createDotgrid(userConfig) {
      */
     step: function () {
       if (!built || !canvasEl) return;
-      if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+      if (rafId) { _cancelRaf(rafId); rafId = null; }
       simRunning = false;
       _noRAF = true;
       render();

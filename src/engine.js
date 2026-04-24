@@ -21,6 +21,7 @@ import { configurePrimitives as _configureStateStorePrimitives } from './state-s
 import { configurePrimitives as _configureReconcilerPrimitives } from './reconciler.js';
 import { configurePrimitives as _configureDomObserverPrimitives } from './dom-observer.js';
 import { configurePrimitives as _configureRefreshCoordinatorPrimitives } from './refresh-coordinator.js';
+import { configurePrimitives as _configureDotgridPrimitives } from './dotgrid.js';
 
 /**
  * Create a TotoFX engine instance.
@@ -56,6 +57,7 @@ export function createEngine(userConfig) {
   _configureReconcilerPrimitives(_primBundle);
   _configureDomObserverPrimitives(_primBundle);
   _configureRefreshCoordinatorPrimitives(_primBundle);
+  _configureDotgridPrimitives(_primBundle);
 
   // ── Configuration ──────────────────────────────────────────
 
