@@ -357,6 +357,49 @@ export function fxEnabled(key) {
   return fxConfig[key] !== false;
 }
 
+// ── Determinism primitives ───────────────────────────────────────
+// Default to raw browser APIs — live mode is zero-overhead identical to
+// pre-migration. `configurePrimitives()` rebinds these to route through
+// an engine's clock/scheduler/rng, giving deterministic render mode.
+//
+// Module-level singleton: last engine to configure wins. Multi-engine
+// render mode is out of scope for v0.4; document if it becomes real.
+// Use globalThis to access the browser APIs directly here, so replace_all
+// couldn't accidentally recurse these defaults into themselves.
+// Bracket access so future bulk replace_all of these patterns cannot
+// accidentally self-recurse these defaults (learned the hard way).
+let _now = () => globalThis['performance']['now']();
+let _raf = (cb) => globalThis['requestAnimationFrame'](cb);
+let _cancelRaf = (token) => globalThis['cancelAnimationFrame'](token);
+let _rand = () => globalThis['Math']['random']();
+let _setTimeout = (cb, dt) => globalThis['setTimeout'](cb, dt);
+let _clearTimeout = (token) => globalThis['clearTimeout'](token);
+
+/**
+ * Bind fx.js to an engine's determinism primitives. Called automatically
+ * by `createEngine()` during setup; consumers don't need to invoke it.
+ *
+ * After binding, the master rAF loop, particle init, speed-line timing,
+ * and every other time/entropy-dependent FX routes through the engine —
+ * so in render mode, identical seeds + identical ticks produce identical
+ * pixel-level output.
+ *
+ * As of P3.2, setTimeout-based flash/burst clearing also routes through
+ * the engine's virtual-time timer wheel — so flashes clear at frame N
+ * deterministically in render mode, not after real-time drift.
+ *
+ * @param {{ now?: () => number, raf?: (cb: Function) => any, cancelRaf?: (token: any) => void, rand?: () => number, setTimeout?: (cb: Function, dt: number) => any, clearTimeout?: (token: any) => void }} primitives
+ */
+export function configurePrimitives(primitives) {
+  if (!primitives) return;
+  if (primitives.now) _now = primitives.now;
+  if (primitives.raf) _raf = primitives.raf;
+  if (primitives.cancelRaf) _cancelRaf = primitives.cancelRaf;
+  if (primitives.rand) _rand = primitives.rand;
+  if (primitives.setTimeout) _setTimeout = primitives.setTimeout;
+  if (primitives.clearTimeout) _clearTimeout = primitives.clearTimeout;
+}
+
 // ── Unified RAF Loop ─────────────────────────────────────────────
 // Single requestAnimationFrame drives all active subsystems (particles,
 // speed lines) to avoid 2+ RAF callbacks per frame during animations.
@@ -432,16 +475,16 @@ function _masterTick(now) {
     if (totalEntities > cap && !_budgetWarnThrottled) {
       console.warn('toto-fx: entity count (' + totalEntities + ') exceeds device budget (' + cap + ')');
       _budgetWarnThrottled = true;
-      setTimeout(function () { _budgetWarnThrottled = false; }, 2000);
+      _setTimeout(function () { _budgetWarnThrottled = false; }, 2000);
     }
   }
 
-  if (anyActive) _masterRAF = requestAnimationFrame(_masterTick);
+  if (anyActive) _masterRAF = _raf(_masterTick);
   else { _masterRAF = null; _lastFrameTime = 0; }
 }
 
 function _ensureMasterTick() {
-  if (!_masterRAF) _masterRAF = requestAnimationFrame(_masterTick);
+  if (!_masterRAF) _masterRAF = _raf(_masterTick);
 }
 
 // ── Particle State ───────────────────────────────────────────────
@@ -478,16 +521,16 @@ for (let i = 0; i < radialLineCount; i++) {
   if (isMobile) {
     // Bias toward vertical (top/bottom) for portrait screens.
     // Concentrate angles near PI/2 (down) and 3PI/2 (up) with +-45deg spread.
-    const base = Math.random() < 0.5 ? (Math.PI / 2) : (3 * Math.PI / 2);
-    angle = base + (Math.random() - 0.5) * (Math.PI / 2);
+    const base = _rand() < 0.5 ? (Math.PI / 2) : (3 * Math.PI / 2);
+    angle = base + (_rand() - 0.5) * (Math.PI / 2);
   } else {
-    angle = Math.random() * Math.PI * 2;
+    angle = _rand() * Math.PI * 2;
   }
   radialLines.push({
     angle: angle,
-    speed: 0.6 + Math.random() * 0.8,
-    opacity: 0.15 + Math.random() * 0.45,
-    width: 0.8 + Math.random() * 1.5,
+    speed: 0.6 + _rand() * 0.8,
+    opacity: 0.15 + _rand() * 0.45,
+    width: 0.8 + _rand() * 1.5,
   });
 }
 
@@ -572,7 +615,7 @@ export function startSpeedLines(cx, cy, direction, durationMs) {
   if (!fxEnabled('speedLines')) return;
   const c = getFxCanvas();
   _speedLinesActive = true;
-  _speedLinesStart = performance.now();
+  _speedLinesStart = _now();
   _speedLinesDuration = durationMs;
   _speedLinesCx = cx;
   _speedLinesCy = cy;
@@ -618,7 +661,7 @@ export function spawnParticles(cx, cy, opts) {
   // Defer particles until after impact flash clears so they're visible on spawn
   const remaining = _flashClearTime - Date.now();
   if (remaining > 0) {
-    setTimeout(function() { spawnParticles(cx, cy, opts); }, remaining);
+    _setTimeout(function() { spawnParticles(cx, cy, opts); }, remaining);
     return;
   }
   getFxCanvas();
@@ -634,19 +677,19 @@ export function spawnParticles(cx, cy, opts) {
     ? _theme.chars(_ctx.particleStyle)
     : (opts.chars || _theme.chars('particles'));
   for (let i = 0; i < count; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const vel = (opts.minVel || 1) + Math.random() * spread;
+    const angle = _rand() * Math.PI * 2;
+    const vel = (opts.minVel || 1) + _rand() * spread;
     particles.push({
-      x: cx + (Math.random() - 0.5) * (opts.originSpread || 10),
-      y: cy + (Math.random() - 0.5) * (opts.originSpread || 10),
+      x: cx + (_rand() - 0.5) * (opts.originSpread || 10),
+      y: cy + (_rand() - 0.5) * (opts.originSpread || 10),
       vx: Math.cos(angle) * vel,
       vy: Math.sin(angle) * vel - (opts.upBias || 0),
-      life: life + Math.random() * 30,
+      life: life + _rand() * 30,
       maxLife: life + 30,
-      size: sizeRange[0] + Math.random() * (sizeRange[1] - sizeRange[0]),
+      size: sizeRange[0] + _rand() * (sizeRange[1] - sizeRange[0]),
       color: color,
       gravity: gravity,
-      char: glyphs[Math.floor(Math.random() * glyphs.length)],
+      char: glyphs[Math.floor(_rand() * glyphs.length)],
       drag: opts.drag || 0.98,
     });
   }
@@ -758,11 +801,11 @@ export function spawnSmoke(cx, cy, count) {
   const color = _theme.particleColor('smoke');
   for (let i = 0; i < count; i++) {
     particles.push({
-      x: cx + (Math.random() - 0.5) * 40, y: cy + Math.random() * 10,
-      vx: (Math.random() - 0.5) * 0.5, vy: -(0.3 + Math.random() * 0.8),
-      life: 90 + Math.random() * 50, maxLife: 140,
-      size: 8 + Math.random() * 15, color: color, gravity: -0.01, drag: 0.99,
-      char: glyphs[Math.floor(Math.random() * glyphs.length)],
+      x: cx + (_rand() - 0.5) * 40, y: cy + _rand() * 10,
+      vx: (_rand() - 0.5) * 0.5, vy: -(0.3 + _rand() * 0.8),
+      life: 90 + _rand() * 50, maxLife: 140,
+      size: 8 + _rand() * 15, color: color, gravity: -0.01, drag: 0.99,
+      char: glyphs[Math.floor(_rand() * glyphs.length)],
     });
   }
   _ensureParticlePool();
@@ -781,14 +824,14 @@ export function spawnFireTrail(x, y, angle) {
   const glyphs = _theme.chars('fire');
   const color = _theme.particleColor('fire');
   for (let i = 0; i < 4; i++) {
-    const spread = (Math.random() - 0.5) * 0.8;
+    const spread = (_rand() - 0.5) * 0.8;
     particles.push({
       x: x, y: y,
-      vx: Math.cos(angle + Math.PI + spread) * (1 + Math.random() * 2),
-      vy: Math.sin(angle + Math.PI + spread) * (1 + Math.random() * 2),
-      life: 20 + Math.random() * 15, maxLife: 35,
-      size: 2 + Math.random() * 4, color: color, gravity: -0.02, drag: 0.96,
-      char: glyphs[Math.floor(Math.random() * glyphs.length)],
+      vx: Math.cos(angle + Math.PI + spread) * (1 + _rand() * 2),
+      vy: Math.sin(angle + Math.PI + spread) * (1 + _rand() * 2),
+      life: 20 + _rand() * 15, maxLife: 35,
+      size: 2 + _rand() * 4, color: color, gravity: -0.02, drag: 0.96,
+      char: glyphs[Math.floor(_rand() * glyphs.length)],
     });
   }
   _ensureParticlePool();
@@ -812,14 +855,14 @@ export function flashColor(color, durationMs) {
   if (!fxEnabled('flash')) return;
   if (!_flashEl) _flashEl = document.querySelector(_selectors.flashOverlay);
   if (!_flashEl) return;
-  if (_flashTimer) { clearTimeout(_flashTimer); _flashTimer = null; }
+  if (_flashTimer) { _clearTimeout(_flashTimer); _flashTimer = null; }
   _flashEl.style.transition = 'none';
   _flashEl.style.background = color;
   _flashEl.style.opacity = '1';
-  requestAnimationFrame(function () {
+  _raf(function () {
     _flashEl.style.transition = 'opacity ' + durationMs + 'ms ease-out';
     _flashEl.style.opacity = '0';
-    _flashTimer = setTimeout(function () {
+    _flashTimer = _setTimeout(function () {
       _flashEl.style.background = '';
       _flashTimer = null;
     }, durationMs + 20);
@@ -838,7 +881,7 @@ export function doImpactFlash(whiteOut) {
   if (!_flashEl) return;
 
   // Cancel any in-flight flash to prevent style conflicts
-  if (_flashTimer) { clearTimeout(_flashTimer); _flashTimer = null; }
+  if (_flashTimer) { _clearTimeout(_flashTimer); _flashTimer = null; }
 
   const themeFlashDur = _theme.color('flashDuration');
   const flashDur = themeFlashDur
@@ -851,10 +894,10 @@ export function doImpactFlash(whiteOut) {
   _flashEl.style.background = whiteOut ? '#fff' : '#000';
   _flashEl.style.opacity = '1';
 
-  requestAnimationFrame(function () {
+  _raf(function () {
     _flashEl.style.transition = 'opacity ' + fadeDur + 'ms ease-out';
     _flashEl.style.opacity = '0';
-    _flashTimer = setTimeout(function () {
+    _flashTimer = _setTimeout(function () {
       _flashEl.style.background = '';
       _flashTimer = null;
     }, fadeDur + 20);
@@ -873,9 +916,9 @@ export function doScreenShake(heavy) {
   const el = document.querySelector(_selectors.appShell) || document.body;
   const cls = heavy ? _classes.shakingHeavy : _classes.shaking;
   el.classList.remove(_classes.shaking, _classes.shakingHeavy);
-  requestAnimationFrame(function () {
+  _raf(function () {
     el.classList.add(cls);
-    setTimeout(function () { el.classList.remove(cls); }, heavy ? 550 : 450);
+    _setTimeout(function () { el.classList.remove(cls); }, heavy ? 550 : 450);
   });
 }
 
@@ -1093,7 +1136,7 @@ export function liftCard(card, shadow, cx, cy, peakZ, liftDuration, rotX, rotY, 
     // Delayed hide — card visible initially, destroyed after delay
     card.classList.add(_classes.visible);
     card.style.opacity = '1';
-    setTimeout(function () { destroyCard(card); }, speedScale(hideDelay));
+    _setTimeout(function () { destroyCard(card); }, speedScale(hideDelay));
   } else {
     // Default (-1): card stays visible throughout thud animation
     card.classList.add(_classes.visible);
@@ -1109,7 +1152,7 @@ export function liftCard(card, shadow, cx, cy, peakZ, liftDuration, rotX, rotY, 
   const glowColor = _theme.color('glow') || 'rgba(196,90,60,0.15)';
   const dur = speedScale(liftDuration);
 
-  requestAnimationFrame(function () {
+  _raf(function () {
     let liftTransition = 'transform ' + dur + 'ms cubic-bezier(0.22, 1, 0.36, 1)';
     if (!isMobile) liftTransition += ', box-shadow ' + dur + 'ms ease';
     card.style.transition = liftTransition;
@@ -1130,7 +1173,7 @@ export function liftCard(card, shadow, cx, cy, peakZ, liftDuration, rotX, rotY, 
     }
 
     startSpeedLines(cx, cy, 'outward', dur);
-    setTimeout(onDone, dur + 40);
+    _setTimeout(onDone, dur + 40);
   });
 }
 
@@ -1157,7 +1200,7 @@ export function gravityFall(card, shadow, peakZ, rotX, rotY, fallDuration, easeE
   const dur = speedScale(fallDuration);
   startSpeedLines(cx, cy, 'inward', dur);
 
-  const start = performance.now();
+  const start = _now();
   const glowColor = _theme.color('glow') || 'rgba(196,90,60,0.15)';
   let _fallFrame = 0;
 
@@ -1182,10 +1225,10 @@ export function gravityFall(card, shadow, peakZ, rotX, rotY, fallDuration, easeE
     }
     _fallFrame++;
 
-    if (t < 1) requestAnimationFrame(step);
+    if (t < 1) _raf(step);
     else { stopSpeedLines(); onImpact(); }
   }
-  requestAnimationFrame(step);
+  _raf(step);
 }
 
 /**
@@ -1232,7 +1275,7 @@ export function standardImpact(card, shadow, burst, cx, cy) {
   doDotgridRipple(cx, cy);
 
   // Write phase 2: recovery transitions — next frame
-  requestAnimationFrame(function () {
+  _raf(function () {
     if (isMobile) {
       // Mobile: only animate GPU-friendly transform + opacity
       card.style.transition = fxEnabled('cardSquash')
@@ -1300,7 +1343,7 @@ export function completeAndRemove(card, badge, strike, delayBase, onDone) {
 
   // Strikethrough
   if (showStrike) {
-    setTimeout(function () {
+    _setTimeout(function () {
       card.classList.add(_classes.done);
       card.style.boxShadow = '';
       if (strike) {
@@ -1310,14 +1353,14 @@ export function completeAndRemove(card, badge, strike, delayBase, onDone) {
       }
     }, d);
   } else {
-    setTimeout(function () {
+    _setTimeout(function () {
       card.style.boxShadow = '';
     }, d);
   }
 
   // Done badge popup
   if (showBadge) {
-    setTimeout(function () {
+    _setTimeout(function () {
       if (badge) {
         badge.style.color = badgeColor;
         badge.style.transition = 'transform ' + speedScale(200) + 'ms cubic-bezier(0.22,1,0.36,1), opacity ' + speedScale(200) + 'ms ease';
@@ -1327,7 +1370,7 @@ export function completeAndRemove(card, badge, strike, delayBase, onDone) {
     }, d + speedScale(150));
 
     // Badge fade
-    setTimeout(function () {
+    _setTimeout(function () {
       if (badge) {
         badge.style.transition = 'opacity ' + speedScale(200) + 'ms ease';
         badge.style.opacity = '0';
@@ -1338,7 +1381,7 @@ export function completeAndRemove(card, badge, strike, delayBase, onDone) {
   // Card exit timing: after badge fades (or immediately if no badge/strike)
   const exitDelay = showBadge ? d + speedScale(150 + badgeDur + 200) : (showStrike ? d + speedScale(350) : d + speedScale(100));
 
-  setTimeout(function () {
+  _setTimeout(function () {
     card.classList.remove(_classes.visible);
     card.style.transition = 'opacity ' + speedScale(300) + 'ms ease, transform ' + speedScale(350) + 'ms ease';
     card.style.opacity = '0';
@@ -1351,7 +1394,7 @@ export function completeAndRemove(card, badge, strike, delayBase, onDone) {
       ph.style.marginBottom = '0px';
     }
 
-    setTimeout(function () {
+    _setTimeout(function () {
       if (card._animStage) { card._animStage.remove(); card._animStage = null; }
       if (card._animPlaceholder) { card._animPlaceholder.remove(); card._animPlaceholder = null; }
       card.classList.remove(_classes.animating);
@@ -1397,12 +1440,12 @@ export function cleanupCard(card) {
  * @param {Function} [onDone] - Callback fired after full cleanup.
  */
 export function removeCard(card, fadeDelay, onDone) {
-  setTimeout(function () {
+  _setTimeout(function () {
     // Fade the card
     card.style.transition = 'opacity ' + speedScale(250) + 'ms ease-out';
     card.style.opacity = '0';
 
-    setTimeout(function () {
+    _setTimeout(function () {
       // Collapse placeholder
       if (card._animPlaceholder) {
         card._animPlaceholder.style.transition = 'height ' + speedScale(300) + 'ms ease, margin-bottom ' + speedScale(300) + 'ms ease';
@@ -1410,7 +1453,7 @@ export function removeCard(card, fadeDelay, onDone) {
         card._animPlaceholder.style.marginBottom = '0px';
       }
 
-      setTimeout(function () {
+      _setTimeout(function () {
         cleanupCard(card);
         if (onDone) onDone();
       }, speedScale(350));
@@ -1608,7 +1651,7 @@ export function prepareCard(el) {
   if (hideDelay === 0) {
     destroyCard(el);
   } else if (hideDelay > 0) {
-    setTimeout(function () { destroyCard(el); }, speedScale(hideDelay));
+    _setTimeout(function () { destroyCard(el); }, speedScale(hideDelay));
   }
 
   return { cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2, rect: rect, w: rect.width, h: rect.height };
@@ -1633,7 +1676,7 @@ export function finalize(el, opts) {
     ph.style.height = '0';
     ph.style.marginBottom = '0';
   }
-  setTimeout(function () {
+  _setTimeout(function () {
     deregisterAnimation(el);
     cleanupCard(el);
     el.style.display = 'none';
@@ -1695,7 +1738,7 @@ export function setAnimationCleanup(el, cleanupFn) {
 export function cancelAnimation(el) {
   const entry = _activeAnimations.get(el);
   if (!entry) return false;
-  entry.rafIds.forEach(function (id) { cancelAnimationFrame(id); });
+  entry.rafIds.forEach(function (id) { _cancelRaf(id); });
   if (entry.cleanup) entry.cleanup();
   _activeAnimations.delete(el);
   return true;
@@ -1887,10 +1930,10 @@ export function warmup() {
     _flashEl.style.transition = 'none';
     _flashEl.style.background = '#000';
     _flashEl.style.opacity = '0';
-    requestAnimationFrame(function() {
+    _raf(function() {
       _flashEl.style.transition = 'opacity 1ms ease-out';
       _flashEl.style.opacity = '0';
-      requestAnimationFrame(function() {
+      _raf(function() {
         _flashEl.style.background = '';
         _flashEl.style.transition = '';
       });
@@ -1900,7 +1943,7 @@ export function warmup() {
   // Warm screen shake path
   const shakeTarget = document.querySelector(_selectors.appShell) || document.body;
   shakeTarget.classList.add(_classes.shaking);
-  requestAnimationFrame(function() {
+  _raf(function() {
     shakeTarget.classList.remove(_classes.shaking);
   });
 }
@@ -1950,12 +1993,12 @@ let _autoWarmup = true;
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   // Defer to allow configure() to be called first
-  setTimeout(function () {
+  _setTimeout(function () {
     if (!_autoWarmup) return;
     if (typeof requestIdleCallback !== 'undefined') {
       requestIdleCallback(warmup);
     } else {
-      setTimeout(warmup, 200);
+      _setTimeout(warmup, 200);
     }
   }, 0);
 }

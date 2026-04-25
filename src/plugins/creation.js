@@ -67,7 +67,7 @@ function lerp(a, b, t) { return a + (b - a) * t; }
  * @param {Array} arr
  * @returns {*}
  */
-function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function pick(arr) { return arr[Math.floor(ctx.rand() * arr.length)]; }
 
 /**
  * Random number in range [a, b).
@@ -75,7 +75,7 @@ function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
  * @param {number} b
  * @returns {number}
  */
-function randRange(a, b) { return a + Math.random() * (b - a); }
+function randRange(a, b) { return a + ctx.rand() * (b - a); }
 
 /**
  * Resolve the text element inside a target element.
@@ -151,7 +151,7 @@ export const fadeIn = {
     const p = fx.resolveParams(this.params, ctx.params);
     const speed = ctx.speed || 1;
     const duration = sd(p.duration, speed);
-    const startTime = performance.now();
+    const startTime = ctx.now();
     el.style.opacity = '0';
 
     function frame(now) {
@@ -161,12 +161,12 @@ export const fadeIn = {
       const eased = 1 - Math.pow(1 - t, 3);
       el.style.opacity = String(eased);
       if (t < 1) {
-        requestAnimationFrame(frame);
+        ctx.raf(frame);
       } else {
         creationDone(el, ctx.onDone);
       }
     }
-    requestAnimationFrame(frame);
+    ctx.raf(frame);
   },
   cleanup: creationCleanup,
 };
@@ -194,7 +194,7 @@ export const slideIn = {
     const inorm = intensityNorm(ctx.intensity);
     const duration = sd(p.duration, speed);
     const distance = lerp(p.minDistance, p.maxDistance, inorm);
-    const startTime = performance.now();
+    const startTime = ctx.now();
     el.style.opacity = '0';
     el.style.transform = 'translateX(' + distance + 'px)';
 
@@ -206,12 +206,12 @@ export const slideIn = {
       el.style.opacity = String(Math.min(t * 2, 1));
       el.style.transform = 'translateX(' + (distance * (1 - eased)) + 'px)';
       if (t < 1) {
-        requestAnimationFrame(frame);
+        ctx.raf(frame);
       } else {
         creationDone(el, ctx.onDone);
       }
     }
-    requestAnimationFrame(frame);
+    ctx.raf(frame);
   },
   cleanup: creationCleanup,
 };
@@ -235,7 +235,7 @@ export const unfold = {
     const p = fx.resolveParams(this.params, ctx.params);
     const speed = ctx.speed || 1;
     const duration = sd(p.duration, speed);
-    const startTime = performance.now();
+    const startTime = ctx.now();
     const targetHeight = el.scrollHeight;
     el.style.overflow = 'hidden';
     el.style.maxHeight = '0px';
@@ -248,12 +248,12 @@ export const unfold = {
       const eased = 1 - Math.pow(1 - t, 3);
       el.style.maxHeight = (targetHeight * eased) + 'px';
       if (t < 1) {
-        requestAnimationFrame(frame);
+        ctx.raf(frame);
       } else {
         creationDone(el, ctx.onDone);
       }
     }
-    requestAnimationFrame(frame);
+    ctx.raf(frame);
   },
   cleanup: creationCleanup,
 };
@@ -292,7 +292,7 @@ export const typewriter = {
     el.style.opacity = '1';
     textEl.textContent = '';
     let charIndex = 0;
-    const startTime = performance.now();
+    const startTime = ctx.now();
 
     function frame(now) {
       const elapsed = now - startTime;
@@ -302,13 +302,13 @@ export const typewriter = {
         charIndex = targetIndex;
       }
       if (charIndex < totalChars) {
-        requestAnimationFrame(frame);
+        ctx.raf(frame);
       } else {
         textEl.textContent = fullText;
         creationDone(el, ctx.onDone);
       }
     }
-    requestAnimationFrame(frame);
+    ctx.raf(frame);
   },
   cleanup: creationCleanup,
 };
@@ -336,7 +336,7 @@ export const rise = {
     const inorm = intensityNorm(ctx.intensity);
     const duration = sd(p.duration, speed);
     const distance = lerp(p.minDistance, p.maxDistance, inorm);
-    const startTime = performance.now();
+    const startTime = ctx.now();
     el.style.opacity = '0';
     el.style.transform = 'translateY(' + distance + 'px)';
 
@@ -348,12 +348,12 @@ export const rise = {
       el.style.opacity = String(eased);
       el.style.transform = 'translateY(' + (distance * (1 - eased)) + 'px)';
       if (t < 1) {
-        requestAnimationFrame(frame);
+        ctx.raf(frame);
       } else {
         creationDone(el, ctx.onDone);
       }
     }
-    requestAnimationFrame(frame);
+    ctx.raf(frame);
   },
   cleanup: creationCleanup,
 };
@@ -387,7 +387,7 @@ export const slamDown = {
     const speed = ctx.speed || 1;
     const inorm = intensityNorm(ctx.intensity);
     const fallDur = sd(p.fallDur, speed);
-    const startTime = performance.now();
+    const startTime = ctx.now();
     const rect = el.getBoundingClientRect();
 
     // If originY is provided (e.g. from an input element), compute fall
@@ -419,7 +419,7 @@ export const slamDown = {
           }
         }
         // Bounce recovery
-        const bounceStart = performance.now();
+        const bounceStart = ctx.now();
         const bounceDur = sd(p.bounceDur, speed);
         function bounceFrame(now2) {
           const bt = Math.min((now2 - bounceStart) / bounceDur, 1);
@@ -427,17 +427,17 @@ export const slamDown = {
           const spring = Math.exp(-bt * 4) * Math.cos(bt * Math.PI * 2) * lerp(0.02, 0.06, inorm);
           el.style.transform = 'scaleY(' + (1 + spring) + ') scaleX(' + (1 - spring * 0.5) + ')';
           if (bt < 1) {
-            requestAnimationFrame(bounceFrame);
+            ctx.raf(bounceFrame);
           } else {
             creationDone(el, ctx.onDone);
           }
         }
-        requestAnimationFrame(bounceFrame);
+        ctx.raf(bounceFrame);
       } else {
-        requestAnimationFrame(frame);
+        ctx.raf(frame);
       }
     }
-    requestAnimationFrame(frame);
+    ctx.raf(frame);
   },
   cleanup: creationCleanup,
 };
@@ -464,7 +464,7 @@ export const scaleBounce = {
     const speed = ctx.speed || 1;
     const inorm = intensityNorm(ctx.intensity);
     const duration = sd(p.duration, speed);
-    const startTime = performance.now();
+    const startTime = ctx.now();
     el.style.opacity = '0';
     el.style.transform = 'scale(0)';
 
@@ -483,12 +483,12 @@ export const scaleBounce = {
       el.style.transform = 'scale(' + eased + ')';
 
       if (t < 1) {
-        requestAnimationFrame(frame);
+        ctx.raf(frame);
       } else {
         creationDone(el, ctx.onDone);
       }
     }
-    requestAnimationFrame(frame);
+    ctx.raf(frame);
   },
   cleanup: creationCleanup,
 };
@@ -518,7 +518,7 @@ export const materialize = {
     const rect = el.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
-    const startTime = performance.now();
+    const startTime = ctx.now();
 
     const fragCount = fx.pCount(Math.round(lerp(p.minFrags, p.maxFrags, inorm)));
     const frags = [];
@@ -529,10 +529,10 @@ export const materialize = {
         targetX: cx + randRange(-rect.width * 0.4, rect.width * 0.4),
         targetY: cy + randRange(-rect.height * 0.4, rect.height * 0.4),
         char: pick(GLITCH_CHARS),
-        size: lerp(6, 14, inorm) + Math.random() * 6,
+        size: lerp(6, 14, inorm) + ctx.rand() * 6,
         color: pick(RAINBOW),
-        delay: Math.random() * duration * 0.5,
-        phase: Math.random() * Math.PI * 2,
+        delay: ctx.rand() * duration * 0.5,
+        phase: ctx.rand() * Math.PI * 2,
       });
     }
 
@@ -551,8 +551,8 @@ export const materialize = {
       if (t > 0.4) {
         const cardT = (t - 0.4) / 0.6;
         el.style.opacity = String(cardT);
-        if (t < 0.85 && Math.random() > 0.7) {
-          const glitchX = (Math.random() - 0.5) * lerp(4, 12, inorm);
+        if (t < 0.85 && ctx.rand() > 0.7) {
+          const glitchX = (ctx.rand() - 0.5) * lerp(4, 12, inorm);
           el.style.transform = 'translateX(' + glitchX + 'px)';
         } else {
           el.style.transform = '';
@@ -613,7 +613,7 @@ export const portal = {
     const cx = rect.width / 2;
     const cy = rect.height / 2;
     const maxRadius = Math.sqrt(cx * cx + cy * cy) + 10;
-    const startTime = performance.now();
+    const startTime = ctx.now();
 
     const absCx = rect.left + cx;
     const absCy = rect.top + cy;
@@ -624,9 +624,9 @@ export const portal = {
       ringParts.push({
         angle: angle,
         char: pick(PORTAL_CHARS),
-        size: lerp(6, 12, inorm) + Math.random() * 4,
+        size: lerp(6, 12, inorm) + ctx.rand() * 4,
         color: pick(RAINBOW),
-        speed: 0.8 + Math.random() * 0.4,
+        speed: 0.8 + ctx.rand() * 0.4,
       });
     }
 
@@ -693,7 +693,7 @@ export const glitchIn = {
     const speed = ctx.speed || 1;
     const inorm = intensityNorm(ctx.intensity);
     const duration = sd(p.duration, speed);
-    const startTime = performance.now();
+    const startTime = ctx.now();
     const glitchIntensity = lerp(p.minGlitch, p.maxGlitch, inorm);
 
     el.style.opacity = '0';
@@ -703,10 +703,10 @@ export const glitchIn = {
     const numGlitches = Math.round(lerp(4, 12, inorm));
     for (let i = 0; i < numGlitches; i++) {
       glitchFrames.push({
-        time: Math.random() * 0.7,  // normalized time 0-0.7
-        durPct: 0.02 + Math.random() * 0.06,
-        offsetX: (Math.random() - 0.5) * glitchIntensity,
-        skewX: (Math.random() - 0.5) * lerp(2, 8, inorm),
+        time: ctx.rand() * 0.7,  // normalized time 0-0.7
+        durPct: 0.02 + ctx.rand() * 0.06,
+        offsetX: (ctx.rand() - 0.5) * glitchIntensity,
+        skewX: (ctx.rand() - 0.5) * lerp(2, 8, inorm),
       });
     }
     glitchFrames.sort(function (a, b) { return a.time - b.time; });
@@ -733,9 +733,9 @@ export const glitchIn = {
       }
 
       if (inGlitch) {
-        el.style.opacity = String(baseAlpha * (0.6 + Math.random() * 0.4));
+        el.style.opacity = String(baseAlpha * (0.6 + ctx.rand() * 0.4));
         el.style.transform = 'translateX(' + gOffsetX + 'px) skewX(' + gSkew + 'deg)';
-        el.style.filter = 'hue-rotate(' + Math.round((Math.random() - 0.5) * 60) + 'deg)';
+        el.style.filter = 'hue-rotate(' + Math.round((ctx.rand() - 0.5) * 60) + 'deg)';
       } else {
         el.style.opacity = String(baseAlpha);
         el.style.transform = '';
@@ -743,12 +743,12 @@ export const glitchIn = {
       }
 
       if (t < 1) {
-        requestAnimationFrame(frame);
+        ctx.raf(frame);
       } else {
         creationDone(el, ctx.onDone);
       }
     }
-    requestAnimationFrame(frame);
+    ctx.raf(frame);
   },
   cleanup: creationCleanup,
 };
@@ -786,23 +786,23 @@ export const confettiDrop = {
     const rect = el.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
-    const startTime = performance.now();
+    const startTime = ctx.now();
 
     const confettiCount = fx.pCount(Math.round(lerp(p.minConfetti, p.maxConfetti, inorm)));
     const confetti = [];
     for (let i = 0; i < confettiCount; i++) {
       confetti.push({
         x: cx + randRange(-rect.width * 0.6, rect.width * 0.6),
-        y: cy - 20 - Math.random() * 60,
-        vx: (Math.random() - 0.5) * lerp(2, 6, inorm),
-        vy: -(1 + Math.random() * lerp(2, 5, inorm)),
-        gravity: 0.08 + Math.random() * 0.06,
+        y: cy - 20 - ctx.rand() * 60,
+        vx: (ctx.rand() - 0.5) * lerp(2, 6, inorm),
+        vy: -(1 + ctx.rand() * lerp(2, 5, inorm)),
+        gravity: 0.08 + ctx.rand() * 0.06,
         char: pick(CONFETTI_CHARS),
         color: pick(RAINBOW),
-        size: lerp(6, 12, inorm) + Math.random() * 4,
-        rotation: Math.random() * Math.PI * 2,
-        rotSpeed: (Math.random() - 0.5) * 0.15,
-        delay: Math.random() * dropDur * 0.3,
+        size: lerp(6, 12, inorm) + ctx.rand() * 4,
+        rotation: ctx.rand() * Math.PI * 2,
+        rotSpeed: (ctx.rand() - 0.5) * 0.15,
+        delay: ctx.rand() * dropDur * 0.3,
       });
     }
 
@@ -878,7 +878,7 @@ export const sparkleTrail = {
     const inorm = intensityNorm(ctx.intensity);
     const duration = sd(p.duration, speed);
     const rect = el.getBoundingClientRect();
-    const startTime = performance.now();
+    const startTime = ctx.now();
 
     // Sparkles spawn continuously as element fades in
     let sparkles = [];
@@ -904,17 +904,17 @@ export const sparkleTrail = {
       if (t < 0.8 && elapsed - lastSpawn > (1000 / sparkleRate)) {
         lastSpawn = elapsed;
         sparkles.push({
-          x: rect.left + Math.random() * rect.width,
-          y: rect.top + Math.random() * rect.height,
-          vx: (Math.random() - 0.5) * 2,
-          vy: -(0.5 + Math.random() * 2),
+          x: rect.left + ctx.rand() * rect.width,
+          y: rect.top + ctx.rand() * rect.height,
+          vx: (ctx.rand() - 0.5) * 2,
+          vy: -(0.5 + ctx.rand() * 2),
           char: pick(SPARKLE_CHARS),
           color: pick(PASTEL.concat(RAINBOW)),
-          size: lerp(4, 10, inorm) + Math.random() * 4,
+          size: lerp(4, 10, inorm) + ctx.rand() * 4,
           life: 0,
-          maxLife: 300 + Math.random() * 400,
-          rotation: Math.random() * Math.PI * 2,
-          rotSpeed: (Math.random() - 0.5) * 0.1,
+          maxLife: 300 + ctx.rand() * 400,
+          rotation: ctx.rand() * Math.PI * 2,
+          rotSpeed: (ctx.rand() - 0.5) * 0.1,
         });
       }
 
@@ -978,25 +978,25 @@ export const butterflyCarry = {
     const rect = el.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
-    const startTime = performance.now();
+    const startTime = ctx.now();
 
     const bflyCount = fx.pCount(Math.round(lerp(p.minButterflies, p.maxButterflies, inorm)));
     const butterflies = [];
     for (let i = 0; i < bflyCount; i++) {
-      const fromLeft = Math.random() > 0.5;
+      const fromLeft = ctx.rand() > 0.5;
       butterflies.push({
-        startX: fromLeft ? rect.left - 40 - Math.random() * 60 : rect.right + 40 + Math.random() * 60,
+        startX: fromLeft ? rect.left - 40 - ctx.rand() * 60 : rect.right + 40 + ctx.rand() * 60,
         startY: cy + randRange(-rect.height * 0.3, rect.height * 0.3),
-        targetX: rect.left + Math.random() * rect.width,
-        targetY: rect.top + Math.random() * rect.height,
+        targetX: rect.left + ctx.rand() * rect.width,
+        targetY: rect.top + ctx.rand() * rect.height,
         color: pick(BUTTERFLY_COLORS),
-        size: lerp(8, 16, inorm) + Math.random() * 4,
-        wingPhase: Math.random() * Math.PI * 2,
-        wingSpeed: 0.015 + Math.random() * 0.01,
-        delay: Math.random() * duration * 0.2,
-        departDelay: duration * 0.6 + Math.random() * duration * 0.2,
-        departX: (Math.random() > 0.5 ? 1 : -1) * (rect.width + 100 + Math.random() * 100),
-        departY: -(50 + Math.random() * 100),
+        size: lerp(8, 16, inorm) + ctx.rand() * 4,
+        wingPhase: ctx.rand() * Math.PI * 2,
+        wingSpeed: 0.015 + ctx.rand() * 0.01,
+        delay: ctx.rand() * duration * 0.2,
+        departDelay: duration * 0.6 + ctx.rand() * duration * 0.2,
+        departX: (ctx.rand() > 0.5 ? 1 : -1) * (rect.width + 100 + ctx.rand() * 100),
+        departY: -(50 + ctx.rand() * 100),
       });
     }
 
@@ -1092,7 +1092,7 @@ export const bounceIn = {
     const duration = sd(p.duration, speed);
     const dropHeight = lerp(p.minDrop, p.maxDrop, inorm);
     const bounces = Math.round(lerp(p.minBounces, p.maxBounces, inorm));
-    const startTime = performance.now();
+    const startTime = ctx.now();
 
     el.style.opacity = '0';
     el.style.transform = 'translateY(-' + dropHeight + 'px)';
@@ -1129,12 +1129,12 @@ export const bounceIn = {
       }
 
       if (t < 1) {
-        requestAnimationFrame(frame);
+        ctx.raf(frame);
       } else {
         creationDone(el, ctx.onDone);
       }
     }
-    requestAnimationFrame(frame);
+    ctx.raf(frame);
   },
   cleanup: creationCleanup,
 };
@@ -1164,7 +1164,7 @@ export const grow = {
     const rect = el.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
-    const startTime = performance.now();
+    const startTime = ctx.now();
 
     // Seed dot that becomes the element
     const seedSize = lerp(4, 8, inorm);
@@ -1173,16 +1173,16 @@ export const grow = {
     const sproutCount = fx.pCount(Math.round(lerp(p.minSprouts, p.maxSprouts, inorm)));
     const sprouts = [];
     for (let i = 0; i < sproutCount; i++) {
-      const angle = (i / sproutCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+      const angle = (i / sproutCount) * Math.PI * 2 + (ctx.rand() - 0.5) * 0.5;
       sprouts.push({
         angle: angle,
-        distance: lerp(10, 40, inorm) + Math.random() * 20,
+        distance: lerp(10, 40, inorm) + ctx.rand() * 20,
         char: pick(['\u273F', '\u2740', '\u273E', '*', '\u2726', '\u00B7']),
         color: pick(['#6aab8e', '#c9a84c', '#6da3b8', '#d4728c', '#9b85c4']),
-        size: lerp(4, 10, inorm) + Math.random() * 4,
-        delay: duration * 0.2 + Math.random() * duration * 0.3,
+        size: lerp(4, 10, inorm) + ctx.rand() * 4,
+        delay: duration * 0.2 + ctx.rand() * duration * 0.3,
         life: 0,
-        maxLife: 400 + Math.random() * 300,
+        maxLife: 400 + ctx.rand() * 300,
       });
     }
 

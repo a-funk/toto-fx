@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>toto-fx render harness</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 960px; height: 540px; overflow: hidden; background: #1a1a1a; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    #stage {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    #target {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 240px;
+      height: 72px;
+      background: #C45A3C;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 600;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    .tfx-persist-shadow {
+      position: absolute;
+      left: 50%;
+      top: calc(50% + 40px);
+      transform: translate(-50%, 0);
+      width: 240px;
+      height: 14px;
+      background: radial-gradient(ellipse, rgba(0,0,0,0.35), transparent);
+      border-radius: 50%;
+    }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <div class="tfx-persist-shadow"></div>
+    <div id="target" data-anim-id="hero" data-group="g1">Hello</div>
+  </div>
+
+  <script src="./toto-fx.min.js"></script>
+  <script src="./thud.min.js"></script>
+  <script src="./creation.min.js"></script>
+  <script>
+    // The harness drives everything from outside via page.evaluate.
+    // This page just sets up the engine and exposes it on window.
+    (function () {
+      const engine = window.TotoFX.createEngine({
+        root: document.body,
+        resolveElement: function (key) {
+          return document.querySelector('[data-anim-id="' + key + '"]');
+        },
+        debug: false,
+        reducedMotion: 'ignore',
+      });
+
+      // Register plugins (they attach themselves via their IIFE globals).
+      // Each plugin export has `{ name, install }` on its root.
+      if (window.TotoFXThud && window.TotoFXThud.thudPlugin) engine.use(window.TotoFXThud.thudPlugin);
+      if (window.TotoFXCreation && window.TotoFXCreation.creationPlugin) engine.use(window.TotoFXCreation.creationPlugin);
+
+      engine.init();
+
+      window.__engine = engine;
+      window.__ready = true;
+    })();
+  </script>
+</body>
+</html>

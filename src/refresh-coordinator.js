@@ -9,7 +9,20 @@
  * The refresh callback is provided by the consuming application (e.g.,
  * the consuming app wires it to its DOM swap/morph logic). The coordinator only manages
  * WHEN the refresh fires, not WHAT it does.
+ *
+ * NOTE: The setTimeout-based debounce is intentionally left on the
+ * browser timer — it is not a per-frame operation, and P0's scheduler
+ * is rAF-only. Render mode does not use debounced refreshes, so no
+ * behavioral conflict. Migration to a virtual-time debounce is P2+.
  */
+
+// ── Determinism primitives ──────────────────────────────────────
+let _raf = (cb) => globalThis['requestAnimationFrame'](cb);
+
+/** @param {{ raf?: (cb: Function) => any }} primitives */
+export function configurePrimitives(primitives) {
+  if (primitives && primitives.raf) _raf = primitives.raf;
+}
 
 /**
  * Create a RefreshCoordinator bound to a LayoutAnimator and Reconciler.
@@ -162,7 +175,7 @@ export function createRefreshCoordinator(store, deps) {
       if (result && typeof result.then === 'function') {
         result.then(afterSwap);
       } else {
-        requestAnimationFrame(afterSwap);
+        _raf(afterSwap);
       }
     },
   };
