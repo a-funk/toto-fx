@@ -47,6 +47,25 @@
 
   /* ∞ AUTO DEMO button on splash — visually distinct from timed modes */
   .overlay .duration-picker .demo-btn { color: #8ff0c0; border-color: #2a5040; }
+
+  /* Soundpack picker — fixed top-right, above splash/end overlays so you
+     can pick a pack before starting a run. */
+  .pack-picker {
+    position: fixed; top: 16px; right: 16px; z-index: 25;
+    display: flex; gap: 8px; align-items: center;
+    padding: 6px 10px;
+    background: rgba(10, 12, 22, 0.82); backdrop-filter: blur(8px);
+    border: 1px solid #272c42; border-radius: 999px;
+    font-size: 11px; letter-spacing: 0.1em;
+  }
+  .pack-picker .lbl { color: #6a7090; font-size: 10px; text-transform: uppercase; }
+  .pack-picker select {
+    font: inherit; font-size: 11px; letter-spacing: 0.08em;
+    background: #0a0d18; color: #ffd76a;
+    border: 1px solid #2a3048; border-radius: 6px;
+    padding: 3px 6px; cursor: pointer; outline: none;
+  }
+  .pack-picker select:hover { border-color: #4a5078; }
   .overlay .duration-picker .demo-btn:hover { border-color: #4a8060; background: #0e1e18; }
 
   /* ── Central card ───────────────────────────────────────────── */
@@ -73,6 +92,21 @@
     letter-spacing: 0.1em; line-height: 1;
     text-align: center;
     text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    white-space: pre-line;
+  }
+  /* `.quote` carries longer philosophical card text: shrink & relax so it fits */
+  .card.quote .big {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+    font-style: italic;
+  }
+  .card.quote.attrib .big {
+    font-size: 12px;
+    font-style: normal;
+    letter-spacing: 0.18em;
+    opacity: 0.85;
   }
   .card .sub {
     margin-top: 12px; font-size: 11px; color: #7a8ba8; letter-spacing: 0.24em;
@@ -235,6 +269,16 @@
     <button id="hudEnd" class="hud-end" title="end game (Esc)">END</button>
   </div>
 
+  <!-- Soundpack selector — always visible (splash and game screens) so you
+       can pick a pack before starting and hot-swap mid-run. -->
+  <div class="pack-picker">
+    <span class="lbl">pack</span>
+    <select id="sound-pack" title="sound pack">
+      <option value="chiptune">chiptune</option>
+      <option value="shoegaze">shoegaze</option>
+    </select>
+  </div>
+
   <div class="card-wrap" id="card-wrap" style="display: none;">
     <div class="card" id="card" data-tier="0" data-id="clicker-card">
       <div class="big" id="cardText">CLICK ME</div>
@@ -293,6 +337,7 @@
   <script src="../../dist/plugins/thud.min.js"></script>
   <script src="../../dist/plugins/death.min.js"></script>
   <script src="../../dist/audio-packs/chiptune.min.js"></script>
+  <script src="../../dist/audio-packs/shoegaze.min.js"></script>
   <script type="module">
     import * as THREE from 'three';
 
@@ -324,6 +369,7 @@
     //   audio.setAmbient('tier', n);  // re-fire to pick it up
     const audio = TotoFX.createAudioEngine();
     audio.use(TotoFXAudioChiptune.chiptunePack);
+    if (typeof TotoFXAudioShoegaze !== 'undefined') audio.use(TotoFXAudioShoegaze.shoegazePack);
 
     // Thin `Sound.*` adapter so the existing call sites (onClick,
     // onTierEnter, etc.) keep working without touching every hook.
@@ -356,8 +402,6 @@
         audio.setAmbient('tier', n);
       },
     };
-
-    })();
 
     // ── Three.js arena ────────────────────────────────────────────
     const canvas = document.getElementById('three-canvas');
@@ -632,30 +676,92 @@
       return tier.ripplePalette === 'rainbow' ? scoreHueHex(score) : tier.ripplePalette;
     }
 
-    // Card text ladder per tier — more urgent / deranged as you climb
+    // Card text ladder per tier — starts punchy, drifts into introspection,
+    // then into the pessimists. Use `\n` for explicit line breaks (the `.big`
+    // class has white-space: pre-line). Strings starting with `—` are read as
+    // attributions and styled differently.
     const TEXT_BY_TIER = {
       0:  ['CLICK ME', 'nice', 'faster', 'go', 'more'],
       1:  ['good.', 'keep going', 'warming up', 'not bad', 'warmer'],
       2:  ['HEATING UP', 'NOW WE COOK', 'KEEP GOING', 'FASTER'],
-      3:  ['UNSTOPPABLE', 'GO GO GO', "DON'T STOP", 'MAD MAN'],
-      4:  ['DESTROY MODE', 'OBLITERATE', 'MAXIMUM FURY', 'ANNIHILATE'],
-      5:  ['INSANITY', '!!!', 'WHAT ARE YOU', 'CALM DOWN', '👁 👁', 'BEYOND HUMAN'],
-      6:  ['BEYOND', 'VIOLATING PHYSICS', 'ERROR 404', 'REALITY.EXE', 'WTF'],
-      7:  ['SINGULARITY', 'EVENT HORIZON', 'SPAGHETTIFY', 'COLLAPSE', '∞', 'NO RETURN'],
-      8:  ['GOD MODE', 'ASCENDED', 'OMNIPRESENT', 'YOU ARE LIGHT', '✨', 'CHOSEN ONE'],
-      9:  ['OMNIPOTENT', 'ALL IS ONE', '🌌', 'THE UNIVERSE', 'ENLIGHTENED', 'REWRITE REALITY'],
-      10: ['TRANSCENDENT', 'COSMIC ERROR', 'beyond time', 'existence.crash()', '🤯', 'YOU BROKE IT', 'CONGRATULATIONS'],
-      11: ['APOTHEOSIS', 'ASCENDING', 'NEAR THE TOP', 'ENLIGHTENMENT', 'ALMOST', '✨ ✨ ✨'],
-      12: ['1000', 'ONE THOUSAND', 'ELITE', 'LEGEND', 'IMMORTAL', 'ICON', '👑'],
-      13: ['RIFT', 'DIMENSION TORN', 'FRACTAL', 'SPLIT', 'DIVIDE BY ZERO', '▓▒░'],
-      14: ['PRIMORDIAL', 'BEFORE TIME', 'ORIGIN', 'ANCIENT', 'FIRST CAUSE', 'Δ'],
-      15: ['HEAT DEATH', 'ENTROPY', 'FADING', 'COLDER', '∅', 'silence'],
-      16: ['THE SOURCE', '—', '∞', '☯', 'beyond language', 'you found it', ''],
+      3:  ['UNSTOPPABLE', 'GO GO GO', "DON'T STOP", 'MAD MAN', 'why so fast'],
+      4:  ['DESTROY MODE', 'OBLITERATE', 'MAXIMUM FURY', 'ANNIHILATE', 'for what'],
+      5:  ['INSANITY', '!!!', 'slow down', 'who asked', '👁 👁', 'is this fun', 'CALM DOWN'],
+      6:  ['BEYOND', "what's the point", 'is this it', 'ERROR 404', 'why this', 'is this all'],
+      // — first aphorisms drift in —
+      7:  ['SINGULARITY', 'EVENT HORIZON', 'no return', '∞',
+           'hypocrisy is\nthe homage vice\npays to virtue',
+           'habit is\na second nature'],
+      8:  ['GOD MODE', 'ASCENDED',
+           'we are strangers\nto ourselves',
+           'anxiety is\nthe dizziness\nof freedom',
+           'boredom is the root\nof all evil'],
+      // — Schopenhauer —
+      9:  ['OMNIPOTENT', 'ALL IS ONE',
+           'we forfeit\nthree-fourths of\nourselves to be\nlike other people',
+           'every man takes\nthe limits of his\nvision for the limits\nof the world',
+           '—Schopenhauer'],
+      // — Nietzsche —
+      10: ['TRANSCENDENT',
+           'if you gaze long\ninto an abyss,\nthe abyss\ngazes back',
+           'there are no facts,\nonly interpretations',
+           'man is a rope\nbetween the animal\nand the overman',
+           '—Nietzsche',
+           'YOU BROKE IT'],
+      // — Schopenhauer / Kierkegaard proper —
+      11: ['APOTHEOSIS',
+           'life swings\nlike a pendulum\nbetween pain\nand boredom',
+           'he who has a why\ncan bear\nalmost any how',
+           'life must be\nunderstood backwards\nbut lived forwards',
+           'ENLIGHTENMENT'],
+      // — Camus —
+      12: ['ONE THOUSAND',
+           'one must imagine\nSisyphus happy',
+           'in the depth of winter\nI found in me\nan invincible\nsummer',
+           'should I kill myself,\nor have a cup\nof coffee',
+           'man is the only creature\nwho refuses\nto be what he is',
+           '—Camus', '👑'],
+      // — Bradbury —
+      13: ['RIFT',
+           'we are cups,\nconstantly and quietly\nbeing filled',
+           'stuff your eyes\nwith wonder',
+           'the best books\ntell you\nwhat you already know',
+           '—Bradbury',
+           '▓▒░'],
+      // — Orwell —
+      14: ['PRIMORDIAL',
+           'in a time of deceit,\ntelling the truth\nis a revolutionary act',
+           'if you want\na picture of the future\nimagine a boot\nstamping on a face\nforever',
+           'war is peace.\nfreedom is slavery.\nignorance is strength.',
+           '—Orwell', 'Δ'],
+      // — Vonnegut —
+      15: ['HEAT DEATH',
+           'so it goes.',
+           'everything was beautiful\nand nothing hurt',
+           'we are what\nwe pretend to be\nso be careful',
+           'hi ho.',
+           '—Vonnegut', '∅'],
+      16: ['THE SOURCE',
+           'so it goes',
+           '—',
+           '∅',
+           'silence',
+           'beyond language',
+           'you found it',
+           ''],
     };
     function textForScore(score, tier) {
       if (score === 0) return 'CLICK ME';
       const bucket = TEXT_BY_TIER[tier.n];
       return bucket[score % bucket.length];
+    }
+    // Classify a line so we know whether to shrink/italicize it. Multi-line
+    // or long strings get the `.quote` treatment; attributions (starting `—`)
+    // also toggle `.attrib` for centered small-caps feel.
+    function classifyCardText(str) {
+      const longOrMultiline = str.includes('\n') || str.length > 22;
+      const isAttrib = /^—\s*\p{L}/u.test(str);
+      return { quote: longOrMultiline || isAttrib, attrib: isAttrib };
     }
 
     // ── Game state ────────────────────────────────────────────────
@@ -727,7 +833,11 @@
       // HUD update
       scoreEl.textContent = state.score;
       tierEl.textContent = tier.label;
-      cardText.textContent = textForScore(state.score, tier);
+      const cardStr = textForScore(state.score, tier);
+      cardText.textContent = cardStr;
+      const { quote, attrib } = classifyCardText(cardStr);
+      card.classList.toggle('quote', quote);
+      card.classList.toggle('attrib', attrib);
       cardSub.textContent = state.score + ' hits';
 
       setTierVisuals(tier);
@@ -1124,6 +1234,8 @@
     // Sound master toggle — mirrors the AUTO checkbox wiring.
     const soundEl = document.getElementById('sound');
     soundEl.addEventListener('change', () => { Sound.setEnabled(soundEl.checked); });
+    const soundPackEl = document.getElementById('sound-pack');
+    soundPackEl.addEventListener('change', () => { audio.setActivePack(soundPackEl.value); });
 
     // ── Game flow ─────────────────────────────────────────────────
     function startGame(duration) {
@@ -1138,6 +1250,7 @@
       tierEl.textContent = 'LOW';
       timeEl.textContent = state.endless ? '∞' : duration.toFixed(1);
       cardText.textContent = 'CLICK ME';
+      card.classList.remove('quote', 'attrib');
       cardSub.textContent = 'GO';
       setTierVisuals(TIERS[0]);
 

@@ -21,6 +21,7 @@ const plugins = [
 // Audio pack entry points — soundpack plugins for createAudioEngine.
 const audioPacks = [
   { name: 'chiptune', entry: 'src/audio-packs/chiptune.js', global: 'TotoFXAudioChiptune' },
+  { name: 'shoegaze', entry: 'src/audio-packs/shoegaze.js', global: 'TotoFXAudioShoegaze' },
 ];
 
 // Dotgrid effect plugin entry points
