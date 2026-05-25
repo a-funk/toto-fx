@@ -132,6 +132,15 @@ export function createReconciler(store, config, categories, opts) {
      */
     _startElement: function (key, el, state) {
       const elapsed = _now() - state.startedAt;
+      // Lift `speed` from state.params to the top level of the play ctx so
+      // plugins that read `ctx.speed` (as documented in README and used by
+      // every built-in plugin) actually receive the caller's speed override.
+      // Without this, `engine.set('persist', k, { speed: 0.7, ... })` was
+      // silently discarded because state.params is the full opts object and
+      // plugins read `ctx.speed` (top-level), not `ctx.params.speed`.
+      const speed = state.params && typeof state.params.speed === 'number'
+        ? state.params.speed
+        : undefined;
 
       // Check if this category has a registered play function
       const catDescriptor = categories[state.category];
@@ -141,6 +150,7 @@ export function createReconciler(store, config, categories, opts) {
           style: state.style,
           variant: state.variant,
           params: state.params,
+          speed: speed,
           key: key,
           reducedMotion: opts.isReducedMotion ? opts.isReducedMotion() : false,
         });
@@ -165,6 +175,7 @@ export function createReconciler(store, config, categories, opts) {
           style: state.style,
           variant: state.variant,
           params: state.params,
+          speed: speed,
           key: key,
           reducedMotion: opts.isReducedMotion ? opts.isReducedMotion() : false,
         });
