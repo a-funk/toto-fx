@@ -348,6 +348,52 @@ describe('createEngine', function () {
     assert.equal(keys.size, 2);
   });
 
+  // ── Reconciler ctx threading ────────────────────────────────
+
+  it('set() lifts speed from opts to play ctx.speed (top-level)', function () {
+    // Regression: every built-in plugin's play() reads `ctx.speed` (top-level
+    // — README documents this contract) but the reconciler used to pass only
+    // `params: state.params`. Callers' `speed` was silently discarded.
+    var captured = null;
+    var fakeEl = { isConnected: true };
+    var engine = createEngine({ resolveElement: function () { return fakeEl; } });
+    engine._state._persistent.clear();
+    engine.registerCategory('persist-ctx-speed', {
+      play: function (el, ctx) { captured = ctx; },
+    });
+    engine.set('persist-ctx-speed', 'ks', {
+      style: 'ambient', variant: 'glow', speed: 0.7, params: { color: 'red' },
+    });
+    assert.equal(captured.speed, 0.7, 'speed should be lifted to top-level ctx');
+    assert.equal(captured.style, 'ambient');
+    assert.equal(captured.variant, 'glow');
+    assert.ok(captured.params, 'state.params still threaded through');
+  });
+
+  it('set() leaves ctx.speed undefined when no speed is passed', function () {
+    var captured = null;
+    var fakeEl = { isConnected: true };
+    var engine = createEngine({ resolveElement: function () { return fakeEl; } });
+    engine._state._persistent.clear();
+    engine.registerCategory('persist-ctx-nospeed', {
+      play: function (el, ctx) { captured = ctx; },
+    });
+    engine.set('persist-ctx-nospeed', 'kn', { style: 'ambient', variant: 'glow' });
+    assert.equal(captured.speed, undefined);
+  });
+
+  it('set() ignores non-numeric speed (defensive)', function () {
+    var captured = null;
+    var fakeEl = { isConnected: true };
+    var engine = createEngine({ resolveElement: function () { return fakeEl; } });
+    engine._state._persistent.clear();
+    engine.registerCategory('persist-ctx-badspeed', {
+      play: function (el, ctx) { captured = ctx; },
+    });
+    engine.set('persist-ctx-badspeed', 'kb', { style: 'ambient', variant: 'glow', speed: 'fast' });
+    assert.equal(captured.speed, undefined, 'non-numeric speed should not be lifted');
+  });
+
   // ── Plugin system ───────────────────────────────────────────
 
   it('use() with declarative plugin installs categories', function () {

@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Fixed
+
+- **`speed` parameter is now threaded to `ctx.speed` in persist plays.** `engine.set('persist', key, { speed: 0.7, ... })` was silently discarded: the reconciler passed `params: state.params` to the variant's `play()` but never lifted `speed` to the top-level of the ctx. Every built-in plugin reads `ctx.speed` (top-level, as documented in README), so every speed override defaulted to 1. The fix lifts a numeric `speed` from `state.params` to `ctx.speed` in `_startElement` (both the category-descriptor path and the variant-lookup fallback). Non-numeric `speed` is ignored. Plugins that read `ctx.speed` work unchanged; plugins that already read `ctx.params.speed` are unaffected.
+  - Regression test: `tests/core.test.js` — `set() lifts speed from opts to play ctx.speed (top-level)`.
+  - File: `src/reconciler.js` (`_startElement`).
+
 ## [0.3.1] — 2026-04-17
 
 ### Fixed
