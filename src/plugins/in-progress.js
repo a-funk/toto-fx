@@ -682,13 +682,20 @@ export const progressBarPlugin = {
     bar.className = 'tfx-persist-progress-bar';
     bar.style.cssText = 'position:absolute;left:0;' + position + ':0;height:' + barHeight + 'px;width:30%;background:' + color + ';border-radius:' + barHeight + 'px;pointer-events:none;z-index:2;opacity:0.8;';
     el.style.position = el.style.position || 'relative';
+    // Capture original inline overflow BEFORE mutating it so cleanup can
+    // restore exactly what was there (including ''). Without this, the
+    // forced 'hidden' leaks past cleanup() and clips any subsequent rich
+    // variant whose decoration lives outside the card box (snake-border at
+    // inset:-2px, particle-orbit at inset:-8px, corner-accents at inset:-4px),
+    // making the next animation appear broken even though it ran correctly.
+    const origOverflow = el.style.overflow;
     el.style.overflow = el.style.overflow || 'hidden';
     el.appendChild(bar);
 
     const state = { t: 0, speed: speed, bar: bar };
     InProgressTicker.register(el, progressBarTick, state);
 
-    el.__tfxAnimation = { type: 'raf', variant: 'progress-bar', bar: bar };
+    el.__tfxAnimation = { type: 'raf', variant: 'progress-bar', bar: bar, origOverflow: origOverflow };
 
     _advanceRAFPhase(el, ctx.elapsed);
   },
@@ -699,6 +706,9 @@ export const progressBarPlugin = {
     if (info && info.bar && info.bar.parentNode) {
       info.bar.parentNode.removeChild(info.bar);
     }
+    // Restore the inline overflow we captured in play(). Use a null/undefined
+    // check (not falsy) so an original '' value round-trips correctly.
+    el.style.overflow = (info && info.origOverflow != null) ? info.origOverflow : '';
     delete el.__tfxAnimation;
   },
 };
