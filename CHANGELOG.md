@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.4] — 2026-05-27
+
+### Fixed
+
+- **`progress-bar` persist variant no longer leaks `overflow:hidden` past cleanup.** `progressBarPlugin.play()` set `el.style.overflow = el.style.overflow || 'hidden'` to clip its indeterminate sliding bar to the card box, but `cleanup()` only removed the bar `<div>` and unregistered from the shared RAF ticker — it never restored the original inline `overflow`. The leftover `overflow:hidden` then clipped any subsequent rich persist variant whose decoration container lives outside the card box (`snake-border` at `inset:-2px`, `particle-orbit` at `inset:-8px`, `corner-accents` at `inset:-4px`), so switching from `progress-bar` to any of those three appeared to produce no visible animation even though the reconciler fired and the variant's RAF ticks ran correctly. The fix mirrors the `heartbeat` variant's pattern: stash the original inline value on `__tfxAnimation` during `play()`, restore it (including the empty-string baseline) during `cleanup()`. A null/undefined guard — not a falsy check — is used so `''` round-trips correctly. `style.position` is intentionally left untouched: every rich variant sets it to `'relative'` with the same fallback, so that leak is benign.
+  - Regression tests: `tests/core.test.js` — `progressBarPlugin overflow round-trip` (three cases: empty baseline restoration, pre-existing value preservation, no-leak across variant switch).
+  - File: `src/plugins/in-progress.js` (`progressBarPlugin.play` / `progressBarPlugin.cleanup`).
+
 ## [0.3.3] — 2026-05-26
 
 ### Fixed

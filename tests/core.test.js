@@ -723,3 +723,142 @@ describe('createSettings', function () {
     assert.equal(loaded.animations.action.style, 'custom');
   });
 });
+
+
+// ================================================================
+// 10. progressBarPlugin — overflow round-trip (regression)
+// ================================================================
+//
+// Bug: progress-bar's play() set `el.style.overflow = el.style.overflow ||
+// 'hidden'` to clip its sliding bar, but cleanup() never restored the
+// original value. The leftover inline overflow:hidden then clipped any
+// subsequent rich variant whose decoration lives outside the card box
+// (snake-border at inset:-2px, particle-orbit at inset:-8px, corner-accents
+// at inset:-4px), making the next animation appear broken even though it ran.
+//
+// We exercise the plugin directly with a minimal fake-element shape so the
+// test does not depend on a real DOM. The shape mirrors only the surface
+// progress-bar's play/cleanup touch: style (with a setProperty stub),
+// appendChild, removeChild, __tfxAnimation marker storage.
+
+describe('progressBarPlugin overflow round-trip', function () {
+
+  function makeStyle() {
+    return {
+      overflow: '',
+      position: '',
+      setProperty: function () {},
+      removeProperty: function () {},
+    };
+  }
+
+  function makeFakeBar() {
+    var bar = {
+      className: '',
+      style: { cssText: '' },
+      parentNode: null,
+    };
+    return bar;
+  }
+
+  function makeFakeEl() {
+    var el = {
+      style: makeStyle(),
+      children: [],
+      __tfxAnimation: undefined,
+    };
+    el.appendChild = function (child) {
+      el.children.push(child);
+      child.parentNode = el;
+    };
+    el.removeChild = function (child) {
+      var idx = el.children.indexOf(child);
+      if (idx >= 0) {
+        el.children.splice(idx, 1);
+        child.parentNode = null;
+      }
+    };
+    return el;
+  }
+
+  // Lazy-import the plugin to avoid loading it (and its `document` access)
+  // until this suite runs. We also patch `document.createElement` / `head`
+  // for the duration so `_injectStyles()` and the `bar` div both work.
+  async function loadPlugin() {
+    var savedCreate = globalThis.document.createElement;
+    var savedHead = globalThis.document.head;
+    globalThis.document.createElement = function () { return makeFakeBar(); };
+    globalThis.document.head = { appendChild: function () {} };
+    try {
+      var mod = await import('../src/plugins/in-progress.js');
+      return mod.progressBarPlugin;
+    } finally {
+      globalThis.document.createElement = savedCreate;
+      globalThis.document.head = savedHead;
+    }
+  }
+
+  // Patch document mutators around each play() call (style injection is
+  // memoised after the first run, but createElement is needed every time).
+  // Also polyfill requestAnimationFrame / cancelAnimationFrame because the
+  // shared InProgressTicker schedules a frame on register(). We make rAF a
+  // no-op that returns a token — the test never advances time, so the bar's
+  // tick function never runs (and would not affect overflow even if it did).
+  function withDOM(fn) {
+    var savedCreate = globalThis.document.createElement;
+    var savedHead = globalThis.document.head;
+    var savedRaf = globalThis.requestAnimationFrame;
+    var savedCancel = globalThis.cancelAnimationFrame;
+    globalThis.document.createElement = function () { return makeFakeBar(); };
+    globalThis.document.head = { appendChild: function () {} };
+    globalThis.requestAnimationFrame = function () { return 0; };
+    globalThis.cancelAnimationFrame = function () {};
+    try { return fn(); }
+    finally {
+      globalThis.document.createElement = savedCreate;
+      globalThis.document.head = savedHead;
+      globalThis.requestAnimationFrame = savedRaf;
+      globalThis.cancelAnimationFrame = savedCancel;
+    }
+  }
+
+  it('cleanup() restores empty overflow when nothing was set originally', async function () {
+    var plugin = await loadPlugin();
+    var el = makeFakeEl();
+    assert.equal(el.style.overflow, '', 'precondition: overflow starts empty');
+
+    withDOM(function () { plugin.play(el, { speed: 1, params: {} }); });
+    assert.equal(el.style.overflow, 'hidden', 'play() should force hidden when blank');
+
+    plugin.cleanup(el);
+    assert.equal(el.style.overflow, '', 'cleanup() must restore the original empty overflow');
+    assert.equal(el.__tfxAnimation, undefined, 'marker should be cleared');
+  });
+
+  it('cleanup() preserves a pre-existing inline overflow value', async function () {
+    var plugin = await loadPlugin();
+    var el = makeFakeEl();
+    el.style.overflow = 'auto';
+
+    withDOM(function () { plugin.play(el, { speed: 1, params: {} }); });
+    assert.equal(el.style.overflow, 'auto', 'play() must not stomp a real value');
+
+    plugin.cleanup(el);
+    assert.equal(el.style.overflow, 'auto', 'cleanup() must leave the original value intact');
+  });
+
+  it('switching from progress-bar to another variant leaves overflow restored', async function () {
+    // This is the consumer-visible symptom: progress-bar then snake-border
+    // would render snake-border into a container clipped by overflow:hidden.
+    // Here we just assert that after cleanup() the leak is gone, so the next
+    // variant's `inset:-2px` decoration would render.
+    var plugin = await loadPlugin();
+    var el = makeFakeEl();
+
+    withDOM(function () { plugin.play(el, { speed: 1, params: {} }); });
+    plugin.cleanup(el);
+
+    assert.notEqual(el.style.overflow, 'hidden',
+      'overflow:hidden must not leak past cleanup — subsequent rich variants depend on overflow:visible');
+  });
+});
